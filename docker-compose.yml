@@ -1,0 +1,23 @@
+services:
+  db:
+    image: postgres:17
+    container_name: moviebooking-db
+    restart: always
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  moviebooking:
+    image: moviebooking-app
+    build: ./backend
+    container_name: moviebooking-app
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - db
+
+volumes:
+  db_data:
