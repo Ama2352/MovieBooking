@@ -6,11 +6,23 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.api.moviebooking.helpers.mapstructs.CinemaMapper;
+import com.api.moviebooking.helpers.mapstructs.RoomMapper;
+import com.api.moviebooking.helpers.mapstructs.SnackMapper;
 import com.api.moviebooking.models.dtos.cinema.AddCinemaRequest;
 import com.api.moviebooking.models.dtos.cinema.CinemaDataResponse;
 import com.api.moviebooking.models.dtos.cinema.UpdateCinemaRequest;
+import com.api.moviebooking.models.dtos.room.AddRoomRequest;
+import com.api.moviebooking.models.dtos.room.RoomDataResponse;
+import com.api.moviebooking.models.dtos.room.UpdateRoomRequest;
+import com.api.moviebooking.models.dtos.snack.AddSnackRequest;
+import com.api.moviebooking.models.dtos.snack.SnackDataResponse;
+import com.api.moviebooking.models.dtos.snack.UpdateSnackRequest;
 import com.api.moviebooking.models.entities.Cinema;
+import com.api.moviebooking.models.entities.Room;
+import com.api.moviebooking.models.entities.Snack;
 import com.api.moviebooking.repositories.CinemaRepo;
+import com.api.moviebooking.repositories.RoomRepo;
+import com.api.moviebooking.repositories.SnackRepo;
 
 import lombok.RequiredArgsConstructor;
 
@@ -20,6 +32,10 @@ public class CinemaService {
 
     private final CinemaRepo cinemaRepo;
     private final CinemaMapper cinemaMapper;
+    private final RoomRepo roomRepo;
+    private final RoomMapper roomMapper;
+    private final SnackRepo snackRepo;
+    private final SnackMapper snackMapper;
 
     private Cinema findCinemaById(UUID cinemaId) {
         return cinemaRepo.findById(cinemaId)
@@ -50,13 +66,106 @@ public class CinemaService {
     }
 
     @Transactional
-    public void deleteCinema(UUID cinemaId) {
-        Cinema cinema = findCinemaById(cinemaId);
+    public void deleteCinema(UUID id) {
+        Cinema cinema = findCinemaById(id);
+
+        if (!cinema.getRooms().isEmpty()) {
+            throw new IllegalStateException("Cannot delete cinema with existing rooms");
+        }
+
+        if (!cinema.getSnacks().isEmpty()) {
+            throw new IllegalStateException("Cannot delete cinema with existing snacks");
+        }
+
         cinemaRepo.delete(cinema);
     }
 
     public CinemaDataResponse getCinema(UUID cinemaId) {
         Cinema cinema = findCinemaById(cinemaId);
         return cinemaMapper.toDataResponse(cinema);
+    }
+
+    // Room CRUD methods
+    private Room findRoomById(UUID roomId) {
+        return roomRepo.findById(roomId)
+                .orElseThrow(() -> new RuntimeException("Room not found"));
+    }
+
+    @Transactional
+    public RoomDataResponse addRoom(AddRoomRequest request) {
+        Cinema cinema = findCinemaById(request.getCinemaId());
+        Room newRoom = roomMapper.toEntity(request);
+        newRoom.setCinema(cinema);
+        roomRepo.save(newRoom);
+        return roomMapper.toDataResponse(newRoom);
+    }
+
+    @Transactional
+    public RoomDataResponse updateRoom(UUID roomId, UpdateRoomRequest request) {
+        Room room = findRoomById(roomId);
+        if (request.getRoomType() != null) {
+            room.setRoomType(request.getRoomType());
+        }
+        if (request.getRoomNumber() != null) {
+            room.setRoomNumber(request.getRoomNumber());
+        }
+        roomRepo.save(room);
+        return roomMapper.toDataResponse(room);
+    }
+
+    @Transactional
+    public void deleteRoom(UUID id) {
+        Room room = findRoomById(id);
+        roomRepo.delete(room);
+    }
+
+    public RoomDataResponse getRoom(UUID roomId) {
+        Room room = findRoomById(roomId);
+        return roomMapper.toDataResponse(room);
+    }
+
+    // Snack CRUD methods
+    private Snack findSnackById(UUID snackId) {
+        return snackRepo.findById(snackId)
+                .orElseThrow(() -> new RuntimeException("Snack not found"));
+    }
+
+    @Transactional
+    public SnackDataResponse addSnack(AddSnackRequest request) {
+        Cinema cinema = findCinemaById(request.getCinemaId());
+        Snack newSnack = snackMapper.toEntity(request);
+        newSnack.setCinema(cinema);
+        snackRepo.save(newSnack);
+        return snackMapper.toDataResponse(newSnack);
+    }
+
+    @Transactional
+    public SnackDataResponse updateSnack(UUID snackId, UpdateSnackRequest request) {
+        Snack snack = findSnackById(snackId);
+        if (request.getName() != null) {
+            snack.setName(request.getName());
+        }
+        if (request.getDescription() != null) {
+            snack.setDescription(request.getDescription());
+        }
+        if (request.getPrice() != null) {
+            snack.setPrice(request.getPrice());
+        }
+        if (request.getType() != null) {
+            snack.setType(request.getType());
+        }
+        snackRepo.save(snack);
+        return snackMapper.toDataResponse(snack);
+    }
+
+    @Transactional
+    public void deleteSnack(UUID id) {
+        Snack snack = findSnackById(id);
+        snackRepo.delete(snack);
+    }
+
+    public SnackDataResponse getSnack(UUID snackId) {
+        Snack snack = findSnackById(snackId);
+        return snackMapper.toDataResponse(snack);
     }
 }

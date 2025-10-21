@@ -16,7 +16,7 @@ import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/user")
+@RequestMapping("/users")
 @SecurityRequirement(name = "bearerToken")
 @Tag(name = "User Management")
 public class UserController {

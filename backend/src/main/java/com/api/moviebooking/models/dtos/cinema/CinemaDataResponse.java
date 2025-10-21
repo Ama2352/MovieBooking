@@ -1,8 +1,8 @@
 package com.api.moviebooking.models.dtos.cinema;
 
-import lombok.Setter;
+import lombok.Data;
 
-@Setter
+@Data
 public class CinemaDataResponse {
     private String id;
     private String name;
