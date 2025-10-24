@@ -39,9 +39,9 @@ public class Movie {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    private Integer duration; // in minutes
+    private int duration; // in minutes
 
-    private Integer minimumAge;
+    private int minimumAge;
 
     private String director;
 
