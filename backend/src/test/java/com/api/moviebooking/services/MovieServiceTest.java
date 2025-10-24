@@ -46,7 +46,7 @@ class MovieServiceTest {
                 .duration(148)
                 .minimumAge(13)
                 .director("Christopher Nolan")
-                .cast("Leonardo DiCaprio, Tom Hardy")
+                .actors("Leonardo DiCaprio, Tom Hardy")
                 .posterUrl("http://example.com/poster.jpg")
                 .trailerUrl("http://example.com/trailer.mp4")
                 .status("SHOWING")

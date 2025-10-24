@@ -25,7 +25,7 @@ public class UpdateMovieRequest {
 
     private String director;
 
-    private String cast;
+    private String actors;
 
     private String posterUrl;
 
@@ -33,7 +33,7 @@ public class UpdateMovieRequest {
 
     private String trailerUrl;
 
-    @EnumValidator(enumClass = MovieStatus.class, message = "Status must be NOW_SHOWING, COMING_SOON, or END_OF_SHOWING")
+    @EnumValidator(enumClass = MovieStatus.class, message = "Status must be SHOWING,UPCOMING")
     private String status;
 
     private String language;

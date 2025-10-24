@@ -32,7 +32,6 @@ public class Showtime {
     private Room room;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "movie_id")
     private Movie movie;
 
     private String format; // Ex: 2D Phụ đề Anh, 3D Phụ đề Việt

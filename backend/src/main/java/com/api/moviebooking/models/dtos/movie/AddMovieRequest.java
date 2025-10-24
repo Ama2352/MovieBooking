@@ -33,8 +33,8 @@ public class AddMovieRequest {
     @NotBlank(message = "Director is required")
     private String director;
 
-    @NotBlank(message = "Cast is required")
-    private String cast;
+    @NotBlank(message = "Actors are required")
+    private String actors;
 
     private String posterUrl;
 
@@ -44,7 +44,7 @@ public class AddMovieRequest {
     private String trailerUrl;
 
     @NotNull(message = "Status is required")
-    @EnumValidator(enumClass = MovieStatus.class, message = "Status must be NOW_SHOWING, COMING_SOON, or END_OF_SHOWING")
+    @EnumValidator(enumClass = MovieStatus.class, message = "Status must be SHOWING,UPCOMING")
     private String status;
 
     @NotBlank(message = "Language is required")

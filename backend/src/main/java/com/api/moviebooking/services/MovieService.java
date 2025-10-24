@@ -68,8 +68,8 @@ public class MovieService {
         if (request.getDirector() != null) {
             movie.setDirector(request.getDirector());
         }
-        if (request.getCast() != null) {
-            movie.setCast(request.getCast());
+        if (request.getActors() != null) {
+            movie.setActors(request.getActors());
         }
         if (request.getPosterUrl() != null) {
             movie.setPosterUrl(request.getPosterUrl());

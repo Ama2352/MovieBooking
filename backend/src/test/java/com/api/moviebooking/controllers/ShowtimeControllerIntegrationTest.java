@@ -113,7 +113,7 @@ class ShowtimeControllerIntegrationTest {
         testMovie.setDuration(120);
         testMovie.setMinimumAge(13);
         testMovie.setDirector("Test Director");
-        testMovie.setCast("Test Cast");
+        testMovie.setActors("Test Actors");
         testMovie.setTrailerUrl("http://example.com/trailer.mp4");
         testMovie.setStatus(MovieStatus.SHOWING);
         testMovie.setLanguage("English");
@@ -414,7 +414,7 @@ class ShowtimeControllerIntegrationTest {
         anotherMovie.setDuration(90);
         anotherMovie.setMinimumAge(16);
         anotherMovie.setDirector("Director");
-        anotherMovie.setCast("Cast");
+        anotherMovie.setActors("Actors");
         anotherMovie.setTrailerUrl("http://example.com/trailer.mp4");
         anotherMovie.setStatus(MovieStatus.SHOWING);
         anotherMovie.setLanguage("English");

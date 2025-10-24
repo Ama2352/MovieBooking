@@ -82,7 +82,7 @@ class MovieControllerIntegrationTest {
                 .duration(148)
                 .minimumAge(13)
                 .director("Christopher Nolan")
-                .cast("Leonardo DiCaprio, Tom Hardy, Ellen Page")
+                .actors("Leonardo DiCaprio, Tom Hardy, Ellen Page")
                 .posterUrl("http://example.com/inception.jpg")
                 .trailerUrl("http://example.com/inception-trailer.mp4")
                 .status("SHOWING")
@@ -114,7 +114,7 @@ class MovieControllerIntegrationTest {
                 .duration(120)
                 .minimumAge(13)
                 .director("Test Director")
-                .cast("Test Cast")
+                .actors("Test Actors")
                 .trailerUrl("http://example.com/trailer.mp4")
                 .status("SHOWING")
                 .language("English")
@@ -140,7 +140,7 @@ class MovieControllerIntegrationTest {
                 .duration(-1)
                 .minimumAge(-1)
                 .director("")
-                .cast("")
+                .actors("")
                 .trailerUrl("")
                 .status("INVALID_STATUS")
                 .language("")
@@ -167,7 +167,7 @@ class MovieControllerIntegrationTest {
         existingMovie.setDuration(120);
         existingMovie.setMinimumAge(13);
         existingMovie.setDirector("Director");
-        existingMovie.setCast("Cast");
+        existingMovie.setActors("Actors");
         existingMovie.setTrailerUrl("http://example.com/trailer.mp4");
         existingMovie.setStatus(MovieStatus.SHOWING);
         existingMovie.setLanguage("English");
@@ -181,7 +181,7 @@ class MovieControllerIntegrationTest {
                 .duration(90)
                 .minimumAge(16)
                 .director("Different Director")
-                .cast("Different Cast")
+                .actors("Different actors")
                 .trailerUrl("http://example.com/trailer2.mp4")
                 .status("SHOWING")
                 .language("English")
@@ -207,7 +207,7 @@ class MovieControllerIntegrationTest {
         movie.setDuration(120);
         movie.setMinimumAge(13);
         movie.setDirector("Test Director");
-        movie.setCast("Test Cast");
+        movie.setActors("Test Actors");
         movie.setTrailerUrl("http://example.com/trailer.mp4");
         movie.setStatus(MovieStatus.SHOWING);
         movie.setLanguage("English");
@@ -247,7 +247,7 @@ class MovieControllerIntegrationTest {
         movie.setDuration(120);
         movie.setMinimumAge(13);
         movie.setDirector("Original Director");
-        movie.setCast("Original Cast");
+        movie.setActors("Original Actors");
         movie.setTrailerUrl("http://example.com/trailer.mp4");
         movie.setStatus(MovieStatus.SHOWING);
         movie.setLanguage("English");
@@ -285,7 +285,7 @@ class MovieControllerIntegrationTest {
         movie.setDuration(120);
         movie.setMinimumAge(13);
         movie.setDirector("Test Director");
-        movie.setCast("Test Cast");
+        movie.setActors("Test Actors");
         movie.setTrailerUrl("http://example.com/trailer.mp4");
         movie.setStatus(MovieStatus.SHOWING);
         movie.setLanguage("English");
@@ -315,7 +315,7 @@ class MovieControllerIntegrationTest {
         movie.setDuration(120);
         movie.setMinimumAge(13);
         movie.setDirector("Director");
-        movie.setCast("Cast");
+        movie.setActors("Actors");
         movie.setTrailerUrl("http://example.com/trailer.mp4");
         movie.setStatus(MovieStatus.SHOWING);
         movie.setLanguage("English");
@@ -344,7 +344,7 @@ class MovieControllerIntegrationTest {
         movie.setDuration(120);
         movie.setMinimumAge(13);
         movie.setDirector("Director");
-        movie.setCast("Cast");
+        movie.setActors("Actors");
         movie.setTrailerUrl("http://example.com/trailer.mp4");
         movie.setStatus(MovieStatus.SHOWING);
         movie.setLanguage("English");
@@ -367,7 +367,7 @@ class MovieControllerIntegrationTest {
         movie1.setDuration(120);
         movie1.setMinimumAge(13);
         movie1.setDirector("Director 1");
-        movie1.setCast("Cast 1");
+        movie1.setActors("Actors 1");
         movie1.setTrailerUrl("http://example.com/trailer1.mp4");
         movie1.setStatus(MovieStatus.SHOWING);
         movie1.setLanguage("English");
@@ -380,7 +380,7 @@ class MovieControllerIntegrationTest {
         movie2.setDuration(90);
         movie2.setMinimumAge(16);
         movie2.setDirector("Director 2");
-        movie2.setCast("Cast 2");
+        movie2.setActors("Actors 2");
         movie2.setTrailerUrl("http://example.com/trailer2.mp4");
         movie2.setStatus(MovieStatus.UPCOMING);
         movie2.setLanguage("French");
@@ -406,7 +406,7 @@ class MovieControllerIntegrationTest {
         movie1.setDuration(148);
         movie1.setMinimumAge(13);
         movie1.setDirector("Nolan");
-        movie1.setCast("DiCaprio");
+        movie1.setActors("DiCaprio");
         movie1.setTrailerUrl("http://example.com/trailer.mp4");
         movie1.setStatus(MovieStatus.SHOWING);
         movie1.setLanguage("English");
@@ -419,7 +419,7 @@ class MovieControllerIntegrationTest {
         movie2.setDuration(169);
         movie2.setMinimumAge(13);
         movie2.setDirector("Nolan");
-        movie2.setCast("McConaughey");
+        movie2.setActors("McConaughey");
         movie2.setTrailerUrl("http://example.com/trailer.mp4");
         movie2.setStatus(MovieStatus.SHOWING);
         movie2.setLanguage("English");
@@ -445,7 +445,7 @@ class MovieControllerIntegrationTest {
         movie1.setDuration(120);
         movie1.setMinimumAge(13);
         movie1.setDirector("Director");
-        movie1.setCast("Cast");
+        movie1.setActors("Actors");
         movie1.setTrailerUrl("http://example.com/trailer.mp4");
         movie1.setStatus(MovieStatus.SHOWING);
         movie1.setLanguage("English");
@@ -458,7 +458,7 @@ class MovieControllerIntegrationTest {
         movie2.setDuration(90);
         movie2.setMinimumAge(16);
         movie2.setDirector("Director");
-        movie2.setCast("Cast");
+        movie2.setActors("Actors");
         movie2.setTrailerUrl("http://example.com/trailer.mp4");
         movie2.setStatus(MovieStatus.UPCOMING);
         movie2.setLanguage("English");
@@ -485,7 +485,7 @@ class MovieControllerIntegrationTest {
         movie1.setDuration(120);
         movie1.setMinimumAge(13);
         movie1.setDirector("Director");
-        movie1.setCast("Cast");
+        movie1.setActors("Actors");
         movie1.setTrailerUrl("http://example.com/trailer.mp4");
         movie1.setStatus(MovieStatus.SHOWING);
         movie1.setLanguage("English");
@@ -498,7 +498,7 @@ class MovieControllerIntegrationTest {
         movie2.setDuration(90);
         movie2.setMinimumAge(16);
         movie2.setDirector("Director");
-        movie2.setCast("Cast");
+        movie2.setActors("Actors");
         movie2.setTrailerUrl("http://example.com/trailer.mp4");
         movie2.setStatus(MovieStatus.SHOWING);
         movie2.setLanguage("English");
@@ -525,7 +525,7 @@ class MovieControllerIntegrationTest {
         movie1.setDuration(148);
         movie1.setMinimumAge(13);
         movie1.setDirector("Nolan");
-        movie1.setCast("DiCaprio");
+        movie1.setActors("DiCaprio");
         movie1.setTrailerUrl("http://example.com/trailer.mp4");
         movie1.setStatus(MovieStatus.SHOWING);
         movie1.setLanguage("English");
@@ -538,7 +538,7 @@ class MovieControllerIntegrationTest {
         movie2.setDuration(169);
         movie2.setMinimumAge(13);
         movie2.setDirector("Nolan");
-        movie2.setCast("McConaughey");
+        movie2.setActors("McConaughey");
         movie2.setTrailerUrl("http://example.com/trailer.mp4");
         movie2.setStatus(MovieStatus.UPCOMING);
         movie2.setLanguage("English");

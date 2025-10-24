@@ -46,7 +46,7 @@ public class Movie {
     private String director;
 
     @Column(columnDefinition = "TEXT")
-    private String cast;
+    private String actors;
 
     private String posterUrl;
 

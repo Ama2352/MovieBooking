@@ -16,7 +16,7 @@ public class MovieDataResponse {
     private Integer duration;
     private Integer minimumAge;
     private String director;
-    private String cast;
+    private String actors;
     private String posterUrl;
     private String posterCloudinaryId;
     private String trailerUrl;
