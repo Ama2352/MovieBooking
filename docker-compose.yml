@@ -5,6 +5,8 @@ services:
     restart: always
     ports:
       - "5432:5432"
+    env_file:
+      - ./backend/.env
     volumes:
       - db_data:/var/lib/postgresql/data
 
