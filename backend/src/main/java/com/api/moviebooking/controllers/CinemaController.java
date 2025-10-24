@@ -1,6 +1,7 @@
 package com.api.moviebooking.controllers;
 
 import java.util.UUID;
+import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -67,6 +68,12 @@ public class CinemaController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping
+    public ResponseEntity<List<CinemaDataResponse>> getAllCinemas() {
+        List<CinemaDataResponse> response = cinemaService.getAllCinemas();
+        return ResponseEntity.ok(response);
+    }
+
     // Room CRUD endpoints
     @PostMapping("/rooms")
     public ResponseEntity<RoomDataResponse> addRoom(@Valid @RequestBody AddRoomRequest request) {
@@ -94,6 +101,12 @@ public class CinemaController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/rooms")
+    public ResponseEntity<List<RoomDataResponse>> getAllRooms() {
+        List<RoomDataResponse> response = cinemaService.getAllRooms();
+        return ResponseEntity.ok(response);
+    }
+
     // Snack CRUD endpoints
     @PostMapping("/snacks")
     public ResponseEntity<SnackDataResponse> addSnack(@Valid @RequestBody AddSnackRequest request) {
@@ -118,6 +131,12 @@ public class CinemaController {
     @GetMapping("/snacks/{snackId}")
     public ResponseEntity<SnackDataResponse> getSnack(@PathVariable UUID snackId) {
         SnackDataResponse response = cinemaService.getSnack(snackId);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/snacks")
+    public ResponseEntity<List<SnackDataResponse>> getAllSnacks() {
+        List<SnackDataResponse> response = cinemaService.getAllSnacks();
         return ResponseEntity.ok(response);
     }
 }

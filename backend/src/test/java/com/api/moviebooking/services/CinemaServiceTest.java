@@ -17,7 +17,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 
+import com.api.moviebooking.helpers.exceptions.EntityDeletionForbiddenException;
 import com.api.moviebooking.helpers.mapstructs.CinemaMapper;
 import com.api.moviebooking.helpers.mapstructs.RoomMapper;
 import com.api.moviebooking.helpers.mapstructs.SnackMapper;
@@ -141,7 +143,7 @@ class CinemaServiceTest {
         existing.setSnacks(new ArrayList<>());
         when(cinemaRepo.findById(id)).thenReturn(Optional.of(existing));
 
-        assertThrows(IllegalStateException.class, () -> cinemaService.deleteCinema(id));
+        assertThrows(EntityDeletionForbiddenException.class, () -> cinemaService.deleteCinema(id));
     }
 
     @Test
@@ -154,7 +156,7 @@ class CinemaServiceTest {
         existing.setSnacks(List.of(snack));
         when(cinemaRepo.findById(id)).thenReturn(Optional.of(existing));
 
-        assertThrows(IllegalStateException.class, () -> cinemaService.deleteCinema(id));
+        assertThrows(EntityDeletionForbiddenException.class, () -> cinemaService.deleteCinema(id));
     }
 
     @Test

@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.UUID;
 
 import org.hibernate.annotations.UuidGenerator;
-
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -32,10 +31,10 @@ public class Cinema {
     private String address;
     private String hotline;
 
-    @OneToMany(mappedBy = "cinema")
+    @OneToMany(mappedBy = "cinema", cascade = { CascadeType.PERSIST, CascadeType.MERGE })
     private List<Room> rooms = new ArrayList<>();
 
-    @OneToMany(mappedBy = "cinema")
+    @OneToMany(mappedBy = "cinema", cascade = { CascadeType.PERSIST, CascadeType.MERGE })
     private List<Snack> snacks = new ArrayList<>();
 
 }

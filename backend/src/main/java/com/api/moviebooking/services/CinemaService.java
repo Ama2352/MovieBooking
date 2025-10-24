@@ -1,10 +1,13 @@
 package com.api.moviebooking.services;
 
 import java.util.UUID;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.api.moviebooking.helpers.exceptions.EntityDeletionForbiddenException;
 import com.api.moviebooking.helpers.mapstructs.CinemaMapper;
 import com.api.moviebooking.helpers.mapstructs.RoomMapper;
 import com.api.moviebooking.helpers.mapstructs.SnackMapper;
@@ -28,6 +31,7 @@ import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class CinemaService {
 
     private final CinemaRepo cinemaRepo;
@@ -42,14 +46,12 @@ public class CinemaService {
                 .orElseThrow(() -> new RuntimeException("Cinema not found"));
     }
 
-    @Transactional
     public CinemaDataResponse addCinema(AddCinemaRequest request) {
         Cinema newCinema = cinemaMapper.toEntity(request);
         cinemaRepo.save(newCinema);
         return cinemaMapper.toDataResponse(newCinema);
     }
 
-    @Transactional
     public CinemaDataResponse updateCinema(UUID cinemaId, UpdateCinemaRequest request) {
         Cinema cinema = findCinemaById(cinemaId);
         if (request.getName() != null) {
@@ -65,16 +67,19 @@ public class CinemaService {
         return cinemaMapper.toDataResponse(cinema);
     }
 
-    @Transactional
+    // For testing purpose only
+    public void deleteCinema_violatesForeignKeyConstraint(UUID id) {
+        Cinema cinema = findCinemaById(id);
+        cinemaRepo.delete(cinema);
+    }
+
     public void deleteCinema(UUID id) {
         Cinema cinema = findCinemaById(id);
 
         if (!cinema.getRooms().isEmpty()) {
-            throw new IllegalStateException("Cannot delete cinema with existing rooms");
-        }
-
-        if (!cinema.getSnacks().isEmpty()) {
-            throw new IllegalStateException("Cannot delete cinema with existing snacks");
+            throw new EntityDeletionForbiddenException();
+        } else if (!cinema.getSnacks().isEmpty()) {
+            throw new EntityDeletionForbiddenException();
         }
 
         cinemaRepo.delete(cinema);
@@ -91,7 +96,6 @@ public class CinemaService {
                 .orElseThrow(() -> new RuntimeException("Room not found"));
     }
 
-    @Transactional
     public RoomDataResponse addRoom(AddRoomRequest request) {
         Cinema cinema = findCinemaById(request.getCinemaId());
         Room newRoom = roomMapper.toEntity(request);
@@ -100,7 +104,6 @@ public class CinemaService {
         return roomMapper.toDataResponse(newRoom);
     }
 
-    @Transactional
     public RoomDataResponse updateRoom(UUID roomId, UpdateRoomRequest request) {
         Room room = findRoomById(roomId);
         if (request.getRoomType() != null) {
@@ -113,7 +116,6 @@ public class CinemaService {
         return roomMapper.toDataResponse(room);
     }
 
-    @Transactional
     public void deleteRoom(UUID id) {
         Room room = findRoomById(id);
         roomRepo.delete(room);
@@ -130,7 +132,6 @@ public class CinemaService {
                 .orElseThrow(() -> new RuntimeException("Snack not found"));
     }
 
-    @Transactional
     public SnackDataResponse addSnack(AddSnackRequest request) {
         Cinema cinema = findCinemaById(request.getCinemaId());
         Snack newSnack = snackMapper.toEntity(request);
@@ -139,7 +140,6 @@ public class CinemaService {
         return snackMapper.toDataResponse(newSnack);
     }
 
-    @Transactional
     public SnackDataResponse updateSnack(UUID snackId, UpdateSnackRequest request) {
         Snack snack = findSnackById(snackId);
         if (request.getName() != null) {
@@ -158,7 +158,6 @@ public class CinemaService {
         return snackMapper.toDataResponse(snack);
     }
 
-    @Transactional
     public void deleteSnack(UUID id) {
         Snack snack = findSnackById(id);
         snackRepo.delete(snack);
@@ -167,5 +166,24 @@ public class CinemaService {
     public SnackDataResponse getSnack(UUID snackId) {
         Snack snack = findSnackById(snackId);
         return snackMapper.toDataResponse(snack);
+    }
+
+    // Get all methods
+    public List<CinemaDataResponse> getAllCinemas() {
+        return cinemaRepo.findAll().stream()
+                .map(cinemaMapper::toDataResponse)
+                .collect(Collectors.toList());
+    }
+
+    public List<RoomDataResponse> getAllRooms() {
+        return roomRepo.findAll().stream()
+                .map(roomMapper::toDataResponse)
+                .collect(Collectors.toList());
+    }
+
+    public List<SnackDataResponse> getAllSnacks() {
+        return snackRepo.findAll().stream()
+                .map(snackMapper::toDataResponse)
+                .collect(Collectors.toList());
     }
 }

@@ -1,4 +1,4 @@
-package com.api.moviebooking.controllers;
+package com.api.moviebooking.integrations;
 
 import static io.restassured.module.mockmvc.RestAssuredMockMvc.*;
 import static org.hamcrest.Matchers.*;
@@ -39,7 +39,7 @@ import io.restassured.module.mockmvc.RestAssuredMockMvc;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Testcontainers
 @Transactional
-class UserControllerIntegrationTest {
+class UserIntegrationTest {
 
     @Container
     @ServiceConnection
@@ -124,7 +124,7 @@ class UserControllerIntegrationTest {
         String invalidToken = "invalid.refresh.token";
 
         given()
-                .param("refreshToken", invalidToken)
+                        .param("refreshToken", invalidToken)
                 .when()
                 .post("/users/logout")
                 .then()
