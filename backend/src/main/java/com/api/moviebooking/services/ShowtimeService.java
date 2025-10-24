@@ -8,6 +8,7 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.api.moviebooking.helpers.exceptions.ResourceNotFoundException;
 import com.api.moviebooking.helpers.mapstructs.ShowtimeMapper;
 import com.api.moviebooking.models.dtos.showtime.AddShowtimeRequest;
 import com.api.moviebooking.models.dtos.showtime.ShowtimeDataResponse;
@@ -32,17 +33,17 @@ public class ShowtimeService {
 
     private Showtime findShowtimeById(UUID showtimeId) {
         return showtimeRepo.findById(showtimeId)
-                .orElseThrow(() -> new RuntimeException("Showtime not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Showtime", "id", showtimeId));
     }
 
     private Room findRoomById(UUID roomId) {
         return roomRepo.findById(roomId)
-                .orElseThrow(() -> new RuntimeException("Room not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Room", "id", roomId));
     }
 
     private Movie findMovieById(UUID movieId) {
         return movieRepo.findById(movieId)
-                .orElseThrow(() -> new RuntimeException("Movie not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Movie", "id", movieId));
     }
 
     // Validate no overlap in the same room

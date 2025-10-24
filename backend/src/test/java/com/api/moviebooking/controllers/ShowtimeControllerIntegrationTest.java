@@ -219,7 +219,7 @@ class ShowtimeControllerIntegrationTest {
                 .when()
                 .post("/showtimes")
                 .then()
-                .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
+                .statusCode(HttpStatus.BAD_REQUEST.value());
     }
 
     @Test
@@ -254,7 +254,7 @@ class ShowtimeControllerIntegrationTest {
                 .when()
                 .get("/showtimes/" + randomId)
                 .then()
-                .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
+                .statusCode(HttpStatus.NOT_FOUND.value());
     }
 
     @Test

@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.api.moviebooking.helpers.exceptions.ResourceNotFoundException;
 import com.api.moviebooking.helpers.mapstructs.MovieMapper;
 import com.api.moviebooking.models.dtos.movie.AddMovieRequest;
 import com.api.moviebooking.models.dtos.movie.MovieDataResponse;
@@ -26,7 +27,7 @@ public class MovieService {
 
     private Movie findMovieById(UUID movieId) {
         return movieRepo.findById(movieId)
-                .orElseThrow(() -> new RuntimeException("Movie not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Movie", "id", movieId));
     }
 
     @Transactional

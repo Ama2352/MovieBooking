@@ -193,7 +193,7 @@ class MovieControllerIntegrationTest {
                 .when()
                 .post("/movies")
                 .then()
-                .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
+                .statusCode(HttpStatus.BAD_REQUEST.value());
     }
 
     @Test
@@ -225,7 +225,7 @@ class MovieControllerIntegrationTest {
     }
 
     @Test
-    @DisplayName("Should return 500 when movie not found")
+    @DisplayName("Should return 404 when movie not found")
     void testGetMovie_NotFound() {
         UUID randomId = UUID.randomUUID();
 
@@ -233,7 +233,7 @@ class MovieControllerIntegrationTest {
                 .when()
                 .get("/movies/" + randomId)
                 .then()
-                .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
+                .statusCode(HttpStatus.NOT_FOUND.value());
     }
 
     @Test
@@ -293,6 +293,9 @@ class MovieControllerIntegrationTest {
 
         UpdateMovieRequest request = UpdateMovieRequest.builder()
                 .title("Hacked Title")
+                .genre("Action") // Add valid fields to pass validation
+                .duration(120)
+                .status("SHOWING")
                 .build();
 
         given()
