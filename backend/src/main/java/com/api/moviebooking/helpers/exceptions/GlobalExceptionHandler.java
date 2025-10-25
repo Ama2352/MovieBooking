@@ -31,6 +31,18 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handle resource not found errors
+     * Returns HTTP 404 Not Found
+     */
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<CustomError> handleResourceNotFoundException(
+            ResourceNotFoundException exception, WebRequest webRequest) {
+        CustomError errorDetails = new CustomError(new Date(), exception.getMessage(),
+                webRequest.getDescription(false));
+        return new ResponseEntity<>(errorDetails, HttpStatus.NOT_FOUND);
+    }
+
+    /**
      * Handle access denied errors from Spring Security
      * Returns HTTP 403 Forbidden
      */
@@ -40,6 +52,30 @@ public class GlobalExceptionHandler {
         CustomError errorDetails = new CustomError(new Date(), "Access Denied: " + exception.getMessage(),
                 webRequest.getDescription(false));
         return new ResponseEntity<>(errorDetails, HttpStatus.FORBIDDEN);
+    }
+
+    /**
+     * Handle illegal argument exceptions
+     * Returns HTTP 400 Bad Request
+     */
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<CustomError> handleIllegalArgumentException(
+            IllegalArgumentException exception, WebRequest webRequest) {
+        CustomError errorDetails = new CustomError(new Date(), exception.getMessage(),
+                webRequest.getDescription(false));
+        return new ResponseEntity<>(errorDetails, HttpStatus.BAD_REQUEST);
+    }
+
+    /**
+     * Handle illegal state exceptions
+     * Returns HTTP 409 Conflict
+     */
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<CustomError> handleIllegalStateException(
+            IllegalStateException exception, WebRequest webRequest) {
+        CustomError errorDetails = new CustomError(new Date(), exception.getMessage(),
+                webRequest.getDescription(false));
+        return new ResponseEntity<>(errorDetails, HttpStatus.CONFLICT);
     }
 
     /**
