@@ -16,14 +16,17 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
+import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.utility.DockerImageName;
 
 import com.api.moviebooking.models.dtos.promotion.AddPromotionRequest;
 import com.api.moviebooking.models.dtos.promotion.UpdatePromotionRequest;
@@ -40,6 +43,7 @@ import io.restassured.module.mockmvc.RestAssuredMockMvc;
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Testcontainers
+@ActiveProfiles("test")
 @Transactional
 class PromotionIntegrationTest {
 
@@ -53,12 +57,16 @@ class PromotionIntegrationTest {
     @Autowired
     private PromotionRepo promotionRepo;
 
-    @DynamicPropertySource
-    static void configureProperties(DynamicPropertyRegistry registry) {
-        // Base64 encoded secret key (minimum 256 bits for HS256)
-        registry.add("jwt.secret",
-                () -> "dGVzdHNlY3JldHRlc3RzZWNyZXR0ZXN0c2VjcmV0dGVzdHNlY3JldHRlc3RzZWNyZXR0ZXN0c2VjcmV0");
-    }
+        @Container
+        @SuppressWarnings("resource")
+        static GenericContainer<?> redis = new GenericContainer<>(DockerImageName.parse("redis:7-alpine"))
+                        .withExposedPorts(6379);
+
+        @DynamicPropertySource
+        static void configureProperties(DynamicPropertyRegistry registry) {
+                registry.add("spring.data.redis.host", redis::getHost);
+                registry.add("spring.data.redis.port", redis::getFirstMappedPort);
+        }
 
     @BeforeEach
     void setUp() {
