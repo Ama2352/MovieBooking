@@ -1,18 +1,16 @@
 package com.api.moviebooking.models.entities;
 
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
+import java.math.BigDecimal;
 import java.util.UUID;
-
 import org.hibernate.annotations.UuidGenerator;
 
-import jakarta.persistence.CascadeType;
+import com.api.moviebooking.models.enums.SeatStatus;
+import com.api.moviebooking.models.enums.SeatType;
+
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -24,24 +22,19 @@ import lombok.Setter;
 @AllArgsConstructor
 @Getter
 @Setter
-@Table(name = "showtimes")
-public class Showtime {
+@Table(name = "showtime_seats")
+public class ShowtimeSeat {
 
     @Id
     @UuidGenerator
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    private Room room;
+    private Showtime showtime;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    private Movie movie;
+    private Seat seat;
 
-    private String format; // Ex: 2D Phụ đề Anh, 3D Phụ đề Việt
-
-    private LocalDateTime startTime;
-
-    @OneToMany(mappedBy = "showtime", cascade = { CascadeType.PERSIST, CascadeType.MERGE })
-    List<ShowtimeSeat> showtimeSeats = new ArrayList<>();
-
+    private SeatStatus status;
+    private BigDecimal price;
 }

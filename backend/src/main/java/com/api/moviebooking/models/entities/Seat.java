@@ -3,8 +3,9 @@ package com.api.moviebooking.models.entities;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-
 import org.hibernate.annotations.UuidGenerator;
+
+import com.api.moviebooking.models.enums.SeatType;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
@@ -23,23 +24,21 @@ import lombok.Setter;
 @AllArgsConstructor
 @Getter
 @Setter
-@Table(name = "rooms")
-public class Room {
+@Table(name = "seats")
+public class Seat {
 
     @Id
     @UuidGenerator
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    private Cinema cinema;
+    private Room room;
 
-    private String roomType; // IMAX, 4DX, STARIUM, etc.
-    private int roomNumber;
+    private int seatNumber;
+    private String rowLabel;
+    private SeatType seatType;
 
-    @OneToMany(mappedBy = "room", cascade = { CascadeType.PERSIST, CascadeType.MERGE })
-    private List<Seat> seats = new ArrayList<>();
-
-    @OneToMany(mappedBy = "room", cascade = { CascadeType.PERSIST, CascadeType.MERGE })
-    private List<Showtime> showtimes = new ArrayList<>();
+    @OneToMany(mappedBy = "seat", cascade = { CascadeType.PERSIST, CascadeType.MERGE })
+    private List<ShowtimeSeat> showtimeSeats = new ArrayList<>();
 
 }
