@@ -1,6 +1,8 @@
 package com.api.moviebooking.services;
 
+import java.security.Principal;
 import java.util.Map;
+import java.util.UUID;
 
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -34,6 +36,11 @@ public class UserService {
 
     public User findByEmail(String email) {
         return userRepo.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+    }
+
+    public User findUserById(UUID userId) {
+        return userRepo.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
     }
 
@@ -85,6 +92,11 @@ public class UserService {
     public User getCurrentUser() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         return findByEmail(email);
+    }
+
+    public UUID getUserIdFromPrincipal(Principal principal) {
+        String email = principal.getName();
+        return findByEmail(email).getId();
     }
 
     @Transactional

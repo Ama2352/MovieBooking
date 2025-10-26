@@ -8,6 +8,7 @@ import org.hibernate.annotations.UuidGenerator;
 
 import com.api.moviebooking.models.enums.MovieStatus;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -59,7 +60,7 @@ public class Movie {
 
     private String language;
 
-    @OneToMany(mappedBy = "movie")
+    @OneToMany(mappedBy = "movie", cascade = { CascadeType.PERSIST, CascadeType.MERGE })
     private List<Showtime> showtimes = new ArrayList<>();
 
 }

@@ -1,37 +1,33 @@
-package com.api.moviebooking.integrations;
+package com.api.moviebooking.controllers;
 
 import static io.restassured.module.mockmvc.RestAssuredMockMvc.*;
 import static org.hamcrest.Matchers.*;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
-
 import java.math.BigDecimal;
 import java.util.UUID;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.test.annotation.Commit;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
+import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.utility.DockerImageName;
 
-import com.api.moviebooking.helpers.exceptions.EntityDeletionForbiddenException;
 import com.api.moviebooking.models.dtos.cinema.AddCinemaRequest;
 import com.api.moviebooking.models.dtos.cinema.UpdateCinemaRequest;
 import com.api.moviebooking.models.dtos.room.AddRoomRequest;
@@ -39,10 +35,10 @@ import com.api.moviebooking.models.dtos.room.UpdateRoomRequest;
 import com.api.moviebooking.models.dtos.snack.AddSnackRequest;
 import com.api.moviebooking.models.dtos.snack.UpdateSnackRequest;
 import com.api.moviebooking.models.entities.Cinema;
-import com.api.moviebooking.models.entities.Room;
 import com.api.moviebooking.models.entities.Snack;
 import com.api.moviebooking.repositories.CinemaRepo;
 import com.api.moviebooking.repositories.RoomRepo;
+import com.api.moviebooking.repositories.SeatRepo;
 import com.api.moviebooking.repositories.SnackRepo;
 import com.api.moviebooking.services.CinemaService;
 
@@ -55,12 +51,24 @@ import io.restassured.module.mockmvc.RestAssuredMockMvc;
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Testcontainers
-@Transactional
-class CinemaIntegrationTest {
+@ActiveProfiles("test")
+class CinemaControllerIntegrationTest {
 
         @Container
         @ServiceConnection
-        static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:17");
+        static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>(
+                        DockerImageName.parse("postgres:15-alpine"));
+
+        @Container
+        @SuppressWarnings("resource")
+        static GenericContainer<?> redis = new GenericContainer<>(DockerImageName.parse("redis:7-alpine"))
+                        .withExposedPorts(6379);
+
+        @DynamicPropertySource
+        static void configureProperties(DynamicPropertyRegistry registry) {
+                registry.add("spring.data.redis.host", redis::getHost);
+                registry.add("spring.data.redis.port", redis::getFirstMappedPort);
+        }
 
         @Autowired
         private WebApplicationContext webApplicationContext;
@@ -72,17 +80,13 @@ class CinemaIntegrationTest {
         private RoomRepo roomRepo;
 
         @Autowired
+        private SeatRepo seatRepo;
+
+        @Autowired
         private SnackRepo snackRepo;
 
         @Autowired
         private CinemaService cinemaService;
-
-        @DynamicPropertySource
-        static void configureProperties(DynamicPropertyRegistry registry) {
-                // Base64 encoded secret key (minimum 256 bits for HS256)
-                registry.add("jwt.secret",
-                                () -> "dGVzdHNlY3JldHRlc3RzZWNyZXR0ZXN0c2VjcmV0dGVzdHNlY3JldHRlc3RzZWNyZXR0ZXN0c2VjcmV0");
-        }
 
         @BeforeEach
         void setUp() {
@@ -91,9 +95,10 @@ class CinemaIntegrationTest {
                                 .apply(springSecurity())
                                 .build());
 
-                // Clean up test data
+                // Clean up test data in correct order (children first, then parents)
                 snackRepo.deleteAll();
-                roomRepo.deleteAll();
+                seatRepo.deleteAll(); // Seats reference rooms
+                roomRepo.deleteAll(); // Rooms reference cinemas
                 cinemaRepo.deleteAll();
         }
 
@@ -527,7 +532,7 @@ class CinemaIntegrationTest {
                                 .statusCode(HttpStatus.OK.value())
                                 .body("name", equalTo("Coca Cola"))
                                 .body("description", equalTo("Soft drink"))
-                                .body("price", equalTo(30000))
+                                .body("price", equalTo(30000.0f))
                                 .body("type", equalTo("DRINK"));
         }
 
