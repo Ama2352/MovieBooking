@@ -1,4 +1,4 @@
-package com.api.moviebooking.controllers;
+package com.api.moviebooking.integrations;
 
 import static io.restassured.module.mockmvc.RestAssuredMockMvc.*;
 import static org.hamcrest.Matchers.*;
@@ -51,7 +51,7 @@ import io.restassured.module.mockmvc.RestAssuredMockMvc;
 @Testcontainers
 @ActiveProfiles("test")
 @Transactional
-class ShowtimeControllerIntegrationTest {
+class ShowtimeIntegrationTest {
 
         @Container
         @ServiceConnection
