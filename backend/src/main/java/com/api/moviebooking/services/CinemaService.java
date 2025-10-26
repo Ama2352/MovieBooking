@@ -46,12 +46,21 @@ public class CinemaService {
                 .orElseThrow(() -> new RuntimeException("Cinema not found"));
     }
 
+    /**
+     * Add a new cinema
+     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
+     */
     public CinemaDataResponse addCinema(AddCinemaRequest request) {
         Cinema newCinema = cinemaMapper.toEntity(request);
         cinemaRepo.save(newCinema);
         return cinemaMapper.toDataResponse(newCinema);
     }
 
+    /**
+     * Update cinema information
+     * Predicate nodes (d): 3 -> V(G) = d + 1 = 4
+     * Nodes: name!=null, address!=null, hotline!=null
+     */
     public CinemaDataResponse updateCinema(UUID cinemaId, UpdateCinemaRequest request) {
         Cinema cinema = findCinemaById(cinemaId);
         if (request.getName() != null) {
@@ -67,12 +76,21 @@ public class CinemaService {
         return cinemaMapper.toDataResponse(cinema);
     }
 
-    // For testing purpose only
+    /**
+     * Delete cinema (violates foreign key constraint - for testing only)
+     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
+     */
+    // For testing purpose only (this is not a main method)
     public void deleteCinema_violatesForeignKeyConstraint(UUID id) {
         Cinema cinema = findCinemaById(id);
         cinemaRepo.delete(cinema);
     }
 
+    /**
+     * Delete cinema with validation
+     * Predicate nodes (d): 2 -> V(G) = d + 1 = 3
+     * Nodes: !isEmpty(rooms), !isEmpty(snacks)
+     */
     public void deleteCinema(UUID id) {
         Cinema cinema = findCinemaById(id);
 
@@ -85,6 +103,10 @@ public class CinemaService {
         cinemaRepo.delete(cinema);
     }
 
+    /**
+     * Get cinema by ID
+     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
+     */
     public CinemaDataResponse getCinema(UUID cinemaId) {
         Cinema cinema = findCinemaById(cinemaId);
         return cinemaMapper.toDataResponse(cinema);
@@ -96,6 +118,10 @@ public class CinemaService {
                 .orElseThrow(() -> new RuntimeException("Room not found"));
     }
 
+    /**
+     * Add a new room to a cinema
+     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
+     */
     public RoomDataResponse addRoom(AddRoomRequest request) {
         Cinema cinema = findCinemaById(request.getCinemaId());
         Room newRoom = roomMapper.toEntity(request);
@@ -104,6 +130,11 @@ public class CinemaService {
         return roomMapper.toDataResponse(newRoom);
     }
 
+    /**
+     * Update room information
+     * Predicate nodes (d): 2 -> V(G) = d + 1 = 3
+     * Nodes: roomType!=null, roomNumber!=null
+     */
     public RoomDataResponse updateRoom(UUID roomId, UpdateRoomRequest request) {
         Room room = findRoomById(roomId);
         if (request.getRoomType() != null) {
@@ -116,11 +147,19 @@ public class CinemaService {
         return roomMapper.toDataResponse(room);
     }
 
+    /**
+     * Delete a room
+     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
+     */
     public void deleteRoom(UUID id) {
         Room room = findRoomById(id);
         roomRepo.delete(room);
     }
 
+    /**
+     * Get room by ID
+     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
+     */
     public RoomDataResponse getRoom(UUID roomId) {
         Room room = findRoomById(roomId);
         return roomMapper.toDataResponse(room);
@@ -132,6 +171,10 @@ public class CinemaService {
                 .orElseThrow(() -> new RuntimeException("Snack not found"));
     }
 
+    /**
+     * Add a new snack to a cinema
+     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
+     */
     public SnackDataResponse addSnack(AddSnackRequest request) {
         Cinema cinema = findCinemaById(request.getCinemaId());
         Snack newSnack = snackMapper.toEntity(request);
@@ -140,6 +183,11 @@ public class CinemaService {
         return snackMapper.toDataResponse(newSnack);
     }
 
+    /**
+     * Update snack information
+     * Predicate nodes (d): 4 -> V(G) = d + 1 = 5
+     * Nodes: name!=null, description!=null, price!=null, type!=null
+     */
     public SnackDataResponse updateSnack(UUID snackId, UpdateSnackRequest request) {
         Snack snack = findSnackById(snackId);
         if (request.getName() != null) {
@@ -158,29 +206,54 @@ public class CinemaService {
         return snackMapper.toDataResponse(snack);
     }
 
+    /**
+     * Delete a snack
+     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
+     */
     public void deleteSnack(UUID id) {
         Snack snack = findSnackById(id);
         snackRepo.delete(snack);
     }
 
+    /**
+     * Get snack by ID
+     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
+     */
+    /**
+     * Get snack by ID
+     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
+     */
     public SnackDataResponse getSnack(UUID snackId) {
         Snack snack = findSnackById(snackId);
         return snackMapper.toDataResponse(snack);
     }
 
     // Get all methods
+
+    /**
+     * Get all cinemas
+     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
+     */
     public List<CinemaDataResponse> getAllCinemas() {
         return cinemaRepo.findAll().stream()
                 .map(cinemaMapper::toDataResponse)
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Get all rooms
+     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
+     */
     public List<RoomDataResponse> getAllRooms() {
         return roomRepo.findAll().stream()
                 .map(roomMapper::toDataResponse)
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Get all snacks
+     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
+     */
     public List<SnackDataResponse> getAllSnacks() {
         return snackRepo.findAll().stream()
                 .map(snackMapper::toDataResponse)

@@ -34,6 +34,8 @@ public class RedisLockService {
 
     /**
      * Attempt to acquire a distributed lock
+     * Predicate nodes (d): 2 -> V(G) = d + 1 = 3
+     * Nodes: success==TRUE, catch
      * 
      * @param lockKey    Unique key for the lock
      * @param lockValue  Unique identifier (usually UUID) to identify lock owner
@@ -62,6 +64,8 @@ public class RedisLockService {
 
     /**
      * Release a distributed lock (only if owned by the caller)
+     * Predicate nodes (d): 3 -> V(G) = d + 1 = 4
+     * Nodes: lockValue.equals(currentValue), deleted==TRUE, catch
      * 
      * @param lockKey   The lock key to release
      * @param lockValue The lock owner's identifier
@@ -91,6 +95,8 @@ public class RedisLockService {
 
     /**
      * Check if a lock exists and is active
+     * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
+     * Nodes: catch
      */
     public boolean isLocked(String lockKey) {
         try {
@@ -103,6 +109,8 @@ public class RedisLockService {
 
     /**
      * Get remaining TTL for a lock in seconds
+     * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
+     * Nodes: catch
      */
     public Long getLockTTL(String lockKey) {
         try {
@@ -115,6 +123,8 @@ public class RedisLockService {
 
     /**
      * Extend lock TTL (if owned by caller)
+     * Predicate nodes (d): 3 -> V(G) = d + 1 = 4
+     * Nodes: lockValue.equals(currentValue), currentTTL>0, catch
      */
     public boolean extendLock(String lockKey, String lockValue, long additionalSeconds) {
         try {
@@ -136,6 +146,7 @@ public class RedisLockService {
 
     /**
      * Generate lock key for a specific seat in a showtime
+     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
      */
     public String generateSeatLockKey(UUID showtimeId, UUID seatId) {
         return SEAT_LOCK_PREFIX + showtimeId + ":" + seatId;
@@ -143,6 +154,7 @@ public class RedisLockService {
 
     /**
      * Generate lock key for user's booking session
+     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
      */
     public String generateUserSessionKey(UUID userId, UUID showtimeId) {
         return USER_LOCK_PREFIX + userId + ":showtime:" + showtimeId;
@@ -150,6 +162,7 @@ public class RedisLockService {
 
     /**
      * Generate lock key for showtime-level operations
+     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
      */
     public String generateShowtimeLockKey(UUID showtimeId) {
         return SHOWTIME_LOCK_PREFIX + showtimeId;
@@ -158,6 +171,8 @@ public class RedisLockService {
     /**
      * Lock multiple seats atomically for a user
      * Returns true only if ALL seats can be locked
+     * Predicate nodes (d): 3 -> V(G) = d + 1 = 4
+     * Nodes: for loop (isLocked check), for loop (acquire), !acquireLock
      */
     public boolean acquireMultipleSeatsLock(UUID showtimeId, Iterable<UUID> seatIds,
             String lockToken, long ttlSeconds) {
@@ -187,6 +202,8 @@ public class RedisLockService {
 
     /**
      * Release multiple seat locks
+     * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
+     * Nodes: for loop
      */
     public void releaseMultipleSeatsLock(UUID showtimeId, Iterable<UUID> seatIds, String lockToken) {
         for (UUID seatId : seatIds) {
@@ -197,6 +214,7 @@ public class RedisLockService {
 
     /**
      * Rollback seat locks in case of partial failure
+     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
      */
     private void rollbackSeatLocks(UUID showtimeId, Iterable<UUID> seatIds, String lockToken) {
         log.warn("Rolling back seat locks for showtime: {}", showtimeId);

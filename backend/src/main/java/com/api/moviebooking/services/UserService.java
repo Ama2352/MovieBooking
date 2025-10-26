@@ -34,16 +34,29 @@ public class UserService {
     private final JwtService jwtService;
     private final CustomUserDetailsService customUserDetailsService;
 
+    /**
+     * Find user by email
+     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
+     */
     public User findByEmail(String email) {
         return userRepo.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
     }
 
+    /**
+     * Find user by ID
+     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
+     */
     public User findUserById(UUID userId) {
         return userRepo.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
     }
 
+    /**
+     * Register new user with validation
+     * Predicate nodes (d): 2 -> V(G) = d + 1 = 3
+     * Nodes: existsByEmail, !equals(password, confirmPassword)
+     */
     public void register(RegisterRequest request) {
         String email = request.getEmail();
         String username = request.getUsername();
@@ -72,6 +85,10 @@ public class UserService {
         userRepo.save(user);
     }
 
+    /**
+     * Login user and generate tokens
+     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
+     */
     public Map<String, String> login(LoginRequest request) {
         Authentication authentication = authManager
                 .authenticate(new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
@@ -89,16 +106,28 @@ public class UserService {
                 "refreshToken", refreshToken);
     }
 
+    /**
+     * Get currently authenticated user from security context
+     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
+     */
     public User getCurrentUser() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         return findByEmail(email);
     }
 
+    /**
+     * Extract user ID from principal
+     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
+     */
     public UUID getUserIdFromPrincipal(Principal principal) {
         String email = principal.getName();
         return findByEmail(email).getId();
     }
 
+    /**
+     * Add refresh token to user's token collection
+     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
+     */
     @Transactional
     public void addUserRefreshToken(String refreshToken, String email) {
         User user = findByEmail(email);
@@ -108,6 +137,11 @@ public class UserService {
         user.getRefreshTokens().add(newToken);
     }
 
+    /**
+     * Logout user by revoking refresh token
+     * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
+     * Nodes: catch
+     */
     public void logout(String refreshToken) {
         try {
             jwtService.revokeRefreshToken(refreshToken);
@@ -117,6 +151,11 @@ public class UserService {
 
     }
 
+    /**
+     * Logout user from all sessions
+     * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
+     * Nodes: catch
+     */
     public void logoutAllSessions(String email) {
         try {
             jwtService.revokeAllUserRefreshTokens(email);
@@ -125,6 +164,11 @@ public class UserService {
         }
     }
 
+    /**
+     * Refresh access token using valid refresh token
+     * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
+     * Nodes: !validateRefreshToken
+     */
     public String refreshAccessToken(String refreshToken) {
         if (!jwtService.validateRefreshToken(refreshToken)) {
             throw new IllegalArgumentException("Invalid refresh token");

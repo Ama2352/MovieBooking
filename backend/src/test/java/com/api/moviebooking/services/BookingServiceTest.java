@@ -27,13 +27,13 @@ import com.api.moviebooking.helpers.exceptions.ResourceNotFoundException;
 import com.api.moviebooking.helpers.exceptions.SeatLockedException;
 import com.api.moviebooking.models.dtos.booking.LockSeatsRequest;
 import com.api.moviebooking.models.dtos.booking.LockSeatsResponse;
+import com.api.moviebooking.models.dtos.booking.BookingResponse;
 import com.api.moviebooking.models.entities.*;
 import com.api.moviebooking.models.enums.SeatStatus;
 import com.api.moviebooking.models.enums.SeatType;
 import com.api.moviebooking.repositories.*;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("BookingService Unit Tests")
 class BookingServiceTest {
 
     @Mock
@@ -353,6 +353,21 @@ class BookingServiceTest {
     }
 
     @Test
+    @DisplayName("Should handle release seats when no active lock exists")
+    void testReleaseSeats_NoActiveLock() {
+        // Arrange
+        when(seatLockRepo.findActiveLockByUserAndShowtime(userId, showtimeId))
+                .thenReturn(Optional.empty());
+
+        // Act
+        bookingService.releaseSeats(userId, showtimeId);
+
+        // Assert - No operations should be performed
+        verify(showtimeSeatRepo, never()).updateMultipleSeatsStatus(any(), any());
+        verify(redisLockService, never()).releaseMultipleSeatsLock(any(), any(), any());
+    }
+
+    @Test
     @DisplayName("Should cleanup expired locks")
     void testCleanupExpiredLocks() {
         // Arrange
@@ -379,5 +394,312 @@ class BookingServiceTest {
         // Assert
         verify(showtimeSeatRepo, times(2)).updateMultipleSeatsStatus(anyList(), eq(SeatStatus.AVAILABLE));
         verify(seatLockRepo, times(2)).save(any(SeatLock.class));
+    }
+
+    @Test
+    @DisplayName("Should handle cleanup when no expired locks exist")
+    void testCleanupExpiredLocks_NoExpiredLocks() {
+        // Arrange
+        when(seatLockRepo.findExpiredLocks(any(LocalDateTime.class)))
+                .thenReturn(Arrays.asList());
+
+        // Act
+        bookingService.cleanupExpiredLocks();
+
+        // Assert - No cleanup operations should be performed
+        verify(showtimeSeatRepo, never()).updateMultipleSeatsStatus(any(), any());
+        verify(seatLockRepo, never()).save(any(SeatLock.class));
+    }
+
+    // ========== Additional tests for lockSeats coverage ==========
+
+    @Test
+    @DisplayName("Should throw ConcurrentBookingException when user has lock for same showtime")
+    void testLockSeats_UserHasLockForSameShowtime() {
+        // Arrange
+        LockSeatsRequest request = new LockSeatsRequest(showtimeId, Arrays.asList(seatId1));
+
+        SeatLock existingLock = new SeatLock();
+        existingLock.setId(UUID.randomUUID());
+        existingLock.setUser(mockUser);
+        existingLock.setShowtime(mockShowtime);
+        existingLock.setActive(true);
+
+        when(seatLockRepo.findAllActiveLocksForUser(userId))
+                .thenReturn(Arrays.asList(existingLock));
+
+        // Act & Assert
+        assertThrows(ConcurrentBookingException.class, () -> {
+            bookingService.lockSeats(userId, request);
+        });
+
+        verify(userRepo, never()).findById(any());
+    }
+
+    @Test
+    @DisplayName("Should release locks for different showtimes before locking new seats")
+    void testLockSeats_ReleasesLocksForDifferentShowtimes() {
+        // Arrange
+        UUID differentShowtimeId = UUID.randomUUID();
+        LockSeatsRequest request = new LockSeatsRequest(showtimeId, Arrays.asList(seatId1));
+
+        Showtime differentShowtime = new Showtime();
+        differentShowtime.setId(differentShowtimeId);
+        differentShowtime.setRoom(mockRoom);
+        differentShowtime.setMovie(mockMovie);
+
+        SeatLock existingLock = new SeatLock();
+        existingLock.setId(UUID.randomUUID());
+        existingLock.setUser(mockUser);
+        existingLock.setShowtime(differentShowtime); // Different showtime
+        existingLock.setLockedSeats(Arrays.asList(mockSeat2));
+        existingLock.setActive(true);
+        existingLock.setLockKey("old-lock-key");
+
+        when(seatLockRepo.findAllActiveLocksForUser(userId))
+                .thenReturn(Arrays.asList(existingLock));
+        when(userRepo.findById(userId)).thenReturn(Optional.of(mockUser));
+        when(showtimeRepo.findById(showtimeId)).thenReturn(Optional.of(mockShowtime));
+        when(showtimeSeatRepo.findByIdsAndShowtime(anyList(), eq(showtimeId)))
+                .thenReturn(Arrays.asList(mockSeat1));
+        when(redisLockService.acquireMultipleSeatsLock(eq(showtimeId), anyList(), anyString(), anyLong()))
+                .thenReturn(true);
+        when(seatLockRepo.save(any(SeatLock.class)))
+                .thenAnswer(invocation -> {
+                    SeatLock lock = invocation.getArgument(0);
+                    lock.setId(UUID.randomUUID());
+                    return lock;
+                });
+
+        // Act
+        bookingService.lockSeats(userId, request);
+
+        // Assert - Old lock should be released
+        verify(showtimeSeatRepo, atLeastOnce()).updateMultipleSeatsStatus(anyList(), eq(SeatStatus.AVAILABLE));
+        verify(redisLockService).releaseMultipleSeatsLock(eq(differentShowtimeId), anyList(), eq("old-lock-key"));
+    }
+
+    @Test
+    @DisplayName("Should throw ResourceNotFoundException when showtime not found")
+    void testLockSeats_ShowtimeNotFound() {
+        // Arrange
+        LockSeatsRequest request = new LockSeatsRequest(showtimeId, Arrays.asList(seatId1));
+
+        when(seatLockRepo.findAllActiveLocksForUser(userId))
+                .thenReturn(Arrays.asList());
+        when(userRepo.findById(userId)).thenReturn(Optional.of(mockUser));
+        when(showtimeRepo.findById(showtimeId)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        assertThrows(ResourceNotFoundException.class, () -> {
+            bookingService.lockSeats(userId, request);
+        });
+    }
+
+    @Test
+    @DisplayName("Should throw ResourceNotFoundException when seats not found")
+    void testLockSeats_SeatsNotFound() {
+        // Arrange
+        LockSeatsRequest request = new LockSeatsRequest(showtimeId, Arrays.asList(seatId1, seatId2));
+
+        when(seatLockRepo.findAllActiveLocksForUser(userId))
+                .thenReturn(Arrays.asList());
+        when(userRepo.findById(userId)).thenReturn(Optional.of(mockUser));
+        when(showtimeRepo.findById(showtimeId)).thenReturn(Optional.of(mockShowtime));
+        when(showtimeSeatRepo.findByIdsAndShowtime(anyList(), eq(showtimeId)))
+                .thenReturn(Arrays.asList(mockSeat1)); // Only 1 seat returned instead of 2
+
+        // Act & Assert
+        assertThrows(ResourceNotFoundException.class, () -> {
+            bookingService.lockSeats(userId, request);
+        });
+    }
+
+    @Test
+    @DisplayName("Should rollback Redis lock on database error")
+    void testLockSeats_RollbackOnError() {
+        // Arrange
+        LockSeatsRequest request = new LockSeatsRequest(showtimeId, Arrays.asList(seatId1));
+
+        when(seatLockRepo.findAllActiveLocksForUser(userId))
+                .thenReturn(Arrays.asList());
+        when(userRepo.findById(userId)).thenReturn(Optional.of(mockUser));
+        when(showtimeRepo.findById(showtimeId)).thenReturn(Optional.of(mockShowtime));
+        when(showtimeSeatRepo.findByIdsAndShowtime(anyList(), eq(showtimeId)))
+                .thenReturn(Arrays.asList(mockSeat1));
+        when(redisLockService.acquireMultipleSeatsLock(eq(showtimeId), anyList(), anyString(), anyLong()))
+                .thenReturn(true);
+        doThrow(new RuntimeException("Database error"))
+                .when(showtimeSeatRepo).updateMultipleSeatsStatus(anyList(), any());
+
+        // Act & Assert
+        assertThrows(RuntimeException.class, () -> {
+            bookingService.lockSeats(userId, request);
+        });
+
+        // Verify rollback happened
+        verify(redisLockService).releaseMultipleSeatsLock(eq(showtimeId), anyList(), anyString());
+    }
+
+    // ========== Additional tests for confirmBooking coverage ==========
+
+    @Test
+    @DisplayName("Should throw IllegalArgumentException when lock does not belong to user")
+    void testConfirmBooking_LockDoesNotBelongToUser() {
+        // Arrange
+        UUID lockId = UUID.randomUUID();
+        UUID differentUserId = UUID.randomUUID();
+        User differentUser = new User();
+        differentUser.setId(differentUserId);
+
+        SeatLock mockLock = new SeatLock();
+        mockLock.setId(lockId);
+        mockLock.setUser(differentUser); // Different user
+        mockLock.setShowtime(mockShowtime);
+        mockLock.setActive(true);
+
+        when(seatLockRepo.findById(lockId)).thenReturn(Optional.of(mockLock));
+
+        // Act & Assert
+        assertThrows(IllegalArgumentException.class, () -> {
+            bookingService.confirmBooking(userId, lockId);
+        });
+    }
+
+    @Test
+    @DisplayName("Should throw LockExpiredException when lock is not active")
+    void testConfirmBooking_LockNotActive() {
+        // Arrange
+        UUID lockId = UUID.randomUUID();
+        SeatLock inactiveLock = new SeatLock();
+        inactiveLock.setId(lockId);
+        inactiveLock.setUser(mockUser);
+        inactiveLock.setShowtime(mockShowtime);
+        inactiveLock.setActive(false); // Not active
+        inactiveLock.setExpiresAt(LocalDateTime.now().plusMinutes(5));
+
+        when(seatLockRepo.findById(lockId)).thenReturn(Optional.of(inactiveLock));
+
+        // Act & Assert
+        assertThrows(LockExpiredException.class, () -> {
+            bookingService.confirmBooking(userId, lockId);
+        });
+    }
+
+    // ========== Tests for checkAvailability ==========
+
+    @Test
+    @DisplayName("Should return seat availability without releasing locks for unauthenticated user")
+    void testCheckAvailability_UnauthenticatedUser() {
+        // Arrange
+        mockSeat1.setStatus(SeatStatus.AVAILABLE);
+        mockSeat2.setStatus(SeatStatus.LOCKED);
+
+        when(showtimeSeatRepo.findByShowtimeId(showtimeId))
+                .thenReturn(Arrays.asList(mockSeat1, mockSeat2));
+
+        // Act
+        var response = bookingService.checkAvailability(showtimeId, null);
+
+        // Assert
+        assertNotNull(response);
+        assertEquals(showtimeId, response.getShowtimeId());
+        assertEquals(1, response.getAvailableSeats().size());
+        assertEquals(1, response.getLockedSeats().size());
+        assertEquals(0, response.getBookedSeats().size());
+        verify(seatLockRepo, never()).findAllActiveLocksForUser(any());
+    }
+
+    @Test
+    @DisplayName("Should release existing locks and return availability for authenticated user")
+    void testCheckAvailability_AuthenticatedUserWithExistingLocks() {
+        // Arrange
+        SeatLock existingLock = new SeatLock();
+        existingLock.setId(UUID.randomUUID());
+        existingLock.setUser(mockUser);
+        existingLock.setShowtime(mockShowtime);
+        existingLock.setLockedSeats(Arrays.asList(mockSeat1));
+        existingLock.setActive(true);
+        existingLock.setLockKey("existing-lock");
+
+        when(seatLockRepo.findAllActiveLocksForUser(userId))
+                .thenReturn(Arrays.asList(existingLock));
+        when(showtimeSeatRepo.findByShowtimeId(showtimeId))
+                .thenReturn(Arrays.asList(mockSeat1, mockSeat2));
+
+        // Act
+        var response = bookingService.checkAvailability(showtimeId, userId);
+
+        // Assert
+        assertNotNull(response);
+        verify(showtimeSeatRepo).updateMultipleSeatsStatus(anyList(), eq(SeatStatus.AVAILABLE));
+        verify(redisLockService).releaseMultipleSeatsLock(any(), anyList(), eq("existing-lock"));
+    }
+
+    @Test
+    @DisplayName("Should return availability with all seat statuses")
+    void testCheckAvailability_AllSeatStatuses() {
+        // Arrange
+        ShowtimeSeat bookedSeat = new ShowtimeSeat();
+        bookedSeat.setId(UUID.randomUUID());
+        bookedSeat.setStatus(SeatStatus.BOOKED);
+
+        mockSeat1.setStatus(SeatStatus.AVAILABLE);
+        mockSeat2.setStatus(SeatStatus.LOCKED);
+
+        when(seatLockRepo.findAllActiveLocksForUser(userId))
+                .thenReturn(Arrays.asList());
+        when(showtimeSeatRepo.findByShowtimeId(showtimeId))
+                .thenReturn(Arrays.asList(mockSeat1, mockSeat2, bookedSeat));
+
+        // Act
+        var response = bookingService.checkAvailability(showtimeId, userId);
+
+        // Assert
+        assertEquals(1, response.getAvailableSeats().size());
+        assertEquals(1, response.getLockedSeats().size());
+        assertEquals(1, response.getBookedSeats().size());
+    }
+
+    @Test
+    @DisplayName("Should not release locks when user has no active locks")
+    void testCheckAvailability_NoActiveLocks() {
+        // Arrange
+        when(seatLockRepo.findAllActiveLocksForUser(userId))
+                .thenReturn(Arrays.asList());
+        when(showtimeSeatRepo.findByShowtimeId(showtimeId))
+                .thenReturn(Arrays.asList(mockSeat1, mockSeat2));
+
+        // Act
+        bookingService.checkAvailability(showtimeId, userId);
+
+        // Assert - No release operations
+        verify(redisLockService, never()).releaseMultipleSeatsLock(any(), any(), any());
+    }
+
+    // ========== Tests for getUserBookings ==========
+
+    @Test
+    @DisplayName("Should return user booking history")
+    void testGetUserBookings() {
+        // Arrange
+        Booking booking1 = new Booking();
+        booking1.setId(UUID.randomUUID());
+        booking1.setUser(mockUser);
+        booking1.setShowtime(mockShowtime);
+        booking1.setBookedSeats(Arrays.asList(mockSeat1, mockSeat2));
+        booking1.setTotalPrice(new BigDecimal("20.00"));
+
+        when(bookingRepo.findByUserId(userId))
+                .thenReturn(Arrays.asList(booking1));
+
+        // Act
+        List<BookingResponse> responses = bookingService.getUserBookings(userId);
+
+        // Assert
+        assertNotNull(responses);
+        assertEquals(1, responses.size());
+        assertEquals(booking1.getId(), responses.get(0).getBookingId());
+        verify(bookingRepo).findByUserId(userId);
     }
 }

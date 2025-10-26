@@ -21,7 +21,6 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("RedisLockService Unit Tests")
 class RedisLockServiceTest {
 
     @Mock
@@ -47,7 +46,6 @@ class RedisLockServiceTest {
     // ==================== acquireLock Tests ====================
 
     @Test
-    @DisplayName("Should successfully acquire lock when key doesn't exist")
     void testAcquireLock_Success() {
         // Arrange
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
@@ -63,7 +61,6 @@ class RedisLockServiceTest {
     }
 
     @Test
-    @DisplayName("Should fail to acquire lock when key already exists")
     void testAcquireLock_Failure_AlreadyLocked() {
         // Arrange
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
@@ -79,7 +76,6 @@ class RedisLockServiceTest {
     }
 
     @Test
-    @DisplayName("Should return false when Redis throws exception during acquire")
     void testAcquireLock_RedisException() {
         // Arrange
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
@@ -94,7 +90,6 @@ class RedisLockServiceTest {
     }
 
     @Test
-    @DisplayName("Should handle null response from Redis")
     void testAcquireLock_NullResponse() {
         // Arrange
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
@@ -110,7 +105,6 @@ class RedisLockServiceTest {
     // ==================== releaseLock Tests ====================
 
     @Test
-    @DisplayName("Should successfully release lock when owned by caller")
     void testReleaseLock_Success() {
         // Arrange
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
@@ -127,7 +121,6 @@ class RedisLockServiceTest {
     }
 
     @Test
-    @DisplayName("Should fail to release lock when not owned by caller")
     void testReleaseLock_NotOwned() {
         // Arrange
         String differentLockValue = UUID.randomUUID().toString();
@@ -144,7 +137,6 @@ class RedisLockServiceTest {
     }
 
     @Test
-    @DisplayName("Should fail to release lock when lock doesn't exist")
     void testReleaseLock_LockDoesNotExist() {
         // Arrange
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
@@ -160,7 +152,6 @@ class RedisLockServiceTest {
     }
 
     @Test
-    @DisplayName("Should return false when Redis throws exception during release")
     void testReleaseLock_RedisException() {
         // Arrange
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
@@ -174,7 +165,6 @@ class RedisLockServiceTest {
     }
 
     @Test
-    @DisplayName("Should fail when delete operation returns false")
     void testReleaseLock_DeleteFails() {
         // Arrange
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
@@ -192,7 +182,6 @@ class RedisLockServiceTest {
     // ==================== isLocked Tests ====================
 
     @Test
-    @DisplayName("Should return true when lock exists")
     void testIsLocked_Exists() {
         // Arrange
         when(redisTemplate.hasKey(lockKey)).thenReturn(true);
@@ -206,7 +195,6 @@ class RedisLockServiceTest {
     }
 
     @Test
-    @DisplayName("Should return false when lock doesn't exist")
     void testIsLocked_DoesNotExist() {
         // Arrange
         when(redisTemplate.hasKey(lockKey)).thenReturn(false);
@@ -220,7 +208,6 @@ class RedisLockServiceTest {
     }
 
     @Test
-    @DisplayName("Should return false when Redis throws exception during check")
     void testIsLocked_RedisException() {
         // Arrange
         when(redisTemplate.hasKey(lockKey)).thenThrow(new RuntimeException("Redis connection error"));
@@ -235,7 +222,6 @@ class RedisLockServiceTest {
     // ==================== getLockTTL Tests ====================
 
     @Test
-    @DisplayName("Should return TTL in seconds when lock exists")
     void testGetLockTTL_Success() {
         // Arrange
         long expectedTTL = 300L;
@@ -250,7 +236,6 @@ class RedisLockServiceTest {
     }
 
     @Test
-    @DisplayName("Should return -1 when Redis throws exception")
     void testGetLockTTL_RedisException() {
         // Arrange
         when(redisTemplate.getExpire(lockKey, TimeUnit.SECONDS))
@@ -266,7 +251,6 @@ class RedisLockServiceTest {
     // ==================== extendLock Tests ====================
 
     @Test
-    @DisplayName("Should successfully extend lock when owned by caller")
     void testExtendLock_Success() {
         // Arrange
         long additionalSeconds = 300L;
@@ -288,7 +272,6 @@ class RedisLockServiceTest {
     }
 
     @Test
-    @DisplayName("Should fail to extend lock when not owned by caller")
     void testExtendLock_NotOwned() {
         // Arrange
         String differentLockValue = UUID.randomUUID().toString();
@@ -305,7 +288,6 @@ class RedisLockServiceTest {
     }
 
     @Test
-    @DisplayName("Should fail to extend lock when TTL is negative")
     void testExtendLock_NegativeTTL() {
         // Arrange
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
@@ -321,7 +303,6 @@ class RedisLockServiceTest {
     }
 
     @Test
-    @DisplayName("Should return false when Redis throws exception during extend")
     void testExtendLock_RedisException() {
         // Arrange
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
@@ -337,7 +318,6 @@ class RedisLockServiceTest {
     // ==================== Key Generation Tests ====================
 
     @Test
-    @DisplayName("Should generate correct seat lock key")
     void testGenerateSeatLockKey() {
         // Arrange
         UUID showtimeId = UUID.randomUUID();
@@ -351,7 +331,6 @@ class RedisLockServiceTest {
     }
 
     @Test
-    @DisplayName("Should generate correct user session key")
     void testGenerateUserSessionKey() {
         // Arrange
         UUID userId = UUID.randomUUID();
@@ -365,7 +344,6 @@ class RedisLockServiceTest {
     }
 
     @Test
-    @DisplayName("Should generate correct showtime lock key")
     void testGenerateShowtimeLockKey() {
         // Arrange
         UUID showtimeId = UUID.randomUUID();
@@ -380,7 +358,6 @@ class RedisLockServiceTest {
     // ==================== acquireMultipleSeatsLock Tests ====================
 
     @Test
-    @DisplayName("Should acquire all seats when all are available")
     void testAcquireMultipleSeatsLock_Success() {
         // Arrange
         UUID showtimeId = UUID.randomUUID();
@@ -413,7 +390,6 @@ class RedisLockServiceTest {
     }
 
     @Test
-    @DisplayName("Should fail when any seat is already locked")
     void testAcquireMultipleSeatsLock_OneSeatLocked() {
         // Arrange
         UUID showtimeId = UUID.randomUUID();
@@ -441,7 +417,6 @@ class RedisLockServiceTest {
     }
 
     @Test
-    @DisplayName("Should rollback when partial lock acquisition fails")
     void testAcquireMultipleSeatsLock_PartialFailure_Rollback() {
         // Arrange
         UUID showtimeId = UUID.randomUUID();
@@ -479,7 +454,6 @@ class RedisLockServiceTest {
     // ==================== releaseMultipleSeatsLock Tests ====================
 
     @Test
-    @DisplayName("Should release all seat locks")
     void testReleaseMultipleSeatsLock() {
         // Arrange
         UUID showtimeId = UUID.randomUUID();
@@ -509,7 +483,6 @@ class RedisLockServiceTest {
     }
 
     @Test
-    @DisplayName("Should handle empty seat list gracefully")
     void testAcquireMultipleSeatsLock_EmptyList() {
         // Arrange
         UUID showtimeId = UUID.randomUUID();

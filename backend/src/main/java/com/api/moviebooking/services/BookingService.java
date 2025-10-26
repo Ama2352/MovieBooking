@@ -61,8 +61,9 @@ public class BookingService {
         private int maxSeatsPerBooking;
 
         /**
-         * Lock seats for a user (called when user proceeds to checkout)
-         * Implements distributed locking with Redis
+         * Predicate nodes (d): 7 -> V(G) = d + 1 = 8
+         * Nodes: size>max, !isEmpty, isPresent, size!=expected, !isEmpty(unavailable),
+         * !redisLocked, catch
          */
         @Transactional
         public LockSeatsResponse lockSeats(UUID userId, LockSeatsRequest request) {
@@ -75,7 +76,6 @@ public class BookingService {
                 }
 
                 // Safety check: Handle existing locks
-                // This is a safety net in case frontend bypasses seat selection page
                 List<SeatLock> existingLocks = seatLockRepo.findAllActiveLocksForUser(userId);
 
                 if (!existingLocks.isEmpty()) {
@@ -172,6 +172,7 @@ public class BookingService {
         /**
          * Handle user pressing back button - immediately releases all locked seats
          * Seats become AVAILABLE to everyone including the original user
+         * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
          */
         @Transactional
         public void handleBackButton(UUID userId, UUID showtimeId) {
@@ -188,6 +189,8 @@ public class BookingService {
 
         /**
          * Confirm booking and transition from LOCKED to BOOKED
+         * Predicate nodes (d): 3 -> V(G) = d + 1 = 4
+         * Nodes: !equals(userId), !isActive, isAfter(expiresAt)
          */
         @Transactional
         public BookingResponse confirmBooking(UUID userId, UUID lockId) {
@@ -249,6 +252,8 @@ public class BookingService {
 
         /**
          * Release seats manually (user cancels or navigates away)
+         * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
+         * Nodes: seatLock != null
          */
         @Transactional
         public void releaseSeats(UUID userId, UUID showtimeId) {
@@ -266,6 +271,8 @@ public class BookingService {
          * Check seat availability for a showtime
          * If user has ANY active locks, release them
          * This allows user to start fresh selection even for same showtime
+         * Predicate nodes (d): 3 -> V(G) = d + 1 = 4
+         * Nodes: userId!=null, !isEmpty(locks), switch(3 cases)
          */
         @Transactional
         public SeatAvailabilityResponse checkAvailability(UUID showtimeId, UUID userId) {
@@ -305,6 +312,7 @@ public class BookingService {
 
         /**
          * Get user's booking history
+         * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
          */
         public List<BookingResponse> getUserBookings(UUID userId) {
                 List<Booking> bookings = bookingRepo.findByUserId(userId);
@@ -401,6 +409,8 @@ public class BookingService {
 
         /**
          * Cleanup expired locks (called by scheduler)
+         * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
+         * Nodes: for loop
          */
         @Transactional
         public void cleanupExpiredLocks() {

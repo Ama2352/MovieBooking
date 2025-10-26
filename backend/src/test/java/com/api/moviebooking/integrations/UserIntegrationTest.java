@@ -1,4 +1,4 @@
-package com.api.moviebooking.controllers;
+package com.api.moviebooking.integrations;
 
 import static io.restassured.module.mockmvc.RestAssuredMockMvc.*;
 import static org.hamcrest.Matchers.*;
@@ -42,23 +42,12 @@ import io.restassured.module.mockmvc.RestAssuredMockMvc;
 @Testcontainers
 @ActiveProfiles("test")
 @Transactional
-class UserControllerIntegrationTest {
+class UserIntegrationTest {
 
         @Container
         @ServiceConnection
         static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>(
                         DockerImageName.parse("postgres:15-alpine"));
-
-        @Container
-        @SuppressWarnings("resource")
-        static GenericContainer<?> redis = new GenericContainer<>(DockerImageName.parse("redis:7-alpine"))
-                        .withExposedPorts(6379);
-
-        @DynamicPropertySource
-        static void configureProperties(DynamicPropertyRegistry registry) {
-                registry.add("spring.data.redis.host", redis::getHost);
-                registry.add("spring.data.redis.port", redis::getFirstMappedPort);
-        }
 
         @Autowired
         private WebApplicationContext webApplicationContext;

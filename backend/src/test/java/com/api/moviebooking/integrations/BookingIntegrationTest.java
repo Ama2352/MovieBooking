@@ -1,4 +1,4 @@
-package com.api.moviebooking.controllers;
+package com.api.moviebooking.integrations;
 
 import static io.restassured.module.mockmvc.RestAssuredMockMvc.*;
 import static org.hamcrest.Matchers.*;
@@ -53,7 +53,7 @@ import io.restassured.module.mockmvc.RestAssuredMockMvc;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Testcontainers
 @ActiveProfiles("test")
-class BookingControllerIntegrationTest {
+class BookingIntegrationTest {
 
         @Container
         @ServiceConnection
