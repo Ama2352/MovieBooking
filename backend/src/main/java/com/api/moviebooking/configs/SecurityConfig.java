@@ -49,7 +49,8 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/auth/**",
                                 "/movies/**",
-                                "/showtimes/**")
+                                "/showtimes/**",
+                                "/promotions/**")
                         .permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(filter, UsernamePasswordAuthenticationFilter.class)
