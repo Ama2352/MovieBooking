@@ -16,13 +16,10 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
-import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -202,7 +199,7 @@ class CinemaIntegrationTest {
         }
 
         @Test
-        @DisplayName("Should return 500 when cinema not found")
+        @DisplayName("Should return 404 when cinema not found")
         @WithMockUser(roles = "ADMIN")
         void testGetCinema_NotFound() {
                 UUID nonExistentId = UUID.randomUUID();
@@ -211,8 +208,8 @@ class CinemaIntegrationTest {
                                 .when()
                                 .get("/cinemas/" + nonExistentId)
                                 .then()
-                                .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value()); // RuntimeException from service
-                                                                                       // -> 500
+                                .statusCode(HttpStatus.NOT_FOUND.value()); // ResourceNotFoundException from service
+                                                                           // -> 404
         }
 
         @Test
@@ -312,8 +309,8 @@ class CinemaIntegrationTest {
                                 .when()
                                 .post("/cinemas/rooms")
                                 .then()
-                                .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value()); // RuntimeException from service
-                                                                                       // -> 500
+                                .statusCode(HttpStatus.NOT_FOUND.value()); // ResourceNotFoundException from service
+                                                                           // -> 404
         }
 
         @Test
@@ -482,8 +479,8 @@ class CinemaIntegrationTest {
                                 .when()
                                 .post("/cinemas/snacks")
                                 .then()
-                                .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value()); // RuntimeException from service
-                                                                                       // -> 500
+                                .statusCode(HttpStatus.NOT_FOUND.value()); // ResourceNotFoundException from service
+                                                                           // -> 404
         }
 
         @Test

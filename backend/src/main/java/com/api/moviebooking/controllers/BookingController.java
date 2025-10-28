@@ -103,11 +103,13 @@ public class BookingController {
      * Check seat availability for a showtime
      */
     @GetMapping("/availability/{showtimeId}")
-    @Operation(summary = "Check seat availability", description = "Returns available, locked, and booked seats for a showtime.")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    @SecurityRequirement(name = "bearerToken")
+    @Operation(summary = "Check seat availability", description = "Returns available, locked, and booked seats for a showtime. Releases any existing locks for the user.")
     public ResponseEntity<SeatAvailabilityResponse> checkAvailability(
             @PathVariable UUID showtimeId,
             Principal principal) {
-        UUID userId = principal != null ? userService.getUserIdFromPrincipal(principal) : null;
+        UUID userId = userService.getUserIdFromPrincipal(principal);
         SeatAvailabilityResponse response = bookingService.checkAvailability(showtimeId, userId);
         return ResponseEntity.ok(response);
     }

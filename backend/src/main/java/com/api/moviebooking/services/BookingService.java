@@ -61,9 +61,11 @@ public class BookingService {
         private int maxSeatsPerBooking;
 
         /**
-         * Predicate nodes (d): 7 -> V(G) = d + 1 = 8
-         * Nodes: size>max, !isEmpty, isPresent, size!=expected, !isEmpty(unavailable),
-         * !redisLocked, catch
+         * Predicate nodes (d): 9 -> V(G) = d + 1 = 10
+         * Nodes: size>max, !isEmpty(existingLocks), isPresent(sameShowtimeLock),
+         * find user, find showtime,
+         * size!=expected(seats), !isEmpty(unavailableSeats), !redisLocked,
+         * try-catch
          */
         @Transactional
         public LockSeatsResponse lockSeats(UUID userId, LockSeatsRequest request) {
@@ -171,8 +173,6 @@ public class BookingService {
 
         /**
          * Handle user pressing back button - immediately releases all locked seats
-         * Seats become AVAILABLE to everyone including the original user
-         * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
          */
         @Transactional
         public void handleBackButton(UUID userId, UUID showtimeId) {
@@ -189,8 +189,8 @@ public class BookingService {
 
         /**
          * Confirm booking and transition from LOCKED to BOOKED
-         * Predicate nodes (d): 3 -> V(G) = d + 1 = 4
-         * Nodes: !equals(userId), !isActive, isAfter(expiresAt)
+         * Predicate nodes (d): 4 -> V(G) = d + 1 = 5
+         * Nodes: findSeatLock, !equals(userId), !isActive, isAfter(expiresAt)
          */
         @Transactional
         public BookingResponse confirmBooking(UUID userId, UUID lockId) {
@@ -269,22 +269,19 @@ public class BookingService {
 
         /**
          * Check seat availability for a showtime
-         * If user has ANY active locks, release them
-         * This allows user to start fresh selection even for same showtime
-         * Predicate nodes (d): 3 -> V(G) = d + 1 = 4
-         * Nodes: userId!=null, !isEmpty(locks), switch(3 cases)
+         * User must be authenticated - releases any existing locks for fresh selection
+         * Predicate nodes (d): 4 -> V(G) = d + 1 = 5
+         * Nodes: !isEmpty(locks), switch(3 cases)
          */
         @Transactional
         public SeatAvailabilityResponse checkAvailability(UUID showtimeId, UUID userId) {
-                // If user is authenticated, check for and release ANY existing locks
-                if (userId != null) {
-                        List<SeatLock> existingLocks = seatLockRepo.findAllActiveLocksForUser(userId);
+                // Check for and release ANY existing locks for authenticated user
+                List<SeatLock> existingLocks = seatLockRepo.findAllActiveLocksForUser(userId);
 
-                        if (!existingLocks.isEmpty()) {
-                                log.info("User {} viewing showtime {}, releasing {} existing lock(s) to allow fresh selection",
-                                                userId, showtimeId, existingLocks.size());
-                                existingLocks.forEach(lock -> releaseSeatsInternal(lock, false));
-                        }
+                if (!existingLocks.isEmpty()) {
+                        log.info("User {} viewing showtime {}, releasing {} existing lock(s) to allow fresh selection",
+                                        userId, showtimeId, existingLocks.size());
+                        existingLocks.forEach(lock -> releaseSeatsInternal(lock, false));
                 }
 
                 List<ShowtimeSeat> allSeats = showtimeSeatRepo.findByShowtimeId(showtimeId);
@@ -312,7 +309,6 @@ public class BookingService {
 
         /**
          * Get user's booking history
-         * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
          */
         public List<BookingResponse> getUserBookings(UUID userId) {
                 List<Booking> bookings = bookingRepo.findByUserId(userId);

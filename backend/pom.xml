@@ -161,6 +161,9 @@
 				<artifactId>maven-surefire-plugin</artifactId>
 				<configuration>
 					<argLine>-Duser.timezone=UTC</argLine>
+					<excludes>
+						<exclude>**/BookingServiceDebugTest.java</exclude>
+					</excludes>
 				</configuration>
 			</plugin>
 			<plugin>

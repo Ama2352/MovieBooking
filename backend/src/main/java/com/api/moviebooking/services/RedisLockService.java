@@ -146,7 +146,6 @@ public class RedisLockService {
 
     /**
      * Generate lock key for a specific seat in a showtime
-     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
      */
     public String generateSeatLockKey(UUID showtimeId, UUID seatId) {
         return SEAT_LOCK_PREFIX + showtimeId + ":" + seatId;
@@ -154,7 +153,6 @@ public class RedisLockService {
 
     /**
      * Generate lock key for user's booking session
-     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
      */
     public String generateUserSessionKey(UUID userId, UUID showtimeId) {
         return USER_LOCK_PREFIX + userId + ":showtime:" + showtimeId;
@@ -162,7 +160,6 @@ public class RedisLockService {
 
     /**
      * Generate lock key for showtime-level operations
-     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
      */
     public String generateShowtimeLockKey(UUID showtimeId) {
         return SHOWTIME_LOCK_PREFIX + showtimeId;
@@ -214,7 +211,6 @@ public class RedisLockService {
 
     /**
      * Rollback seat locks in case of partial failure
-     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
      */
     private void rollbackSeatLocks(UUID showtimeId, Iterable<UUID> seatIds, String lockToken) {
         log.warn("Rolling back seat locks for showtime: {}", showtimeId);

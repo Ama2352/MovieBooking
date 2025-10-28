@@ -1,9 +1,13 @@
 package com.api.moviebooking.models.dtos.cinema;
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Getter;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-@Getter
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 @Builder
 public class UpdateCinemaRequest {
     private String name;

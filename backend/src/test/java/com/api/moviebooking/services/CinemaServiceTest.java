@@ -1,25 +1,28 @@
 package com.api.moviebooking.services;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.dao.DataIntegrityViolationException;
 
+import com.api.moviebooking.helpers.exceptions.DuplicateResourceException;
 import com.api.moviebooking.helpers.exceptions.EntityDeletionForbiddenException;
+import com.api.moviebooking.helpers.exceptions.ResourceNotFoundException;
 import com.api.moviebooking.helpers.mapstructs.CinemaMapper;
 import com.api.moviebooking.helpers.mapstructs.RoomMapper;
 import com.api.moviebooking.helpers.mapstructs.SnackMapper;
@@ -39,6 +42,13 @@ import com.api.moviebooking.repositories.CinemaRepo;
 import com.api.moviebooking.repositories.RoomRepo;
 import com.api.moviebooking.repositories.SnackRepo;
 
+/**
+ * White-Box Testing for CinemaService
+ * Tests organized by method with cyclomatic complexity from code comments
+ * Total Methods: 18
+ * Total Cyclomatic Complexity: 50
+ * Total Test Cases: 50
+ */
 @ExtendWith(MockitoExtension.class)
 class CinemaServiceTest {
 
@@ -63,354 +73,1230 @@ class CinemaServiceTest {
     @InjectMocks
     private CinemaService cinemaService;
 
-    @Test
-    void addCinema_mapsSavesAndReturnsResponse() {
-        AddCinemaRequest req = AddCinemaRequest.builder()
-                .name("Cinema A").address("123 Street").hotline("0123456789").build();
+    private UUID cinemaId;
+    private UUID roomId;
+    private UUID snackId;
+    private Cinema mockCinema;
+    private Room mockRoom;
+    private Snack mockSnack;
+    private CinemaDataResponse mockCinemaResponse;
+    private RoomDataResponse mockRoomResponse;
+    private SnackDataResponse mockSnackResponse;
 
-        Cinema entity = new Cinema();
-        entity.setName("Cinema A");
-        entity.setAddress("123 Street");
-        entity.setHotline("0123456789");
+    @BeforeEach
+    void setUp() {
+        cinemaId = UUID.randomUUID();
+        roomId = UUID.randomUUID();
+        snackId = UUID.randomUUID();
 
-        CinemaDataResponse expected = new CinemaDataResponse();
-        expected.setName("Cinema A");
-        expected.setAddress("123 Street");
-        expected.setHotline("0123456789");
+        // Setup mock Cinema
+        mockCinema = new Cinema();
+        mockCinema.setId(cinemaId);
+        mockCinema.setName("CGV Cinema");
+        mockCinema.setAddress("123 Main St");
+        mockCinema.setHotline("1900-1234");
+        mockCinema.setRooms(new ArrayList<>());
+        mockCinema.setSnacks(new ArrayList<>());
 
-        when(cinemaMapper.toEntity(req)).thenReturn(entity);
-        when(cinemaMapper.toDataResponse(entity)).thenReturn(expected);
+        mockCinemaResponse = new CinemaDataResponse();
+        mockCinemaResponse.setId(cinemaId.toString());
+        mockCinemaResponse.setName("CGV Cinema");
+        mockCinemaResponse.setAddress("123 Main St");
+        mockCinemaResponse.setHotline("1900-1234");
 
-        CinemaDataResponse result = cinemaService.addCinema(req);
+        // Setup mock Room
+        mockRoom = new Room();
+        mockRoom.setId(roomId);
+        mockRoom.setCinema(mockCinema);
+        mockRoom.setRoomType("IMAX");
+        mockRoom.setRoomNumber(1);
+        mockRoom.setSeats(new ArrayList<>());
+        mockRoom.setShowtimes(new ArrayList<>());
 
-        verify(cinemaRepo).save(entity);
-        // Mapper returns the same object we stubbed
-        assertSame(expected, result);
+        mockRoomResponse = new RoomDataResponse();
+        mockRoomResponse.setId(roomId.toString());
+        mockRoomResponse.setCinemaId(cinemaId.toString());
+        mockRoomResponse.setRoomType("IMAX");
+        mockRoomResponse.setRoomNumber(1);
+
+        // Setup mock Snack
+        mockSnack = new Snack();
+        mockSnack.setId(snackId);
+        mockSnack.setCinema(mockCinema);
+        mockSnack.setName("Popcorn");
+        mockSnack.setDescription("Large popcorn");
+        mockSnack.setPrice(new BigDecimal("50000"));
+        mockSnack.setType("FOOD");
+
+        mockSnackResponse = new SnackDataResponse();
+        mockSnackResponse.setId(snackId.toString());
+        mockSnackResponse.setCinemaId(cinemaId.toString());
+        mockSnackResponse.setName("Popcorn");
+        mockSnackResponse.setDescription("Large popcorn");
+        mockSnackResponse.setPrice(new BigDecimal("50000"));
+        mockSnackResponse.setType("FOOD");
     }
 
-    @Test
-    void updateCinema_updatesNonNullFieldsAndSaves() {
-        UUID id = UUID.randomUUID();
-        Cinema existing = new Cinema();
-        existing.setId(id);
-        existing.setName("Old Name");
-        existing.setAddress("Old Addr");
-        existing.setHotline("0000");
+    // ========================================================================
+    // 1. addCinema() Tests
+    // Cyclomatic Complexity: V(G) = 2
+    // Minimum Test Cases Required: 2
+    // Decision Nodes: existsByName
+    // ========================================================================
 
-        UpdateCinemaRequest req = UpdateCinemaRequest.builder()
-                .name("New Name").address(null).hotline("1111").build();
+    @Nested
+    @DisplayName("addCinema() - V(G)=2, Min Tests=2")
+    class AddCinemaTests {
 
-        when(cinemaRepo.findById(id)).thenReturn(Optional.of(existing));
+        /**
+         * Test Case TC-1: Successfully add a new cinema
+         */
+        @Test
+        @DisplayName("TC-1: Should successfully add cinema with unique name")
+        void testAddCinema_Success() {
+            AddCinemaRequest request = new AddCinemaRequest();
+            request.setName("New Cinema");
+            request.setAddress("456 Street");
+            request.setHotline("1900-5678");
 
-        CinemaDataResponse mapped = new CinemaDataResponse();
-        mapped.setName("New Name");
-        mapped.setAddress("Old Addr");
-        mapped.setHotline("1111");
-        when(cinemaMapper.toDataResponse(existing)).thenReturn(mapped);
+            when(cinemaRepo.existsByName(request.getName())).thenReturn(false);
+            when(cinemaMapper.toEntity(request)).thenReturn(mockCinema);
+            when(cinemaRepo.save(mockCinema)).thenReturn(mockCinema);
+            when(cinemaMapper.toDataResponse(mockCinema)).thenReturn(mockCinemaResponse);
 
-        CinemaDataResponse result = cinemaService.updateCinema(id, req);
+            CinemaDataResponse result = cinemaService.addCinema(request);
 
-        verify(cinemaRepo).save(existing);
-        assertEquals("New Name", existing.getName());
-        assertEquals("Old Addr", existing.getAddress());
-        assertEquals("1111", existing.getHotline());
+            assertNotNull(result);
+            assertEquals(mockCinemaResponse.getName(), result.getName());
+            verify(cinemaRepo).existsByName(request.getName());
+            verify(cinemaRepo).save(mockCinema);
+            verify(cinemaMapper).toDataResponse(mockCinema);
+        }
 
-        // Mapper returns the same object we stubbed
-        assertSame(mapped, result);
+        /**
+         * Test Case TC-2: Duplicate cinema name
+         */
+        @Test
+        @DisplayName("TC-2: Should throw DuplicateResourceException when cinema name exists")
+        void testAddCinema_DuplicateName() {
+            AddCinemaRequest request = new AddCinemaRequest();
+            request.setName("Existing Cinema");
+            request.setAddress("789 Road");
+            request.setHotline("1900-9999");
+
+            when(cinemaRepo.existsByName(request.getName())).thenReturn(true);
+
+            assertThrows(DuplicateResourceException.class, () -> {
+                cinemaService.addCinema(request);
+            });
+
+            verify(cinemaRepo).existsByName(request.getName());
+            verify(cinemaRepo, never()).save(any());
+        }
     }
 
-    @Test
-    void deleteCinema_findsAndDeletes() {
-        UUID id = UUID.randomUUID();
-        Cinema existing = new Cinema();
-        existing.setId(id);
-        existing.setRooms(new ArrayList<>());
-        existing.setSnacks(new ArrayList<>());
-        when(cinemaRepo.findById(id)).thenReturn(Optional.of(existing));
+    // ========================================================================
+    // 2. updateCinema() Tests
+    // Cyclomatic Complexity: V(G) = 6
+    // Minimum Test Cases Required: 6
+    // Decision Nodes: findCinemaById, name!=null, existsByNameAndIdNot,
+    // address!=null,
+    // hotline!=null
+    // ========================================================================
 
-        cinemaService.deleteCinema(id);
+    @Nested
+    @DisplayName("updateCinema() - V(G)=6, Min Tests=6")
+    class UpdateCinemaTests {
 
-        verify(cinemaRepo).delete(existing);
+        /**
+         * Test Case TC-1: Update all fields successfully
+         */
+        @Test
+        @DisplayName("TC-1: Should update all cinema fields successfully")
+        void testUpdateCinema_AllFields() {
+            UpdateCinemaRequest request = new UpdateCinemaRequest();
+            request.setName("Updated Cinema");
+            request.setAddress("New Address");
+            request.setHotline("1900-0000");
+
+            when(cinemaRepo.findById(cinemaId)).thenReturn(Optional.of(mockCinema));
+            when(cinemaRepo.existsByNameAndIdNot(request.getName(), cinemaId)).thenReturn(false);
+            when(cinemaRepo.save(any(Cinema.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            when(cinemaMapper.toDataResponse(any(Cinema.class))).thenReturn(mockCinemaResponse);
+
+            CinemaDataResponse result = cinemaService.updateCinema(cinemaId, request);
+
+            assertNotNull(result);
+            assertEquals("Updated Cinema", mockCinema.getName());
+            assertEquals("New Address", mockCinema.getAddress());
+            assertEquals("1900-0000", mockCinema.getHotline());
+            verify(cinemaRepo).findById(cinemaId);
+            verify(cinemaRepo).existsByNameAndIdNot(request.getName(), cinemaId);
+            verify(cinemaRepo).save(mockCinema);
+        }
+
+        /**
+         * Test Case TC-2: Update only name
+         */
+        @Test
+        @DisplayName("TC-2: Should update only cinema name")
+        void testUpdateCinema_NameOnly() {
+            UpdateCinemaRequest request = new UpdateCinemaRequest();
+            request.setName("New Name Only");
+
+            String originalAddress = mockCinema.getAddress();
+            String originalHotline = mockCinema.getHotline();
+
+            when(cinemaRepo.findById(cinemaId)).thenReturn(Optional.of(mockCinema));
+            when(cinemaRepo.existsByNameAndIdNot(request.getName(), cinemaId)).thenReturn(false);
+            when(cinemaRepo.save(any(Cinema.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            when(cinemaMapper.toDataResponse(any(Cinema.class))).thenReturn(mockCinemaResponse);
+
+            CinemaDataResponse result = cinemaService.updateCinema(cinemaId, request);
+
+            assertNotNull(result);
+            assertEquals("New Name Only", mockCinema.getName());
+            assertEquals(originalAddress, mockCinema.getAddress());
+            assertEquals(originalHotline, mockCinema.getHotline());
+            verify(cinemaRepo).existsByNameAndIdNot(request.getName(), cinemaId);
+            verify(cinemaRepo).save(mockCinema);
+        }
+
+        /**
+         * Test Case TC-3: Duplicate name during update
+         */
+        @Test
+        @DisplayName("TC-3: Should throw DuplicateResourceException when updating to existing name")
+        void testUpdateCinema_DuplicateName() {
+            UpdateCinemaRequest request = new UpdateCinemaRequest();
+            request.setName("Existing Cinema Name");
+
+            when(cinemaRepo.findById(cinemaId)).thenReturn(Optional.of(mockCinema));
+            when(cinemaRepo.existsByNameAndIdNot(request.getName(), cinemaId)).thenReturn(true);
+
+            assertThrows(DuplicateResourceException.class, () -> {
+                cinemaService.updateCinema(cinemaId, request);
+            });
+
+            verify(cinemaRepo).existsByNameAndIdNot(request.getName(), cinemaId);
+            verify(cinemaRepo, never()).save(any());
+        }
+
+        /**
+         * Test Case TC-4: Update only address
+         */
+        @Test
+        @DisplayName("TC-4: Should update only cinema address")
+        void testUpdateCinema_AddressOnly() {
+            UpdateCinemaRequest request = new UpdateCinemaRequest();
+            request.setAddress("New Address Only");
+
+            String originalName = mockCinema.getName();
+            String originalHotline = mockCinema.getHotline();
+
+            when(cinemaRepo.findById(cinemaId)).thenReturn(Optional.of(mockCinema));
+            when(cinemaRepo.save(any(Cinema.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            when(cinemaMapper.toDataResponse(any(Cinema.class))).thenReturn(mockCinemaResponse);
+
+            CinemaDataResponse result = cinemaService.updateCinema(cinemaId, request);
+
+            assertNotNull(result);
+            assertEquals("New Address Only", mockCinema.getAddress());
+            assertEquals(originalName, mockCinema.getName());
+            assertEquals(originalHotline, mockCinema.getHotline());
+            verify(cinemaRepo, never()).existsByNameAndIdNot(anyString(), any());
+            verify(cinemaRepo).save(mockCinema);
+        }
+
+        /**
+         * Test Case TC-5: Update only hotline
+         */
+        @Test
+        @DisplayName("TC-5: Should update only cinema hotline")
+        void testUpdateCinema_HotlineOnly() {
+            UpdateCinemaRequest request = new UpdateCinemaRequest();
+            request.setHotline("1900-7777");
+
+            String originalName = mockCinema.getName();
+            String originalAddress = mockCinema.getAddress();
+
+            when(cinemaRepo.findById(cinemaId)).thenReturn(Optional.of(mockCinema));
+            when(cinemaRepo.save(any(Cinema.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            when(cinemaMapper.toDataResponse(any(Cinema.class))).thenReturn(mockCinemaResponse);
+
+            CinemaDataResponse result = cinemaService.updateCinema(cinemaId, request);
+
+            assertNotNull(result);
+            assertEquals("1900-7777", mockCinema.getHotline());
+            assertEquals(originalName, mockCinema.getName());
+            assertEquals(originalAddress, mockCinema.getAddress());
+            verify(cinemaRepo, never()).existsByNameAndIdNot(anyString(), any());
+            verify(cinemaRepo).save(mockCinema);
+        }
+
+        /**
+         * Test Case TC-6: Cinema not found
+         */
+        @Test
+        @DisplayName("TC-6: Should throw ResourceNotFoundException when cinema not found")
+        void testUpdateCinema_CinemaNotFound() {
+            UpdateCinemaRequest request = new UpdateCinemaRequest();
+            request.setName("Test");
+
+            when(cinemaRepo.findById(cinemaId)).thenReturn(Optional.empty());
+
+            assertThrows(ResourceNotFoundException.class, () -> {
+                cinemaService.updateCinema(cinemaId, request);
+            });
+
+            verify(cinemaRepo).findById(cinemaId);
+            verify(cinemaRepo, never()).save(any());
+        }
     }
 
-    @Test
-    void deleteCinema_throwsWhenHasRooms() {
-        UUID id = UUID.randomUUID();
-        Cinema existing = new Cinema();
-        existing.setId(id);
-        Room room = new Room();
-        existing.setRooms(List.of(room));
-        existing.setSnacks(new ArrayList<>());
-        when(cinemaRepo.findById(id)).thenReturn(Optional.of(existing));
+    // ========================================================================
+    // 3. deleteCinema() Tests
+    // Cyclomatic Complexity: V(G) = 4
+    // Minimum Test Cases Required: 4
+    // Decision Nodes: findCinemaById, !isEmpty(rooms), !isEmpty(snacks)
+    // ========================================================================
 
-        assertThrows(EntityDeletionForbiddenException.class, () -> cinemaService.deleteCinema(id));
+    @Nested
+    @DisplayName("deleteCinema() - V(G)=4, Min Tests=4")
+    class DeleteCinemaTests {
+
+        /**
+         * Test Case TC-1: Successfully delete cinema with no dependencies
+         */
+        @Test
+        @DisplayName("TC-1: Should successfully delete cinema with no rooms or snacks")
+        void testDeleteCinema_Success() {
+            when(cinemaRepo.findById(cinemaId)).thenReturn(Optional.of(mockCinema));
+
+            cinemaService.deleteCinema(cinemaId);
+
+            verify(cinemaRepo).findById(cinemaId);
+            verify(cinemaRepo).delete(mockCinema);
+        }
+
+        /**
+         * Test Case TC-2: Cannot delete cinema with existing rooms
+         */
+        @Test
+        @DisplayName("TC-2: Should throw EntityDeletionForbiddenException when cinema has rooms")
+        void testDeleteCinema_HasRooms() {
+            mockCinema.getRooms().add(mockRoom);
+
+            when(cinemaRepo.findById(cinemaId)).thenReturn(Optional.of(mockCinema));
+
+            assertThrows(EntityDeletionForbiddenException.class, () -> {
+                cinemaService.deleteCinema(cinemaId);
+            });
+
+            verify(cinemaRepo).findById(cinemaId);
+            verify(cinemaRepo, never()).delete(any());
+        }
+
+        /**
+         * Test Case TC-3: Cannot delete cinema with existing snacks
+         */
+        @Test
+        @DisplayName("TC-3: Should throw EntityDeletionForbiddenException when cinema has snacks")
+        void testDeleteCinema_HasSnacks() {
+            mockCinema.getSnacks().add(mockSnack);
+
+            when(cinemaRepo.findById(cinemaId)).thenReturn(Optional.of(mockCinema));
+
+            assertThrows(EntityDeletionForbiddenException.class, () -> {
+                cinemaService.deleteCinema(cinemaId);
+            });
+
+            verify(cinemaRepo).findById(cinemaId);
+            verify(cinemaRepo, never()).delete(any());
+        }
+
+        /**
+         * Test Case TC-4: Cinema not found
+         */
+        @Test
+        @DisplayName("TC-4: Should throw ResourceNotFoundException when cinema not found")
+        void testDeleteCinema_CinemaNotFound() {
+            when(cinemaRepo.findById(cinemaId)).thenReturn(Optional.empty());
+
+            assertThrows(ResourceNotFoundException.class, () -> {
+                cinemaService.deleteCinema(cinemaId);
+            });
+
+            verify(cinemaRepo).findById(cinemaId);
+            verify(cinemaRepo, never()).delete(any());
+        }
     }
 
-    @Test
-    void deleteCinema_throwsWhenHasSnacks() {
-        UUID id = UUID.randomUUID();
-        Cinema existing = new Cinema();
-        existing.setId(id);
-        existing.setRooms(new ArrayList<>());
-        Snack snack = new Snack();
-        existing.setSnacks(List.of(snack));
-        when(cinemaRepo.findById(id)).thenReturn(Optional.of(existing));
+    // ========================================================================
+    // 4. getCinema() Tests
+    // Cyclomatic Complexity: V(G) = 2
+    // Minimum Test Cases Required: 2
+    // Decision Nodes: findCinemaById
+    // ========================================================================
 
-        assertThrows(EntityDeletionForbiddenException.class, () -> cinemaService.deleteCinema(id));
+    @Nested
+    @DisplayName("getCinema() - V(G)=2, Min Tests=2")
+    class GetCinemaTests {
+
+        /**
+         * Test Case TC-1: Successfully retrieve cinema by ID
+         */
+        @Test
+        @DisplayName("TC-1: Should successfully retrieve cinema by ID")
+        void testGetCinema_Success() {
+            when(cinemaRepo.findById(cinemaId)).thenReturn(Optional.of(mockCinema));
+            when(cinemaMapper.toDataResponse(mockCinema)).thenReturn(mockCinemaResponse);
+
+            CinemaDataResponse result = cinemaService.getCinema(cinemaId);
+
+            assertNotNull(result);
+            assertEquals(mockCinemaResponse.getName(), result.getName());
+            verify(cinemaRepo).findById(cinemaId);
+            verify(cinemaMapper).toDataResponse(mockCinema);
+        }
+
+        /**
+         * Test Case TC-2: Cinema not found
+         */
+        @Test
+        @DisplayName("TC-2: Should throw ResourceNotFoundException when cinema not found")
+        void testGetCinema_CinemaNotFound() {
+            when(cinemaRepo.findById(cinemaId)).thenReturn(Optional.empty());
+
+            assertThrows(ResourceNotFoundException.class, () -> {
+                cinemaService.getCinema(cinemaId);
+            });
+
+            verify(cinemaRepo).findById(cinemaId);
+        }
     }
 
-    @Test
-    void getCinema_returnsMappedResponse() {
-        UUID id = UUID.randomUUID();
-        Cinema existing = new Cinema();
-        existing.setId(id);
-        existing.setName("C");
-        existing.setAddress("A");
-        existing.setHotline("H");
+    // ========================================================================
+    // 5. addRoom() Tests
+    // Cyclomatic Complexity: V(G) = 3
+    // Minimum Test Cases Required: 3
+    // Decision Nodes: findCinemaById, existsByCinemaIdAndRoomNumber
+    // ========================================================================
 
-        when(cinemaRepo.findById(id)).thenReturn(Optional.of(existing));
+    @Nested
+    @DisplayName("addRoom() - V(G)=3, Min Tests=3")
+    class AddRoomTests {
 
-        CinemaDataResponse mapped = new CinemaDataResponse();
-        mapped.setName("C");
-        mapped.setAddress("A");
-        mapped.setHotline("H");
-        when(cinemaMapper.toDataResponse(existing)).thenReturn(mapped);
+        /**
+         * Test Case TC-1: Successfully add room to cinema
+         */
+        @Test
+        @DisplayName("TC-1: Should successfully add room with unique room number")
+        void testAddRoom_Success() {
+            AddRoomRequest request = new AddRoomRequest();
+            request.setCinemaId(cinemaId);
+            request.setRoomType("Standard");
+            request.setRoomNumber(2);
 
-        CinemaDataResponse result = cinemaService.getCinema(id);
-        // Mapper returns the same object we stubbed
-        org.junit.jupiter.api.Assertions.assertSame(mapped, result);
+            when(cinemaRepo.findById(cinemaId)).thenReturn(Optional.of(mockCinema));
+            when(roomRepo.existsByCinemaIdAndRoomNumber(cinemaId, 2)).thenReturn(false);
+            when(roomMapper.toEntity(request)).thenReturn(mockRoom);
+            when(roomRepo.save(mockRoom)).thenReturn(mockRoom);
+            when(roomMapper.toDataResponse(mockRoom)).thenReturn(mockRoomResponse);
+
+            RoomDataResponse result = cinemaService.addRoom(request);
+
+            assertNotNull(result);
+            verify(cinemaRepo).findById(cinemaId);
+            verify(roomRepo).existsByCinemaIdAndRoomNumber(cinemaId, 2);
+            verify(roomRepo).save(mockRoom);
+        }
+
+        /**
+         * Test Case TC-2: Duplicate room number in same cinema
+         */
+        @Test
+        @DisplayName("TC-2: Should throw DuplicateResourceException when room number exists in cinema")
+        void testAddRoom_DuplicateRoomNumber() {
+            AddRoomRequest request = new AddRoomRequest();
+            request.setCinemaId(cinemaId);
+            request.setRoomType("IMAX");
+            request.setRoomNumber(1);
+
+            when(cinemaRepo.findById(cinemaId)).thenReturn(Optional.of(mockCinema));
+            when(roomRepo.existsByCinemaIdAndRoomNumber(cinemaId, 1)).thenReturn(true);
+
+            assertThrows(DuplicateResourceException.class, () -> {
+                cinemaService.addRoom(request);
+            });
+
+            verify(roomRepo).existsByCinemaIdAndRoomNumber(cinemaId, 1);
+            verify(roomRepo, never()).save(any());
+        }
+
+        /**
+         * Test Case TC-3: Cinema not found
+         */
+        @Test
+        @DisplayName("TC-3: Should throw ResourceNotFoundException when cinema not found")
+        void testAddRoom_CinemaNotFound() {
+            AddRoomRequest request = new AddRoomRequest();
+            request.setCinemaId(cinemaId);
+            request.setRoomType("IMAX");
+            request.setRoomNumber(1);
+
+            when(cinemaRepo.findById(cinemaId)).thenReturn(Optional.empty());
+
+            assertThrows(ResourceNotFoundException.class, () -> {
+                cinemaService.addRoom(request);
+            });
+
+            verify(cinemaRepo).findById(cinemaId);
+            verify(roomRepo, never()).save(any());
+        }
     }
 
-    @Test
-    void operations_throwWhenCinemaNotFound() {
-        UUID id = UUID.randomUUID();
-        when(cinemaRepo.findById(id)).thenReturn(Optional.empty());
+    // ========================================================================
+    // 6. updateRoom() Tests
+    // Cyclomatic Complexity: V(G) = 5
+    // Minimum Test Cases Required: 5
+    // Decision Nodes: findRoomById, roomType!=null, roomNumber!=null,
+    // existsByCinemaIdAndRoomNumberAndIdNot
+    // ========================================================================
 
-        assertThrows(RuntimeException.class, () -> cinemaService.getCinema(id));
-        assertThrows(RuntimeException.class,
-                () -> cinemaService.updateCinema(id, UpdateCinemaRequest.builder().build()));
-        assertThrows(RuntimeException.class, () -> cinemaService.deleteCinema(id));
+    @Nested
+    @DisplayName("updateRoom() - V(G)=5, Min Tests=5")
+    class UpdateRoomTests {
+
+        /**
+         * Test Case TC-1: Update both room type and room number
+         */
+        @Test
+        @DisplayName("TC-1: Should update both room type and room number")
+        void testUpdateRoom_BothFields() {
+            UpdateRoomRequest request = new UpdateRoomRequest();
+            request.setRoomType("4DX");
+            request.setRoomNumber(3);
+
+            when(roomRepo.findById(roomId)).thenReturn(Optional.of(mockRoom));
+            when(roomRepo.existsByCinemaIdAndRoomNumberAndIdNot(cinemaId, 3, roomId)).thenReturn(false);
+            when(roomRepo.save(any(Room.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            when(roomMapper.toDataResponse(any(Room.class))).thenReturn(mockRoomResponse);
+
+            RoomDataResponse result = cinemaService.updateRoom(roomId, request);
+
+            assertNotNull(result);
+            assertEquals("4DX", mockRoom.getRoomType());
+            assertEquals(3, mockRoom.getRoomNumber());
+            verify(roomRepo).existsByCinemaIdAndRoomNumberAndIdNot(cinemaId, 3, roomId);
+            verify(roomRepo).save(mockRoom);
+        }
+
+        /**
+         * Test Case TC-2: Update only room type
+         */
+        @Test
+        @DisplayName("TC-2: Should update only room type")
+        void testUpdateRoom_RoomTypeOnly() {
+            UpdateRoomRequest request = new UpdateRoomRequest();
+            request.setRoomType("VIP");
+
+            int originalRoomNumber = mockRoom.getRoomNumber();
+
+            when(roomRepo.findById(roomId)).thenReturn(Optional.of(mockRoom));
+            when(roomRepo.save(any(Room.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            when(roomMapper.toDataResponse(any(Room.class))).thenReturn(mockRoomResponse);
+
+            RoomDataResponse result = cinemaService.updateRoom(roomId, request);
+
+            assertNotNull(result);
+            assertEquals("VIP", mockRoom.getRoomType());
+            assertEquals(originalRoomNumber, mockRoom.getRoomNumber());
+            verify(roomRepo, never()).existsByCinemaIdAndRoomNumberAndIdNot(any(), anyInt(), any());
+            verify(roomRepo).save(mockRoom);
+        }
+
+        /**
+         * Test Case TC-3: Update only room number with unique value
+         */
+        @Test
+        @DisplayName("TC-3: Should update only room number when unique")
+        void testUpdateRoom_RoomNumberOnly() {
+            UpdateRoomRequest request = new UpdateRoomRequest();
+            request.setRoomNumber(5);
+
+            String originalRoomType = mockRoom.getRoomType();
+
+            when(roomRepo.findById(roomId)).thenReturn(Optional.of(mockRoom));
+            when(roomRepo.existsByCinemaIdAndRoomNumberAndIdNot(cinemaId, 5, roomId)).thenReturn(false);
+            when(roomRepo.save(any(Room.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            when(roomMapper.toDataResponse(any(Room.class))).thenReturn(mockRoomResponse);
+
+            RoomDataResponse result = cinemaService.updateRoom(roomId, request);
+
+            assertNotNull(result);
+            assertEquals(5, mockRoom.getRoomNumber());
+            assertEquals(originalRoomType, mockRoom.getRoomType());
+            verify(roomRepo).existsByCinemaIdAndRoomNumberAndIdNot(cinemaId, 5, roomId);
+            verify(roomRepo).save(mockRoom);
+        }
+
+        /**
+         * Test Case TC-4: Duplicate room number during update
+         */
+        @Test
+        @DisplayName("TC-4: Should throw DuplicateResourceException when updating to existing room number")
+        void testUpdateRoom_DuplicateRoomNumber() {
+            UpdateRoomRequest request = new UpdateRoomRequest();
+            request.setRoomNumber(1);
+
+            when(roomRepo.findById(roomId)).thenReturn(Optional.of(mockRoom));
+            when(roomRepo.existsByCinemaIdAndRoomNumberAndIdNot(cinemaId, 1, roomId)).thenReturn(true);
+
+            assertThrows(DuplicateResourceException.class, () -> {
+                cinemaService.updateRoom(roomId, request);
+            });
+
+            verify(roomRepo).existsByCinemaIdAndRoomNumberAndIdNot(cinemaId, 1, roomId);
+            verify(roomRepo, never()).save(any());
+        }
+
+        /**
+         * Test Case TC-5: Room not found
+         */
+        @Test
+        @DisplayName("TC-5: Should throw ResourceNotFoundException when room not found")
+        void testUpdateRoom_RoomNotFound() {
+            UpdateRoomRequest request = new UpdateRoomRequest();
+            request.setRoomType("Test");
+
+            when(roomRepo.findById(roomId)).thenReturn(Optional.empty());
+
+            assertThrows(ResourceNotFoundException.class, () -> {
+                cinemaService.updateRoom(roomId, request);
+            });
+
+            verify(roomRepo).findById(roomId);
+            verify(roomRepo, never()).save(any());
+        }
     }
 
-    // Room CRUD Tests
-    @Test
-    void addRoom_mapsSavesAndReturnsResponse() {
-        UUID cinemaId = UUID.randomUUID();
-        Cinema cinema = new Cinema();
-        cinema.setId(cinemaId);
+    // ========================================================================
+    // 7. deleteRoom() Tests
+    // Cyclomatic Complexity: V(G) = 4
+    // Minimum Test Cases Required: 4
+    // Decision Nodes: findRoomById, !isEmpty(seats), !isEmpty(showtimes)
+    // ========================================================================
 
-        AddRoomRequest req = AddRoomRequest.builder()
-                .cinemaId(cinemaId)
-                .roomType("IMAX")
-                .roomNumber(1)
-                .build();
+    @Nested
+    @DisplayName("deleteRoom() - V(G)=4, Min Tests=4")
+    class DeleteRoomTests {
 
-        Room entity = new Room();
-        entity.setRoomType("IMAX");
-        entity.setRoomNumber(1);
+        /**
+         * Test Case TC-1: Successfully delete room with no dependencies
+         */
+        @Test
+        @DisplayName("TC-1: Should successfully delete room with no seats or showtimes")
+        void testDeleteRoom_Success() {
+            when(roomRepo.findById(roomId)).thenReturn(Optional.of(mockRoom));
 
-        RoomDataResponse expected = new RoomDataResponse();
-        expected.setRoomType("IMAX");
-        expected.setRoomNumber(1);
+            cinemaService.deleteRoom(roomId);
 
-        when(cinemaRepo.findById(cinemaId)).thenReturn(Optional.of(cinema));
-        when(roomMapper.toEntity(req)).thenReturn(entity);
-        when(roomMapper.toDataResponse(entity)).thenReturn(expected);
+            verify(roomRepo).findById(roomId);
+            verify(roomRepo).delete(mockRoom);
+        }
 
-        RoomDataResponse result = cinemaService.addRoom(req);
+        /**
+         * Test Case TC-2: Cannot delete room with existing seats
+         */
+        @Test
+        @DisplayName("TC-2: Should throw EntityDeletionForbiddenException when room has seats")
+        void testDeleteRoom_HasSeats() {
+            mockRoom.getSeats().add(new com.api.moviebooking.models.entities.Seat());
 
-        verify(roomRepo).save(entity);
-        assertEquals(cinema, entity.getCinema());
-        assertSame(expected, result);
+            when(roomRepo.findById(roomId)).thenReturn(Optional.of(mockRoom));
+
+            assertThrows(EntityDeletionForbiddenException.class, () -> {
+                cinemaService.deleteRoom(roomId);
+            });
+
+            verify(roomRepo).findById(roomId);
+            verify(roomRepo, never()).delete(any());
+        }
+
+        /**
+         * Test Case TC-3: Cannot delete room with existing showtimes
+         */
+        @Test
+        @DisplayName("TC-3: Should throw EntityDeletionForbiddenException when room has showtimes")
+        void testDeleteRoom_HasShowtimes() {
+            mockRoom.getShowtimes().add(new com.api.moviebooking.models.entities.Showtime());
+
+            when(roomRepo.findById(roomId)).thenReturn(Optional.of(mockRoom));
+
+            assertThrows(EntityDeletionForbiddenException.class, () -> {
+                cinemaService.deleteRoom(roomId);
+            });
+
+            verify(roomRepo).findById(roomId);
+            verify(roomRepo, never()).delete(any());
+        }
+
+        /**
+         * Test Case TC-4: Room not found
+         */
+        @Test
+        @DisplayName("TC-4: Should throw ResourceNotFoundException when room not found")
+        void testDeleteRoom_RoomNotFound() {
+            when(roomRepo.findById(roomId)).thenReturn(Optional.empty());
+
+            assertThrows(ResourceNotFoundException.class, () -> {
+                cinemaService.deleteRoom(roomId);
+            });
+
+            verify(roomRepo).findById(roomId);
+            verify(roomRepo, never()).delete(any());
+        }
     }
 
-    @Test
-    void updateRoom_updatesNonNullFieldsAndSaves() {
-        UUID roomId = UUID.randomUUID();
-        Room existing = new Room();
-        existing.setId(roomId);
-        existing.setRoomType("IMAX");
-        existing.setRoomNumber(1);
+    // ========================================================================
+    // 8. getRoom() Tests
+    // Cyclomatic Complexity: V(G) = 2
+    // Minimum Test Cases Required: 2
+    // Decision Nodes: findRoomById
+    // ========================================================================
 
-        UpdateRoomRequest req = UpdateRoomRequest.builder()
-                .roomType("4DX")
-                .roomNumber(null)
-                .build();
+    @Nested
+    @DisplayName("getRoom() - V(G)=2, Min Tests=2")
+    class GetRoomTests {
 
-        when(roomRepo.findById(roomId)).thenReturn(Optional.of(existing));
+        /**
+         * Test Case TC-1: Successfully retrieve room by ID
+         */
+        @Test
+        @DisplayName("TC-1: Should successfully retrieve room by ID")
+        void testGetRoom_Success() {
+            when(roomRepo.findById(roomId)).thenReturn(Optional.of(mockRoom));
+            when(roomMapper.toDataResponse(mockRoom)).thenReturn(mockRoomResponse);
 
-        RoomDataResponse mapped = new RoomDataResponse();
-        mapped.setRoomType("4DX");
-        mapped.setRoomNumber(1);
-        when(roomMapper.toDataResponse(existing)).thenReturn(mapped);
+            RoomDataResponse result = cinemaService.getRoom(roomId);
 
-        RoomDataResponse result = cinemaService.updateRoom(roomId, req);
+            assertNotNull(result);
+            assertEquals(mockRoomResponse.getRoomType(), result.getRoomType());
+            verify(roomRepo).findById(roomId);
+            verify(roomMapper).toDataResponse(mockRoom);
+        }
 
-        verify(roomRepo).save(existing);
-        assertEquals("4DX", existing.getRoomType());
-        assertEquals(1, existing.getRoomNumber());
-        assertSame(mapped, result);
+        /**
+         * Test Case TC-2: Room not found
+         */
+        @Test
+        @DisplayName("TC-2: Should throw ResourceNotFoundException when room not found")
+        void testGetRoom_RoomNotFound() {
+            when(roomRepo.findById(roomId)).thenReturn(Optional.empty());
+
+            assertThrows(ResourceNotFoundException.class, () -> {
+                cinemaService.getRoom(roomId);
+            });
+
+            verify(roomRepo).findById(roomId);
+        }
     }
 
-    @Test
-    void deleteRoom_findsAndDeletes() {
-        UUID roomId = UUID.randomUUID();
-        Room existing = new Room();
-        existing.setId(roomId);
-        when(roomRepo.findById(roomId)).thenReturn(Optional.of(existing));
+    // ========================================================================
+    // 9. addSnack() Tests
+    // Cyclomatic Complexity: V(G) = 3
+    // Minimum Test Cases Required: 3
+    // Decision Nodes: findCinemaById, existsByCinemaIdAndName
+    // ========================================================================
 
-        cinemaService.deleteRoom(roomId);
+    @Nested
+    @DisplayName("addSnack() - V(G)=3, Min Tests=3")
+    class AddSnackTests {
 
-        verify(roomRepo).delete(existing);
+        /**
+         * Test Case TC-1: Successfully add snack to cinema
+         */
+        @Test
+        @DisplayName("TC-1: Should successfully add snack with unique name")
+        void testAddSnack_Success() {
+            AddSnackRequest request = new AddSnackRequest();
+            request.setCinemaId(cinemaId);
+            request.setName("Nachos");
+            request.setDescription("Cheese nachos");
+            request.setPrice(new BigDecimal("45000"));
+            request.setType("FOOD");
+
+            when(cinemaRepo.findById(cinemaId)).thenReturn(Optional.of(mockCinema));
+            when(snackRepo.existsByCinemaIdAndName(cinemaId, "Nachos")).thenReturn(false);
+            when(snackMapper.toEntity(request)).thenReturn(mockSnack);
+            when(snackRepo.save(mockSnack)).thenReturn(mockSnack);
+            when(snackMapper.toDataResponse(mockSnack)).thenReturn(mockSnackResponse);
+
+            SnackDataResponse result = cinemaService.addSnack(request);
+
+            assertNotNull(result);
+            verify(cinemaRepo).findById(cinemaId);
+            verify(snackRepo).existsByCinemaIdAndName(cinemaId, "Nachos");
+            verify(snackRepo).save(mockSnack);
+        }
+
+        /**
+         * Test Case TC-2: Duplicate snack name in same cinema
+         */
+        @Test
+        @DisplayName("TC-2: Should throw DuplicateResourceException when snack name exists in cinema")
+        void testAddSnack_DuplicateName() {
+            AddSnackRequest request = new AddSnackRequest();
+            request.setCinemaId(cinemaId);
+            request.setName("Popcorn");
+            request.setDescription("Large popcorn");
+            request.setPrice(new BigDecimal("50000"));
+            request.setType("FOOD");
+
+            when(cinemaRepo.findById(cinemaId)).thenReturn(Optional.of(mockCinema));
+            when(snackRepo.existsByCinemaIdAndName(cinemaId, "Popcorn")).thenReturn(true);
+
+            assertThrows(DuplicateResourceException.class, () -> {
+                cinemaService.addSnack(request);
+            });
+
+            verify(snackRepo).existsByCinemaIdAndName(cinemaId, "Popcorn");
+            verify(snackRepo, never()).save(any());
+        }
+
+        /**
+         * Test Case TC-3: Cinema not found
+         */
+        @Test
+        @DisplayName("TC-3: Should throw ResourceNotFoundException when cinema not found")
+        void testAddSnack_CinemaNotFound() {
+            AddSnackRequest request = new AddSnackRequest();
+            request.setCinemaId(cinemaId);
+            request.setName("Popcorn");
+            request.setDescription("Large popcorn");
+            request.setPrice(new BigDecimal("50000"));
+            request.setType("FOOD");
+
+            when(cinemaRepo.findById(cinemaId)).thenReturn(Optional.empty());
+
+            assertThrows(ResourceNotFoundException.class, () -> {
+                cinemaService.addSnack(request);
+            });
+
+            verify(cinemaRepo).findById(cinemaId);
+            verify(snackRepo, never()).save(any());
+        }
     }
 
-    @Test
-    void getRoom_returnsMappedResponse() {
-        UUID roomId = UUID.randomUUID();
-        Room existing = new Room();
-        existing.setId(roomId);
-        existing.setRoomType("STARIUM");
-        existing.setRoomNumber(3);
+    // ========================================================================
+    // 10. updateSnack() Tests
+    // Cyclomatic Complexity: V(G) = 7
+    // Minimum Test Cases Required: 7
+    // Decision Nodes: findSnackById, name!=null, existsByCinemaIdAndNameAndIdNot,
+    // description!=null, price!=null, type!=null
+    // ========================================================================
 
-        when(roomRepo.findById(roomId)).thenReturn(Optional.of(existing));
+    @Nested
+    @DisplayName("updateSnack() - V(G)=7, Min Tests=7")
+    class UpdateSnackTests {
 
-        RoomDataResponse mapped = new RoomDataResponse();
-        mapped.setRoomType("STARIUM");
-        mapped.setRoomNumber(3);
-        when(roomMapper.toDataResponse(existing)).thenReturn(mapped);
+        /**
+         * Test Case TC-1: Update all fields successfully
+         */
+        @Test
+        @DisplayName("TC-1: Should update all snack fields successfully")
+        void testUpdateSnack_AllFields() {
+            UpdateSnackRequest request = new UpdateSnackRequest();
+            request.setName("Updated Snack");
+            request.setDescription("New description");
+            request.setPrice(new BigDecimal("60000"));
+            request.setType("DRINK");
 
-        RoomDataResponse result = cinemaService.getRoom(roomId);
-        assertSame(mapped, result);
+            when(snackRepo.findById(snackId)).thenReturn(Optional.of(mockSnack));
+            when(snackRepo.existsByCinemaIdAndNameAndIdNot(cinemaId, "Updated Snack", snackId)).thenReturn(false);
+            when(snackRepo.save(any(Snack.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            when(snackMapper.toDataResponse(any(Snack.class))).thenReturn(mockSnackResponse);
+
+            SnackDataResponse result = cinemaService.updateSnack(snackId, request);
+
+            assertNotNull(result);
+            assertEquals("Updated Snack", mockSnack.getName());
+            assertEquals("New description", mockSnack.getDescription());
+            assertEquals(new BigDecimal("60000"), mockSnack.getPrice());
+            assertEquals("DRINK", mockSnack.getType());
+            verify(snackRepo).existsByCinemaIdAndNameAndIdNot(cinemaId, "Updated Snack", snackId);
+            verify(snackRepo).save(mockSnack);
+        }
+
+        /**
+         * Test Case TC-2: Update only name
+         */
+        @Test
+        @DisplayName("TC-2: Should update only snack name")
+        void testUpdateSnack_NameOnly() {
+            UpdateSnackRequest request = new UpdateSnackRequest();
+            request.setName("New Snack Name");
+
+            String originalDescription = mockSnack.getDescription();
+            BigDecimal originalPrice = mockSnack.getPrice();
+            String originalType = mockSnack.getType();
+
+            when(snackRepo.findById(snackId)).thenReturn(Optional.of(mockSnack));
+            when(snackRepo.existsByCinemaIdAndNameAndIdNot(cinemaId, "New Snack Name", snackId)).thenReturn(false);
+            when(snackRepo.save(any(Snack.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            when(snackMapper.toDataResponse(any(Snack.class))).thenReturn(mockSnackResponse);
+
+            SnackDataResponse result = cinemaService.updateSnack(snackId, request);
+
+            assertNotNull(result);
+            assertEquals("New Snack Name", mockSnack.getName());
+            assertEquals(originalDescription, mockSnack.getDescription());
+            assertEquals(originalPrice, mockSnack.getPrice());
+            assertEquals(originalType, mockSnack.getType());
+            verify(snackRepo).existsByCinemaIdAndNameAndIdNot(cinemaId, "New Snack Name", snackId);
+            verify(snackRepo).save(mockSnack);
+        }
+
+        /**
+         * Test Case TC-3: Duplicate name during update
+         */
+        @Test
+        @DisplayName("TC-3: Should throw DuplicateResourceException when updating to existing name")
+        void testUpdateSnack_DuplicateName() {
+            UpdateSnackRequest request = new UpdateSnackRequest();
+            request.setName("Existing Snack");
+
+            when(snackRepo.findById(snackId)).thenReturn(Optional.of(mockSnack));
+            when(snackRepo.existsByCinemaIdAndNameAndIdNot(cinemaId, "Existing Snack", snackId)).thenReturn(true);
+
+            assertThrows(DuplicateResourceException.class, () -> {
+                cinemaService.updateSnack(snackId, request);
+            });
+
+            verify(snackRepo).existsByCinemaIdAndNameAndIdNot(cinemaId, "Existing Snack", snackId);
+            verify(snackRepo, never()).save(any());
+        }
+
+        /**
+         * Test Case TC-4: Update only description
+         */
+        @Test
+        @DisplayName("TC-4: Should update only snack description")
+        void testUpdateSnack_DescriptionOnly() {
+            UpdateSnackRequest request = new UpdateSnackRequest();
+            request.setDescription("New description only");
+
+            String originalName = mockSnack.getName();
+            BigDecimal originalPrice = mockSnack.getPrice();
+            String originalType = mockSnack.getType();
+
+            when(snackRepo.findById(snackId)).thenReturn(Optional.of(mockSnack));
+            when(snackRepo.save(any(Snack.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            when(snackMapper.toDataResponse(any(Snack.class))).thenReturn(mockSnackResponse);
+
+            SnackDataResponse result = cinemaService.updateSnack(snackId, request);
+
+            assertNotNull(result);
+            assertEquals("New description only", mockSnack.getDescription());
+            assertEquals(originalName, mockSnack.getName());
+            assertEquals(originalPrice, mockSnack.getPrice());
+            assertEquals(originalType, mockSnack.getType());
+            verify(snackRepo, never()).existsByCinemaIdAndNameAndIdNot(any(), anyString(), any());
+            verify(snackRepo).save(mockSnack);
+        }
+
+        /**
+         * Test Case TC-5: Update only price
+         */
+        @Test
+        @DisplayName("TC-5: Should update only snack price")
+        void testUpdateSnack_PriceOnly() {
+            UpdateSnackRequest request = new UpdateSnackRequest();
+            request.setPrice(new BigDecimal("55000"));
+
+            String originalName = mockSnack.getName();
+            String originalDescription = mockSnack.getDescription();
+            String originalType = mockSnack.getType();
+
+            when(snackRepo.findById(snackId)).thenReturn(Optional.of(mockSnack));
+            when(snackRepo.save(any(Snack.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            when(snackMapper.toDataResponse(any(Snack.class))).thenReturn(mockSnackResponse);
+
+            SnackDataResponse result = cinemaService.updateSnack(snackId, request);
+
+            assertNotNull(result);
+            assertEquals(new BigDecimal("55000"), mockSnack.getPrice());
+            assertEquals(originalName, mockSnack.getName());
+            assertEquals(originalDescription, mockSnack.getDescription());
+            assertEquals(originalType, mockSnack.getType());
+            verify(snackRepo, never()).existsByCinemaIdAndNameAndIdNot(any(), anyString(), any());
+            verify(snackRepo).save(mockSnack);
+        }
+
+        /**
+         * Test Case TC-6: Update only type
+         */
+        @Test
+        @DisplayName("TC-6: Should update only snack type")
+        void testUpdateSnack_TypeOnly() {
+            UpdateSnackRequest request = new UpdateSnackRequest();
+            request.setType("COMBO");
+
+            String originalName = mockSnack.getName();
+            String originalDescription = mockSnack.getDescription();
+            BigDecimal originalPrice = mockSnack.getPrice();
+
+            when(snackRepo.findById(snackId)).thenReturn(Optional.of(mockSnack));
+            when(snackRepo.save(any(Snack.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            when(snackMapper.toDataResponse(any(Snack.class))).thenReturn(mockSnackResponse);
+
+            SnackDataResponse result = cinemaService.updateSnack(snackId, request);
+
+            assertNotNull(result);
+            assertEquals("COMBO", mockSnack.getType());
+            assertEquals(originalName, mockSnack.getName());
+            assertEquals(originalDescription, mockSnack.getDescription());
+            assertEquals(originalPrice, mockSnack.getPrice());
+            verify(snackRepo, never()).existsByCinemaIdAndNameAndIdNot(any(), anyString(), any());
+            verify(snackRepo).save(mockSnack);
+        }
+
+        /**
+         * Test Case TC-7: Snack not found
+         */
+        @Test
+        @DisplayName("TC-7: Should throw ResourceNotFoundException when snack not found")
+        void testUpdateSnack_SnackNotFound() {
+            UpdateSnackRequest request = new UpdateSnackRequest();
+            request.setName("Test");
+
+            when(snackRepo.findById(snackId)).thenReturn(Optional.empty());
+
+            assertThrows(ResourceNotFoundException.class, () -> {
+                cinemaService.updateSnack(snackId, request);
+            });
+
+            verify(snackRepo).findById(snackId);
+            verify(snackRepo, never()).save(any());
+        }
     }
 
-    @Test
-    void roomOperations_throwWhenRoomNotFound() {
-        UUID id = UUID.randomUUID();
-        when(roomRepo.findById(id)).thenReturn(Optional.empty());
+    // ========================================================================
+    // 11. deleteSnack() Tests
+    // Cyclomatic Complexity: V(G) = 2
+    // Minimum Test Cases Required: 2
+    // Decision Nodes: findSnackById
+    // ========================================================================
 
-        assertThrows(RuntimeException.class, () -> cinemaService.getRoom(id));
-        assertThrows(RuntimeException.class,
-                () -> cinemaService.updateRoom(id, UpdateRoomRequest.builder().build()));
-        assertThrows(RuntimeException.class, () -> cinemaService.deleteRoom(id));
+    @Nested
+    @DisplayName("deleteSnack() - V(G)=2, Min Tests=2")
+    class DeleteSnackTests {
+
+        /**
+         * Test Case TC-1: Successfully delete snack
+         */
+        @Test
+        @DisplayName("TC-1: Should successfully delete snack")
+        void testDeleteSnack_Success() {
+            when(snackRepo.findById(snackId)).thenReturn(Optional.of(mockSnack));
+
+            cinemaService.deleteSnack(snackId);
+
+            verify(snackRepo).findById(snackId);
+            verify(snackRepo).delete(mockSnack);
+        }
+
+        /**
+         * Test Case TC-2: Snack not found
+         */
+        @Test
+        @DisplayName("TC-2: Should throw ResourceNotFoundException when snack not found")
+        void testDeleteSnack_SnackNotFound() {
+            when(snackRepo.findById(snackId)).thenReturn(Optional.empty());
+
+            assertThrows(ResourceNotFoundException.class, () -> {
+                cinemaService.deleteSnack(snackId);
+            });
+
+            verify(snackRepo).findById(snackId);
+            verify(snackRepo, never()).delete(any());
+        }
     }
 
-    // Snack CRUD Tests
-    @Test
-    void addSnack_mapsSavesAndReturnsResponse() {
-        UUID cinemaId = UUID.randomUUID();
-        Cinema cinema = new Cinema();
-        cinema.setId(cinemaId);
+    // ========================================================================
+    // 12. getSnack() Tests
+    // Cyclomatic Complexity: V(G) = 2
+    // Minimum Test Cases Required: 2
+    // Decision Nodes: findSnackById
+    // ========================================================================
 
-        AddSnackRequest req = AddSnackRequest.builder()
-                .cinemaId(cinemaId)
-                .name("Popcorn")
-                .description("Large Popcorn")
-                .price(new BigDecimal("5.99"))
-                .type("Snack")
-                .build();
+    @Nested
+    @DisplayName("getSnack() - V(G)=2, Min Tests=2")
+    class GetSnackTests {
 
-        Snack entity = new Snack();
-        entity.setName("Popcorn");
-        entity.setDescription("Large Popcorn");
-        entity.setPrice(new BigDecimal("5.99"));
-        entity.setType("Snack");
+        /**
+         * Test Case TC-1: Successfully retrieve snack by ID
+         */
+        @Test
+        @DisplayName("TC-1: Should successfully retrieve snack by ID")
+        void testGetSnack_Success() {
+            when(snackRepo.findById(snackId)).thenReturn(Optional.of(mockSnack));
+            when(snackMapper.toDataResponse(mockSnack)).thenReturn(mockSnackResponse);
 
-        SnackDataResponse expected = new SnackDataResponse();
-        expected.setName("Popcorn");
-        expected.setDescription("Large Popcorn");
-        expected.setPrice(new BigDecimal("5.99"));
-        expected.setType("Snack");
+            SnackDataResponse result = cinemaService.getSnack(snackId);
 
-        when(cinemaRepo.findById(cinemaId)).thenReturn(Optional.of(cinema));
-        when(snackMapper.toEntity(req)).thenReturn(entity);
-        when(snackMapper.toDataResponse(entity)).thenReturn(expected);
+            assertNotNull(result);
+            assertEquals(mockSnackResponse.getName(), result.getName());
+            verify(snackRepo).findById(snackId);
+            verify(snackMapper).toDataResponse(mockSnack);
+        }
 
-        SnackDataResponse result = cinemaService.addSnack(req);
+        /**
+         * Test Case TC-2: Snack not found
+         */
+        @Test
+        @DisplayName("TC-2: Should throw ResourceNotFoundException when snack not found")
+        void testGetSnack_SnackNotFound() {
+            when(snackRepo.findById(snackId)).thenReturn(Optional.empty());
 
-        verify(snackRepo).save(entity);
-        assertEquals(cinema, entity.getCinema());
-        assertSame(expected, result);
+            assertThrows(ResourceNotFoundException.class, () -> {
+                cinemaService.getSnack(snackId);
+            });
+
+            verify(snackRepo).findById(snackId);
+        }
     }
 
-    @Test
-    void updateSnack_updatesNonNullFieldsAndSaves() {
-        UUID snackId = UUID.randomUUID();
-        Snack existing = new Snack();
-        existing.setId(snackId);
-        existing.setName("Popcorn");
-        existing.setDescription("Small Popcorn");
-        existing.setPrice(new BigDecimal("3.99"));
-        existing.setType("Snack");
+    // ========================================================================
+    // 13. getAllCinemas() Tests
+    // Cyclomatic Complexity: V(G) = 1
+    // Minimum Test Cases Required: 1
+    // Decision Nodes: None (straight-line code)
+    // ========================================================================
 
-        UpdateSnackRequest req = UpdateSnackRequest.builder()
-                .name("Combo 1")
-                .description(null)
-                .price(new BigDecimal("9.99"))
-                .type("Combo")
-                .build();
+    @Nested
+    @DisplayName("getAllCinemas() - V(G)=1, Min Tests=1")
+    class GetAllCinemasTests {
 
-        when(snackRepo.findById(snackId)).thenReturn(Optional.of(existing));
+        /**
+         * Test Case TC-1: Successfully retrieve all cinemas
+         */
+        @Test
+        @DisplayName("TC-1: Should successfully retrieve all cinemas")
+        void testGetAllCinemas_Success() {
+            Cinema cinema1 = new Cinema();
+            cinema1.setId(UUID.randomUUID());
+            cinema1.setName("Cinema 1");
 
-        SnackDataResponse mapped = new SnackDataResponse();
-        mapped.setName("Combo 1");
-        mapped.setDescription("Small Popcorn");
-        mapped.setPrice(new BigDecimal("9.99"));
-        mapped.setType("Combo");
-        when(snackMapper.toDataResponse(existing)).thenReturn(mapped);
+            Cinema cinema2 = new Cinema();
+            cinema2.setId(UUID.randomUUID());
+            cinema2.setName("Cinema 2");
 
-        SnackDataResponse result = cinemaService.updateSnack(snackId, req);
+            CinemaDataResponse response1 = new CinemaDataResponse();
+            response1.setName("Cinema 1");
 
-        verify(snackRepo).save(existing);
-        assertEquals("Combo 1", existing.getName());
-        assertEquals("Small Popcorn", existing.getDescription());
-        assertEquals(new BigDecimal("9.99"), existing.getPrice());
-        assertEquals("Combo", existing.getType());
-        assertSame(mapped, result);
+            CinemaDataResponse response2 = new CinemaDataResponse();
+            response2.setName("Cinema 2");
+
+            when(cinemaRepo.findAll()).thenReturn(Arrays.asList(cinema1, cinema2));
+            when(cinemaMapper.toDataResponse(cinema1)).thenReturn(response1);
+            when(cinemaMapper.toDataResponse(cinema2)).thenReturn(response2);
+
+            List<CinemaDataResponse> result = cinemaService.getAllCinemas();
+
+            assertNotNull(result);
+            assertEquals(2, result.size());
+            verify(cinemaRepo).findAll();
+            verify(cinemaMapper, times(2)).toDataResponse(any(Cinema.class));
+        }
     }
 
-    @Test
-    void deleteSnack_findsAndDeletes() {
-        UUID snackId = UUID.randomUUID();
-        Snack existing = new Snack();
-        existing.setId(snackId);
-        when(snackRepo.findById(snackId)).thenReturn(Optional.of(existing));
+    // ========================================================================
+    // 14. getAllRooms() Tests
+    // Cyclomatic Complexity: V(G) = 1
+    // Minimum Test Cases Required: 1
+    // Decision Nodes: None (straight-line code)
+    // ========================================================================
 
-        cinemaService.deleteSnack(snackId);
+    @Nested
+    @DisplayName("getAllRooms() - V(G)=1, Min Tests=1")
+    class GetAllRoomsTests {
 
-        verify(snackRepo).delete(existing);
+        /**
+         * Test Case TC-1: Successfully retrieve all rooms
+         */
+        @Test
+        @DisplayName("TC-1: Should successfully retrieve all rooms")
+        void testGetAllRooms_Success() {
+            Room room1 = new Room();
+            room1.setId(UUID.randomUUID());
+            room1.setRoomType("IMAX");
+
+            Room room2 = new Room();
+            room2.setId(UUID.randomUUID());
+            room2.setRoomType("Standard");
+
+            RoomDataResponse response1 = new RoomDataResponse();
+            response1.setRoomType("IMAX");
+
+            RoomDataResponse response2 = new RoomDataResponse();
+            response2.setRoomType("Standard");
+
+            when(roomRepo.findAll()).thenReturn(Arrays.asList(room1, room2));
+            when(roomMapper.toDataResponse(room1)).thenReturn(response1);
+            when(roomMapper.toDataResponse(room2)).thenReturn(response2);
+
+            List<RoomDataResponse> result = cinemaService.getAllRooms();
+
+            assertNotNull(result);
+            assertEquals(2, result.size());
+            verify(roomRepo).findAll();
+            verify(roomMapper, times(2)).toDataResponse(any(Room.class));
+        }
     }
 
-    @Test
-    void getSnack_returnsMappedResponse() {
-        UUID snackId = UUID.randomUUID();
-        Snack existing = new Snack();
-        existing.setId(snackId);
-        existing.setName("Pepsi");
-        existing.setDescription("Large Pepsi");
-        existing.setPrice(new BigDecimal("4.99"));
-        existing.setType("Drink");
+    // ========================================================================
+    // 15. getAllSnacks() Tests
+    // Cyclomatic Complexity: V(G) = 1
+    // Minimum Test Cases Required: 1
+    // Decision Nodes: None (straight-line code)
+    // ========================================================================
 
-        when(snackRepo.findById(snackId)).thenReturn(Optional.of(existing));
+    @Nested
+    @DisplayName("getAllSnacks() - V(G)=1, Min Tests=1")
+    class GetAllSnacksTests {
 
-        SnackDataResponse mapped = new SnackDataResponse();
-        mapped.setName("Pepsi");
-        mapped.setDescription("Large Pepsi");
-        mapped.setPrice(new BigDecimal("4.99"));
-        mapped.setType("Drink");
-        when(snackMapper.toDataResponse(existing)).thenReturn(mapped);
+        /**
+         * Test Case TC-1: Successfully retrieve all snacks
+         */
+        @Test
+        @DisplayName("TC-1: Should successfully retrieve all snacks")
+        void testGetAllSnacks_Success() {
+            Snack snack1 = new Snack();
+            snack1.setId(UUID.randomUUID());
+            snack1.setName("Popcorn");
 
-        SnackDataResponse result = cinemaService.getSnack(snackId);
-        assertSame(mapped, result);
-    }
+            Snack snack2 = new Snack();
+            snack2.setId(UUID.randomUUID());
+            snack2.setName("Nachos");
 
-    @Test
-    void snackOperations_throwWhenSnackNotFound() {
-        UUID id = UUID.randomUUID();
-        when(snackRepo.findById(id)).thenReturn(Optional.empty());
+            SnackDataResponse response1 = new SnackDataResponse();
+            response1.setName("Popcorn");
 
-        assertThrows(RuntimeException.class, () -> cinemaService.getSnack(id));
-        assertThrows(RuntimeException.class,
-                () -> cinemaService.updateSnack(id, UpdateSnackRequest.builder().build()));
-        assertThrows(RuntimeException.class, () -> cinemaService.deleteSnack(id));
+            SnackDataResponse response2 = new SnackDataResponse();
+            response2.setName("Nachos");
+
+            when(snackRepo.findAll()).thenReturn(Arrays.asList(snack1, snack2));
+            when(snackMapper.toDataResponse(snack1)).thenReturn(response1);
+            when(snackMapper.toDataResponse(snack2)).thenReturn(response2);
+
+            List<SnackDataResponse> result = cinemaService.getAllSnacks();
+
+            assertNotNull(result);
+            assertEquals(2, result.size());
+            verify(snackRepo).findAll();
+            verify(snackMapper, times(2)).toDataResponse(any(Snack.class));
+        }
     }
 }

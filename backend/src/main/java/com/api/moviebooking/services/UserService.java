@@ -18,7 +18,6 @@ import com.api.moviebooking.models.entities.RefreshToken;
 import com.api.moviebooking.models.entities.User;
 import com.api.moviebooking.models.enums.MembershipTier;
 import com.api.moviebooking.models.enums.UserRole;
-import com.api.moviebooking.repositories.RefreshTokenRepo;
 import com.api.moviebooking.repositories.UserRepo;
 
 import jakarta.transaction.Transactional;
@@ -34,19 +33,11 @@ public class UserService {
     private final JwtService jwtService;
     private final CustomUserDetailsService customUserDetailsService;
 
-    /**
-     * Find user by email
-     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
-     */
     public User findByEmail(String email) {
         return userRepo.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
     }
 
-    /**
-     * Find user by ID
-     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
-     */
     public User findUserById(UUID userId) {
         return userRepo.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
@@ -87,7 +78,8 @@ public class UserService {
 
     /**
      * Login user and generate tokens
-     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
+     * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
+     * Nodes: authenticate (implicit exception throw)
      */
     public Map<String, String> login(LoginRequest request) {
         Authentication authentication = authManager
@@ -106,28 +98,16 @@ public class UserService {
                 "refreshToken", refreshToken);
     }
 
-    /**
-     * Get currently authenticated user from security context
-     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
-     */
     public User getCurrentUser() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         return findByEmail(email);
     }
 
-    /**
-     * Extract user ID from principal
-     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
-     */
     public UUID getUserIdFromPrincipal(Principal principal) {
         String email = principal.getName();
         return findByEmail(email).getId();
     }
 
-    /**
-     * Add refresh token to user's token collection
-     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
-     */
     @Transactional
     public void addUserRefreshToken(String refreshToken, String email) {
         User user = findByEmail(email);
@@ -148,7 +128,6 @@ public class UserService {
         } catch (Exception e) {
             throw new IllegalArgumentException("Invalid refresh token");
         }
-
     }
 
     /**

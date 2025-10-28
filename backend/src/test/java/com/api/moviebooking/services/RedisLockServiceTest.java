@@ -43,9 +43,12 @@ class RedisLockServiceTest {
         ttlSeconds = 600L;
     }
 
-    // ==================== acquireLock Tests ====================
+    // ==================== acquireLock() Tests - V(G) = 3 ====================
+    // Cyclomatic Complexity: 3 (2 decision nodes: success==TRUE, catch)
+    // Test Cases: 4 (covers all paths + null response edge case)
 
     @Test
+    @DisplayName("Successfully acquire lock when key is available")
     void testAcquireLock_Success() {
         // Arrange
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
@@ -61,6 +64,7 @@ class RedisLockServiceTest {
     }
 
     @Test
+    @DisplayName("Fail to acquire lock when key already exists")
     void testAcquireLock_Failure_AlreadyLocked() {
         // Arrange
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
@@ -76,6 +80,7 @@ class RedisLockServiceTest {
     }
 
     @Test
+    @DisplayName("Handle Redis connection errors gracefully")
     void testAcquireLock_RedisException() {
         // Arrange
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
@@ -90,6 +95,7 @@ class RedisLockServiceTest {
     }
 
     @Test
+    @DisplayName("Handle null response from Redis setIfAbsent")
     void testAcquireLock_NullResponse() {
         // Arrange
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
@@ -102,9 +108,13 @@ class RedisLockServiceTest {
         assertFalse(result);
     }
 
-    // ==================== releaseLock Tests ====================
+    // ==================== releaseLock() Tests - V(G) = 4 ====================
+    // Cyclomatic Complexity: 4 (3 decision nodes: lockValue.equals(currentValue),
+    // deleted==TRUE, catch)
+    // Test Cases: 5 (covers all paths + delete failure edge case)
 
     @Test
+    @DisplayName("Successfully release owned lock")
     void testReleaseLock_Success() {
         // Arrange
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
@@ -121,6 +131,7 @@ class RedisLockServiceTest {
     }
 
     @Test
+    @DisplayName("Prevent releasing lock owned by another user")
     void testReleaseLock_NotOwned() {
         // Arrange
         String differentLockValue = UUID.randomUUID().toString();
@@ -137,6 +148,7 @@ class RedisLockServiceTest {
     }
 
     @Test
+    @DisplayName("Handle releasing non-existent lock")
     void testReleaseLock_LockDoesNotExist() {
         // Arrange
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
@@ -152,6 +164,7 @@ class RedisLockServiceTest {
     }
 
     @Test
+    @DisplayName("Handle Redis connection errors gracefully during release")
     void testReleaseLock_RedisException() {
         // Arrange
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
@@ -165,6 +178,7 @@ class RedisLockServiceTest {
     }
 
     @Test
+    @DisplayName("Handle edge case where delete operation fails")
     void testReleaseLock_DeleteFails() {
         // Arrange
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
@@ -179,9 +193,13 @@ class RedisLockServiceTest {
         verify(redisTemplate).delete(lockKey);
     }
 
-    // ==================== isLocked Tests ====================
+    // ==================== isLocked() Tests - V(G) = 2 ====================
+    // Cyclomatic Complexity: 2 (1 decision node: catch)
+    // Test Cases: 3 (covers all paths + exception handling)
+    // Note: V(G) ≤ 2, excluded from decision tables per requirements
 
     @Test
+    @DisplayName("Check if lock exists")
     void testIsLocked_Exists() {
         // Arrange
         when(redisTemplate.hasKey(lockKey)).thenReturn(true);
@@ -195,6 +213,7 @@ class RedisLockServiceTest {
     }
 
     @Test
+    @DisplayName("Check if lock does not exist")
     void testIsLocked_DoesNotExist() {
         // Arrange
         when(redisTemplate.hasKey(lockKey)).thenReturn(false);
@@ -208,6 +227,7 @@ class RedisLockServiceTest {
     }
 
     @Test
+    @DisplayName("Handle Redis errors when checking lock existence")
     void testIsLocked_RedisException() {
         // Arrange
         when(redisTemplate.hasKey(lockKey)).thenThrow(new RuntimeException("Redis connection error"));
@@ -219,9 +239,13 @@ class RedisLockServiceTest {
         assertFalse(result);
     }
 
-    // ==================== getLockTTL Tests ====================
+    // ==================== getLockTTL() Tests - V(G) = 2 ====================
+    // Cyclomatic Complexity: 2 (1 decision node: catch)
+    // Test Cases: 2 (covers all paths)
+    // Note: V(G) ≤ 2, excluded from decision tables per requirements
 
     @Test
+    @DisplayName("Get remaining TTL for a lock")
     void testGetLockTTL_Success() {
         // Arrange
         long expectedTTL = 300L;
@@ -236,6 +260,7 @@ class RedisLockServiceTest {
     }
 
     @Test
+    @DisplayName("Handle Redis errors when getting TTL")
     void testGetLockTTL_RedisException() {
         // Arrange
         when(redisTemplate.getExpire(lockKey, TimeUnit.SECONDS))
@@ -248,9 +273,13 @@ class RedisLockServiceTest {
         assertEquals(-1L, result);
     }
 
-    // ==================== extendLock Tests ====================
+    // ==================== extendLock() Tests - V(G) = 4 ====================
+    // Cyclomatic Complexity: 4 (3 decision nodes: lockValue.equals(currentValue),
+    // currentTTL>0, catch)
+    // Test Cases: 4 (covers all paths)
 
     @Test
+    @DisplayName("Successfully extend owned lock with valid TTL")
     void testExtendLock_Success() {
         // Arrange
         long additionalSeconds = 300L;
@@ -272,6 +301,7 @@ class RedisLockServiceTest {
     }
 
     @Test
+    @DisplayName("Prevent extending lock owned by another user")
     void testExtendLock_NotOwned() {
         // Arrange
         String differentLockValue = UUID.randomUUID().toString();
@@ -288,6 +318,7 @@ class RedisLockServiceTest {
     }
 
     @Test
+    @DisplayName("Handle extending lock with negative/expired TTL")
     void testExtendLock_NegativeTTL() {
         // Arrange
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
@@ -303,6 +334,7 @@ class RedisLockServiceTest {
     }
 
     @Test
+    @DisplayName("Handle Redis connection errors gracefully during extend")
     void testExtendLock_RedisException() {
         // Arrange
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
@@ -315,9 +347,13 @@ class RedisLockServiceTest {
         assertFalse(result);
     }
 
-    // ==================== Key Generation Tests ====================
+    // ==================== Key Generation Tests - V(G) = 1 ====================
+    // Cyclomatic Complexity: 1 (0 decision nodes for each method)
+    // Test Cases: 3 (one for each key generation method)
+    // Note: V(G) = 1, excluded from decision tables per requirements
 
     @Test
+    @DisplayName("Generate seat lock key with correct format")
     void testGenerateSeatLockKey() {
         // Arrange
         UUID showtimeId = UUID.randomUUID();
@@ -331,6 +367,7 @@ class RedisLockServiceTest {
     }
 
     @Test
+    @DisplayName("Generate user session key with correct format")
     void testGenerateUserSessionKey() {
         // Arrange
         UUID userId = UUID.randomUUID();
@@ -344,6 +381,7 @@ class RedisLockServiceTest {
     }
 
     @Test
+    @DisplayName("Generate showtime lock key with correct format")
     void testGenerateShowtimeLockKey() {
         // Arrange
         UUID showtimeId = UUID.randomUUID();
@@ -355,9 +393,14 @@ class RedisLockServiceTest {
         assertEquals("lock:showtime:" + showtimeId, key);
     }
 
-    // ==================== acquireMultipleSeatsLock Tests ====================
+    // ==================== acquireMultipleSeatsLock() Tests - V(G) = 4
+    // ====================
+    // Cyclomatic Complexity: 4 (3 decision nodes: for loop isLocked check, for loop
+    // acquire, !acquireLock)
+    // Test Cases: 4 (covers all paths including rollback)
 
     @Test
+    @DisplayName("Successfully lock all seats when available")
     void testAcquireMultipleSeatsLock_Success() {
         // Arrange
         UUID showtimeId = UUID.randomUUID();
@@ -390,6 +433,7 @@ class RedisLockServiceTest {
     }
 
     @Test
+    @DisplayName("Fail when at least one seat is already locked")
     void testAcquireMultipleSeatsLock_OneSeatLocked() {
         // Arrange
         UUID showtimeId = UUID.randomUUID();
@@ -417,6 +461,7 @@ class RedisLockServiceTest {
     }
 
     @Test
+    @DisplayName("Rollback successfully acquired locks on partial failure")
     void testAcquireMultipleSeatsLock_PartialFailure_Rollback() {
         // Arrange
         UUID showtimeId = UUID.randomUUID();
@@ -451,9 +496,15 @@ class RedisLockServiceTest {
         verify(redisTemplate).delete(seatKey1);
     }
 
-    // ==================== releaseMultipleSeatsLock Tests ====================
+    // ==================== releaseMultipleSeatsLock() Tests - V(G) = 2
+    // ====================
+    // Cyclomatic Complexity: 2 (1 decision node: for loop)
+    // Test Cases: 1 (covers normal path, empty list tested via
+    // acquireMultipleSeatsLock_EmptyList)
+    // Note: V(G) ≤ 2, excluded from decision tables per requirements
 
     @Test
+    @DisplayName("Release multiple seat locks")
     void testReleaseMultipleSeatsLock() {
         // Arrange
         UUID showtimeId = UUID.randomUUID();
@@ -483,6 +534,7 @@ class RedisLockServiceTest {
     }
 
     @Test
+    @DisplayName("Handle empty seat list (edge case)")
     void testAcquireMultipleSeatsLock_EmptyList() {
         // Arrange
         UUID showtimeId = UUID.randomUUID();

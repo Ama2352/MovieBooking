@@ -12,4 +12,8 @@ public class EntityDeletionForbiddenException extends CustomException {
     public EntityDeletionForbiddenException() {
         super("Cannot delete parent when it has associated children.", HttpStatus.CONFLICT);
     }
+
+    public EntityDeletionForbiddenException(String message) {
+        super(message, HttpStatus.CONFLICT);
+    }
 }
