@@ -25,11 +25,21 @@ public class MovieService {
     private final MovieRepo movieRepo;
     private final MovieMapper movieMapper;
 
+    /**
+     * Predicate nodes (d): 0 -> V(G)=d+1=1
+     * Nodes: none (just findById with exception)
+     * Minimum test cases: 1
+     */
     private Movie findMovieById(UUID movieId) {
         return movieRepo.findById(movieId)
                 .orElseThrow(() -> new ResourceNotFoundException("Movie", "id", movieId));
     }
 
+    /**
+     * Predicate nodes (d): 1 -> V(G)=d+1=2
+     * Nodes: existsByTitleIgnoreCase
+     * Minimum test cases: 2
+     */
     @Transactional
     public MovieDataResponse addMovie(AddMovieRequest request) {
         // Validate no duplicate title
@@ -42,6 +52,11 @@ public class MovieService {
         return movieMapper.toDataResponse(newMovie);
     }
 
+    /**
+     * Predicate nodes (d): 13 -> V(G)=d+1=14
+     * Nodes: existsByTitleIgnoreCase, multiple null checks for each field
+     * Minimum test cases: 14
+     */
     @Transactional
     public MovieDataResponse updateMovie(UUID movieId, UpdateMovieRequest request) {
         Movie movie = findMovieById(movieId);
@@ -92,6 +107,11 @@ public class MovieService {
         return movieMapper.toDataResponse(movie);
     }
 
+    /**
+     * Predicate nodes (d): 1 -> V(G)=d+1=2
+     * Nodes: check for associated showtimes
+     * Minimum test cases: 2
+     */
     @Transactional
     public void deleteMovie(UUID movieId) {
         Movie movie = findMovieById(movieId);
@@ -103,6 +123,7 @@ public class MovieService {
 
         movieRepo.delete(movie);
     }
+
 
     public MovieDataResponse getMovie(UUID movieId) {
         Movie movie = findMovieById(movieId);
@@ -137,6 +158,12 @@ public class MovieService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * searchMovies:
+     * Predicate nodes (d): 1 -> V(G)=d+1=2
+     * Nodes:
+     * - status != null && !status.isEmpty()
+     */
     // Advanced search with multiple filters
     public List<MovieDataResponse> searchMovies(String title, String genre, String status) {
         MovieStatus movieStatus = (status != null && !status.isEmpty()) ? MovieStatus.valueOf(status) : null;
