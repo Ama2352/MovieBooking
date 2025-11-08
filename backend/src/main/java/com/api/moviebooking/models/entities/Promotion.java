@@ -2,8 +2,12 @@ package com.api.moviebooking.models.entities;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.annotations.UuidGenerator;
 
 import com.api.moviebooking.models.enums.DiscountType;
@@ -13,6 +17,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -32,10 +37,13 @@ public class Promotion {
     private UUID id;
 
     @Column(unique = true, nullable = false)
-    private String code; // Mã giảm giá (unique)
+    private String code; // Mã khuyến mãi (unique)
+
+    @Column(nullable = false)
+    private String name; // Tên khuyến mãi
 
     @Column(columnDefinition = "TEXT")
-    private String description;
+    private String description; // Mô tả (nullable)
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -50,13 +58,21 @@ public class Promotion {
     @Column(nullable = false)
     private LocalDateTime endDate;
 
-    @Column(nullable = false)
-    private Integer usageLimit; // Tổng số lần sử dụng
+    private Integer usageLimit; // Tổng số lần sử dụng toàn hệ thống (nullable)
 
-    @Column(nullable = false)
-    private Integer perUserLimit; // Số lần mỗi user được dùng
+    private Integer perUserLimit; // Giới hạn cho mỗi user (nullable)
 
     @Column(nullable = false)
     private Boolean isActive = true;
 
+    @CreationTimestamp
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(nullable = false)
+    private LocalDateTime updatedAt;
+
+    @ManyToMany(mappedBy = "promotions")
+    private List<Booking> bookings = new ArrayList<>();
 }

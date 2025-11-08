@@ -19,6 +19,8 @@ public class UpdatePromotionRequest {
     @Pattern(regexp = "^[A-Z0-9_-]+$", message = "Code must contain only uppercase letters, numbers, hyphens and underscores")
     private String code;
 
+    private String name;
+
     private String description;
 
     @EnumValidator(enumClass = DiscountType.class, message = "Discount type must be PERCENTAGE or FIXED_AMOUNT")

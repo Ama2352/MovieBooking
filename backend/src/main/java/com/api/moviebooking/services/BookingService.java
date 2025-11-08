@@ -23,6 +23,7 @@ import com.api.moviebooking.models.dtos.booking.LockSeatsRequest;
 import com.api.moviebooking.models.dtos.booking.LockSeatsResponse;
 import com.api.moviebooking.models.dtos.booking.SeatAvailabilityResponse;
 import com.api.moviebooking.models.entities.Booking;
+import com.api.moviebooking.models.entities.Promotion;
 import com.api.moviebooking.models.entities.SeatLock;
 import com.api.moviebooking.models.entities.Showtime;
 import com.api.moviebooking.models.entities.ShowtimeSeat;
@@ -53,6 +54,7 @@ public class BookingService {
         private final ShowtimeRepo showtimeRepo;
         private final UserRepo userRepo;
         private final BookingRepo bookingRepo;
+        private final PromotionService promotionService;
 
         @Value("${seat.lock.duration.minutes}")
         private int lockDurationMinutes;
@@ -188,12 +190,22 @@ public class BookingService {
         }
 
         /**
-         * Confirm booking and transition from LOCKED to BOOKED
+         * Confirm booking and transition from LOCKED to BOOKED (without promotion)
          * Predicate nodes (d): 4 -> V(G) = d + 1 = 5
          * Nodes: findSeatLock, !equals(userId), !isActive, isAfter(expiresAt)
          */
         @Transactional
         public BookingResponse confirmBooking(UUID userId, UUID lockId) {
+                return confirmBooking(userId, lockId, null);
+        }
+
+        /**
+         * Confirm booking with optional promotion
+         * Predicate nodes (d): 5 -> V(G) = d + 1 = 6
+         * Nodes: findSeatLock, !equals(userId), !isActive, isAfter(expiresAt), promotionCode != null
+         */
+        @Transactional
+        public BookingResponse confirmBooking(UUID userId, UUID lockId, String promotionCode) {
                 log.info("User {} confirming booking for lock {}", userId, lockId);
 
                 // Find and validate lock
@@ -231,7 +243,14 @@ public class BookingService {
                 // Create a new list to avoid shared collection references
                 booking.setBookedSeats(new ArrayList<>(seatLock.getLockedSeats()));
                 booking.setTotalPrice(totalPrice);
+                booking.setFinalPrice(totalPrice); // Default to total price
                 booking.setStatus(BookingStatus.PENDING); // Pending payment
+                
+                // Apply promotion if provided
+                if (promotionCode != null && !promotionCode.isBlank()) {
+                        applyPromotionToBooking(booking, promotionCode, userId);
+                }
+                
                 // QR code generation can be added here
 
                 bookingRepo.save(booking);
@@ -319,6 +338,35 @@ public class BookingService {
 
         // ========== Private Helper Methods ==========
 
+        /**
+         * Apply promotion to booking
+         * This method validates promotion and calculates discount
+         */
+        private void applyPromotionToBooking(Booking booking, String promotionCode, UUID userId) {
+                // Validate and get promotion
+                Promotion promotion = promotionService.validateAndGetPromotion(promotionCode, userId);
+                
+                // Calculate discount
+                BigDecimal discountAmount = promotionService.calculateDiscount(promotion, booking.getTotalPrice());
+                BigDecimal finalPrice = booking.getTotalPrice().subtract(discountAmount);
+                
+                // Ensure final price is not negative
+                if (finalPrice.compareTo(BigDecimal.ZERO) < 0) {
+                        finalPrice = BigDecimal.ZERO;
+                }
+                
+                // Add promotion to booking
+                booking.getPromotions().add(promotion);
+                
+                // Set discount information
+                booking.setDiscountReason("Promotion: " + promotion.getName() + " (" + promotion.getCode() + ")");
+                booking.setDiscountValue(discountAmount);
+                booking.setFinalPrice(finalPrice);
+                
+                log.info("Applied promotion {} to booking. Original price: {}, Discount: {}, Final price: {}",
+                        promotionCode, booking.getTotalPrice(), discountAmount, finalPrice);
+        }
+
         private BookingResponse buildBookingResponse(Booking booking) {
                 List<BookingResponse.SeatDetail> seatDetails = booking.getBookedSeats().stream()
                                 .map(s -> BookingResponse.SeatDetail.builder()
@@ -339,6 +387,9 @@ public class BookingService {
                                                 " (" + booking.getShowtime().getRoom().getRoomType() + ")")
                                 .seats(seatDetails)
                                 .totalPrice(booking.getTotalPrice())
+                                .discountReason(booking.getDiscountReason())
+                                .discountValue(booking.getDiscountValue())
+                                .finalPrice(booking.getFinalPrice())
                                 .status(booking.getStatus())
                                 .bookedAt(booking.getBookedAt())
                                 .qrCode(booking.getQrCode())

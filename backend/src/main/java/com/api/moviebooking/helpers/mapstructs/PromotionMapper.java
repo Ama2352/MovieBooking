@@ -12,6 +12,9 @@ import com.api.moviebooking.models.enums.DiscountType;
 public interface PromotionMapper {
 
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "bookings", ignore = true)
     @Mapping(target = "discountType", expression = "java(mapDiscountType(request.getDiscountType()))")
     @Mapping(target = "isActive", expression = "java(request.getIsActive() != null ? request.getIsActive() : true)")
     Promotion toEntity(AddPromotionRequest request);

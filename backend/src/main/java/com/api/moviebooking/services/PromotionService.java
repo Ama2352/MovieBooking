@@ -63,8 +63,9 @@ public class PromotionService {
             }
         }
 
-        // Validate per user limit doesn't exceed usage limit
-        if (request.getPerUserLimit() > request.getUsageLimit()) {
+        // Validate per user limit doesn't exceed usage limit (if both are provided)
+        if (request.getPerUserLimit() != null && request.getUsageLimit() != null 
+                && request.getPerUserLimit() > request.getUsageLimit()) {
             throw new IllegalArgumentException("Per user limit cannot exceed total usage limit");
         }
 
@@ -101,6 +102,10 @@ public class PromotionService {
                 throw new IllegalArgumentException("Promotion code already exists: " + request.getCode());
             }
             promotion.setCode(request.getCode());
+        }
+
+        if (request.getName() != null) {
+            promotion.setName(request.getName());
         }
 
         if (request.getDescription() != null) {
@@ -148,8 +153,9 @@ public class PromotionService {
             promotion.setPerUserLimit(request.getPerUserLimit());
         }
 
-        // Validate per user limit doesn't exceed usage limit
-        if (promotion.getPerUserLimit() > promotion.getUsageLimit()) {
+        // Validate per user limit doesn't exceed usage limit (if both are not null)
+        if (promotion.getPerUserLimit() != null && promotion.getUsageLimit() != null 
+                && promotion.getPerUserLimit() > promotion.getUsageLimit()) {
             throw new IllegalArgumentException("Per user limit cannot exceed total usage limit");
         }
 
@@ -176,17 +182,22 @@ public class PromotionService {
     }
 
     /**
-     * Predicate nodes (d): 1 -> V(G)=d+1=2
-     * Nodes: isPresent (from findPromotionById)
-     * Minimum test cases: 2
-     * 1. Promotion exists (success path)
-     * 2. Promotion not found (throws ResourceNotFoundException)
+     * Predicate nodes (d): 2 -> V(G)=d+1=3
+     * Nodes: isPresent (from findPromotionById), !isEmpty(bookings)
+     * Minimum test cases: 3
+     * 1. Promotion exists with no bookings (success path)
+     * 2. Promotion exists with bookings (throws IllegalStateException)
+     * 3. Promotion not found (throws ResourceNotFoundException)
      */
     @Transactional
     public void deletePromotion(UUID promotionId) {
         Promotion promotion = findPromotionById(promotionId);
-        // TODO: Check if promotion is used in any bookings when booking module is implemented
-        // Similar to MovieService checking for showtimes before deletion
+        
+        // Check if promotion is used in any bookings
+        if (!promotion.getBookings().isEmpty()) {
+            throw new IllegalStateException("Cannot delete promotion that has been used in bookings");
+        }
+        
         promotionRepo.delete(promotion);
     }
 
@@ -252,5 +263,71 @@ public class PromotionService {
         return promotionRepo.findByIsActiveAndStartDateBeforeAndEndDateAfter(true, now, now).stream()
                 .map(promotionMapper::toDataResponse)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Validate if promotion can be used by a user
+     * Predicate nodes (d): 5 -> V(G)=d+1=6
+     * Nodes: !isActive, now.isBefore(startDate), now.isAfter(endDate), 
+     *        usageLimit != null && usedCount >= usageLimit,
+     *        perUserLimit != null && userUsageCount >= perUserLimit
+     * Minimum test cases: 6
+     */
+    public Promotion validateAndGetPromotion(String code, UUID userId) {
+        Promotion promotion = promotionRepo.findByCode(code)
+                .orElseThrow(() -> new ResourceNotFoundException("Promotion", "code", code));
+
+        LocalDateTime now = LocalDateTime.now();
+
+        // Check if promotion is active
+        if (!promotion.getIsActive()) {
+            throw new IllegalArgumentException("Promotion is not active");
+        }
+
+        // Check if promotion is within date range
+        if (now.isBefore(promotion.getStartDate())) {
+            throw new IllegalArgumentException("Promotion has not started yet");
+        }
+
+        if (now.isAfter(promotion.getEndDate())) {
+            throw new IllegalArgumentException("Promotion has expired");
+        }
+
+        // Check usage limit (if set)
+        if (promotion.getUsageLimit() != null) {
+            long totalUsageCount = promotion.getBookings().size();
+            if (totalUsageCount >= promotion.getUsageLimit()) {
+                throw new IllegalArgumentException("Promotion usage limit has been reached");
+            }
+        }
+
+        // Check per user limit (if set)
+        if (promotion.getPerUserLimit() != null && userId != null) {
+            long userUsageCount = promotion.getBookings().stream()
+                    .filter(b -> b.getUser().getId().equals(userId))
+                    .count();
+            if (userUsageCount >= promotion.getPerUserLimit()) {
+                throw new IllegalArgumentException("You have reached the usage limit for this promotion");
+            }
+        }
+
+        return promotion;
+    }
+
+    /**
+     * Calculate discount amount based on promotion type
+     * Predicate nodes (d): 1 -> V(G)=d+1=2
+     * Nodes: discountType == PERCENTAGE
+     * Minimum test cases: 2
+     */
+    public java.math.BigDecimal calculateDiscount(Promotion promotion, java.math.BigDecimal originalPrice) {
+        if (promotion.getDiscountType() == DiscountType.PERCENTAGE) {
+            // Percentage discount: (originalPrice * discountValue) / 100
+            return originalPrice.multiply(promotion.getDiscountValue())
+                    .divide(java.math.BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+        } else {
+            // Fixed amount discount
+            return promotion.getDiscountValue().min(originalPrice);
+        }
     }
 }
