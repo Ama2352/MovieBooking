@@ -26,11 +26,24 @@ public class PromotionService {
     private final PromotionRepo promotionRepo;
     private final PromotionMapper promotionMapper;
 
+    /**
+     * Predicate nodes (d): 1 -> V(G)=d+1=2
+     * Nodes: isPresent
+     * Minimum test cases: 2
+     * 1. Promotion exists (success path)
+     * 2. Promotion not found (throws ResourceNotFoundException)
+     */
     private Promotion findPromotionById(UUID promotionId) {
         return promotionRepo.findById(promotionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Promotion", "id", promotionId));
     }
 
+    /**
+     * Predicate nodes (d): 5 -> V(G)=d+1=6
+     * Nodes: existsByCodeIgnoreCase, endDate.isBefore(startDate), discountType.equals("PERCENTAGE"), 
+     *        discountValue.compareTo(100) > 0, perUserLimit > usageLimit
+     * Minimum test cases: 6
+     */
     @Transactional
     public PromotionDataResponse addPromotion(AddPromotionRequest request) {
         // Validate unique code
@@ -60,6 +73,24 @@ public class PromotionService {
         return promotionMapper.toDataResponse(newPromotion);
     }
 
+    /**
+     * Predicate nodes (d): 14 -> V(G)=d+1=15
+     * Nodes:  * - request.getCode() != null
+    * - !code.equalsIgnoreCase && existsByCode
+    * - request.getDescription() != null
+    * - request.getDiscountType() != null
+    * - newType == PERCENTAGE && value > 100
+    * - request.getDiscountValue() != null
+    * - type == PERCENTAGE && value > 100
+    * - request.getStartDate() != null
+    * - request.getEndDate() != null
+    * - endDate.isBefore(startDate)
+    * - request.getUsageLimit() != null
+    * - request.getPerUserLimit() != null
+    * - perUserLimit > usageLimit
+    * - request.getIsActive() != null
+     * Minimum test cases: 15
+     */
     @Transactional
     public PromotionDataResponse updatePromotion(UUID promotionId, UpdatePromotionRequest request) {
         Promotion promotion = findPromotionById(promotionId);
@@ -130,6 +161,13 @@ public class PromotionService {
         return promotionMapper.toDataResponse(promotion);
     }
 
+    /**
+     * Predicate nodes (d): 1 -> V(G)=d+1=2
+     * Nodes: isPresent (from findPromotionById)
+     * Minimum test cases: 2
+     * 1. Promotion exists (success path)
+     * 2. Promotion not found (throws ResourceNotFoundException)
+     */
     @Transactional
     public void deactivatePromotion(UUID promotionId) {
         Promotion promotion = findPromotionById(promotionId);
@@ -137,6 +175,13 @@ public class PromotionService {
         promotionRepo.save(promotion);
     }
 
+    /**
+     * Predicate nodes (d): 1 -> V(G)=d+1=2
+     * Nodes: isPresent (from findPromotionById)
+     * Minimum test cases: 2
+     * 1. Promotion exists (success path)
+     * 2. Promotion not found (throws ResourceNotFoundException)
+     */
     @Transactional
     public void deletePromotion(UUID promotionId) {
         Promotion promotion = findPromotionById(promotionId);
@@ -145,23 +190,49 @@ public class PromotionService {
         promotionRepo.delete(promotion);
     }
 
+    /**
+     * Predicate nodes (d): 1 -> V(G)=d+1=2
+     * Nodes: isPresent (from findPromotionById)
+     * Minimum test cases: 2
+     * 1. Promotion exists (success path)
+     * 2. Promotion not found (throws ResourceNotFoundException)
+     */
     public PromotionDataResponse getPromotion(UUID promotionId) {
         Promotion promotion = findPromotionById(promotionId);
         return promotionMapper.toDataResponse(promotion);
     }
 
+    /**
+     * Predicate nodes (d): 1 -> V(G)=d+1=2
+     * Nodes: isPresent
+     * Minimum test cases: 2
+     * 1. Promotion exists with code (success path)
+     * 2. Promotion not found with code (throws ResourceNotFoundException)
+     */
     public PromotionDataResponse getPromotionByCode(String code) {
         Promotion promotion = promotionRepo.findByCode(code)
                 .orElseThrow(() -> new ResourceNotFoundException("Promotion", "code", code));
         return promotionMapper.toDataResponse(promotion);
     }
 
+    /**
+     * Predicate nodes (d): 0 -> V(G)=d+1=1
+     * Nodes: None (linear execution)
+     * Minimum test cases: 1
+     * 1. Return all promotions (success path)
+     */
     public List<PromotionDataResponse> getAllPromotions() {
         return promotionRepo.findAll().stream()
                 .map(promotionMapper::toDataResponse)
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Predicate nodes (d): 0 -> V(G)=d+1=1
+     * Nodes: None (linear execution)
+     * Minimum test cases: 1
+     * 1. Return all active promotions (success path)
+     */
     //Promotions is active but not useable atm
     public List<PromotionDataResponse> getActivePromotions() {
         return promotionRepo.findByIsActive(true).stream()
@@ -169,6 +240,12 @@ public class PromotionService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Predicate nodes (d): 0 -> V(G)=d+1=1
+     * Nodes: None (linear execution)
+     * Minimum test cases: 1
+     * 1. Return all valid promotions (active and within date range) (success path)
+     */
     //Promotions is active and within date range
     public List<PromotionDataResponse> getValidPromotions() {
         LocalDateTime now = LocalDateTime.now();

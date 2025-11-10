@@ -31,21 +31,48 @@ public class ShowtimeService {
     private final RoomRepo roomRepo;
     private final MovieRepo movieRepo;
 
+    /**
+     * findShowtimeById:
+     * Predicate nodes (d): 0 -> V(G)=d+1=1
+     * Nodes: none (just findById with exception)
+     * Minimum test cases: 1
+     */
     public Showtime findShowtimeById(UUID showtimeId) {
         return showtimeRepo.findById(showtimeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Showtime", "id", showtimeId));
     }
 
+    /**
+     * findRoomById:
+     * Predicate nodes (d): 0 -> V(G)=d+1=1
+     * Nodes: none (just findById with exception)
+     * Minimum test cases: 1
+     */
     private Room findRoomById(UUID roomId) {
         return roomRepo.findById(roomId)
                 .orElseThrow(() -> new ResourceNotFoundException("Room", "id", roomId));
     }
 
+    /**
+     * findMovieById:
+     * Predicate nodes (d): 0 -> V(G)=d+1=1
+     * Nodes: none (just findById with exception)
+     * Minimum test cases: 1
+     */
     private Movie findMovieById(UUID movieId) {
         return movieRepo.findById(movieId)
                 .orElseThrow(() -> new ResourceNotFoundException("Movie", "id", movieId));
     }
 
+
+    /**
+     * validateNoOverlap:
+     * Predicate nodes (d): 2 -> V(G)=d+1=3
+     * Nodes:
+     * - showtimeId != null (ternary operator)
+     * - existsOverlappingShowtime
+     * Minimum test cases: 3
+     */
     // Validate no overlap in the same room
     private void validateNoOverlap(UUID showtimeId, UUID roomId, LocalDateTime startTime, int movieDuration) {
         // Calculate end time based on movie duration
@@ -59,6 +86,12 @@ public class ShowtimeService {
         }
     }
 
+    /**
+     * addShowtime:
+     * Predicate nodes (d): 0 -> V(G)=d+1=1
+     * Nodes: none (just validation through helper methods)
+     * Minimum test cases: 1
+     */
     @Transactional
     public ShowtimeDataResponse addShowtime(AddShowtimeRequest request) {
         Room room = findRoomById(request.getRoomId());
@@ -75,6 +108,20 @@ public class ShowtimeService {
         return showtimeMapper.toDataResponse(newShowtime);
     }
 
+    /**
+     * updateShowtime:
+     * Predicate nodes (d): 9 -> V(G)=d+1=10
+     * Nodes:
+     * - request.getRoomId() != null (ternary)
+     * - request.getMovieId() != null (ternary)
+     * - request.getStartTime() != null (ternary)
+     * - request.getMovieId() != null (for movie validation)
+     * - !newRoomId.equals || !newMovieId.equals || !newStartTime.equals
+     * - request.getRoomId() != null
+     * - request.getMovieId() != null
+     * - request.getFormat() != null
+     * - request.getStartTime() != null
+     */
     @Transactional
     public ShowtimeDataResponse updateShowtime(UUID showtimeId, UpdateShowtimeRequest request) {
         Showtime showtime = findShowtimeById(showtimeId);
