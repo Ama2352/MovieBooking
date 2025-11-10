@@ -99,7 +99,7 @@ class CinemaServiceTest {
         mockCinema.setSnacks(new ArrayList<>());
 
         mockCinemaResponse = new CinemaDataResponse();
-        mockCinemaResponse.setId(cinemaId.toString());
+        mockCinemaResponse.setCinemaId(cinemaId.toString());
         mockCinemaResponse.setName("CGV Cinema");
         mockCinemaResponse.setAddress("123 Main St");
         mockCinemaResponse.setHotline("1900-1234");
@@ -114,7 +114,7 @@ class CinemaServiceTest {
         mockRoom.setShowtimes(new ArrayList<>());
 
         mockRoomResponse = new RoomDataResponse();
-        mockRoomResponse.setId(roomId.toString());
+        mockRoomResponse.setCinemaId(roomId.toString());
         mockRoomResponse.setCinemaId(cinemaId.toString());
         mockRoomResponse.setRoomType("IMAX");
         mockRoomResponse.setRoomNumber(1);
@@ -129,7 +129,7 @@ class CinemaServiceTest {
         mockSnack.setType("FOOD");
 
         mockSnackResponse = new SnackDataResponse();
-        mockSnackResponse.setId(snackId.toString());
+        mockSnackResponse.setCinemaId(snackId.toString());
         mockSnackResponse.setCinemaId(cinemaId.toString());
         mockSnackResponse.setName("Popcorn");
         mockSnackResponse.setDescription("Large popcorn");

@@ -16,5 +16,6 @@ public interface RoomMapper {
     Room toEntity(AddRoomRequest request);
 
     @Mapping(target = "cinemaId", source = "cinema.id")
+    @Mapping(target = "roomId", source = "id")
     RoomDataResponse toDataResponse(Room room);
 }

@@ -4,7 +4,7 @@ import lombok.Data;
 
 @Data
 public class CinemaDataResponse {
-    private String id;
+    private String cinemaId;
     private String name;
     private String address;
     private String hotline;

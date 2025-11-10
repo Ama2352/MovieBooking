@@ -8,7 +8,7 @@ import com.api.moviebooking.models.dtos.showtime.AddShowtimeRequest;
 import com.api.moviebooking.models.dtos.showtime.ShowtimeDataResponse;
 import com.api.moviebooking.models.entities.Showtime;
 
-@Mapper(componentModel = "spring", uses = {MappingUtils.class, MovieMapper.class, RoomMapper.class})
+@Mapper(componentModel = "spring", uses = { MappingUtils.class, MovieMapper.class, RoomMapper.class })
 public interface ShowtimeMapper {
 
     @Mapping(target = "id", ignore = true)
@@ -16,5 +16,6 @@ public interface ShowtimeMapper {
     @Mapping(target = "movie", ignore = true)
     Showtime toEntity(AddShowtimeRequest request);
 
+    @Mapping(target = "showtimeId", source = "id")
     ShowtimeDataResponse toDataResponse(Showtime showtime);
 }

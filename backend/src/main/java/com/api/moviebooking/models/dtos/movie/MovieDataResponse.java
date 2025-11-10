@@ -9,7 +9,7 @@ import lombok.Getter;
 @Builder
 public class MovieDataResponse {
 
-    private UUID id;
+    private UUID movieId;
     private String title;
     private String genre;
     private String description;

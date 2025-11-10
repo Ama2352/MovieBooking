@@ -16,6 +16,7 @@ public interface PromotionMapper {
     @Mapping(target = "isActive", expression = "java(request.getIsActive() != null ? request.getIsActive() : true)")
     Promotion toEntity(AddPromotionRequest request);
 
+    @Mapping(target = "promotionId", source = "id")
     PromotionDataResponse toDataResponse(Promotion promotion);
 
     default DiscountType mapDiscountType(String discountType) {

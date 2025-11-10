@@ -17,5 +17,6 @@ public interface MovieMapper {
     Movie toEntity(AddMovieRequest request);
 
     @Mapping(target = "status", source = "status")
+    @Mapping(target = "movieId", source = "id")
     MovieDataResponse toDataResponse(Movie movie);
 }

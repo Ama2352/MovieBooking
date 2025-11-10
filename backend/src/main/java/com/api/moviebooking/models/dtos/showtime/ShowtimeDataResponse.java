@@ -13,7 +13,7 @@ import lombok.Getter;
 @Builder
 public class ShowtimeDataResponse {
 
-    private UUID id;
+    private UUID showtimeId;
     private RoomDataResponse room;
     private MovieDataResponse movie;
     private String format;

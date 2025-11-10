@@ -13,7 +13,7 @@ import lombok.Getter;
 @Builder
 public class PromotionDataResponse {
 
-    private UUID id;
+    private UUID promotionId;
     private String code;
     private String description;
     private DiscountType discountType;

@@ -6,7 +6,7 @@ import lombok.Data;
 
 @Data
 public class SnackDataResponse {
-    private String id;
+    private String snackId;
     private String cinemaId;
     private String name;
     private String description;

@@ -16,5 +16,6 @@ public interface SnackMapper {
     Snack toEntity(AddSnackRequest request);
 
     @Mapping(target = "cinemaId", source = "cinema.id")
+    @Mapping(target = "snackId", source = "id")
     SnackDataResponse toDataResponse(Snack snack);
 }
