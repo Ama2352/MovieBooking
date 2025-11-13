@@ -14,21 +14,19 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
-import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
+import com.api.moviebooking.models.entities.MembershipTier;
 import com.api.moviebooking.models.entities.RefreshToken;
 import com.api.moviebooking.models.entities.User;
-import com.api.moviebooking.models.enums.MembershipTier;
 import com.api.moviebooking.models.enums.UserRole;
+import com.api.moviebooking.repositories.MembershipTierRepo;
 import com.api.moviebooking.repositories.RefreshTokenRepo;
 import com.api.moviebooking.repositories.UserRepo;
 import com.api.moviebooking.services.JwtService;
@@ -59,6 +57,9 @@ class UserIntegrationTest {
         private RefreshTokenRepo refreshTokenRepo;
 
         @Autowired
+        private MembershipTierRepo membershipTierRepo;
+
+        @Autowired
         private PasswordEncoder passwordEncoder;
 
         @Autowired
@@ -66,6 +67,7 @@ class UserIntegrationTest {
 
         private User testUser;
         private String validRefreshToken;
+        private MembershipTier defaultTier;
 
         @BeforeEach
         void setUp() {
@@ -77,6 +79,14 @@ class UserIntegrationTest {
                 // Clean up test data
                 refreshTokenRepo.deleteAll();
                 userRepo.deleteAll();
+                membershipTierRepo.deleteAll();
+
+                // Create default membership tier
+                defaultTier = new MembershipTier();
+                defaultTier.setName("SILVER");
+                defaultTier.setMinPoints(0);
+                defaultTier.setIsActive(true);
+                defaultTier = membershipTierRepo.save(defaultTier);
 
                 // Create test user
                 testUser = new User();
@@ -85,7 +95,8 @@ class UserIntegrationTest {
                 testUser.setPassword(passwordEncoder.encode("password123"));
                 testUser.setPhoneNumber("0123456789");
                 testUser.setRole(UserRole.USER);
-                testUser.setMembershipTier(MembershipTier.BRONZE);
+                testUser.setLoyaltyPoints(0);
+                testUser.setMembershipTier(defaultTier);
                 testUser = userRepo.save(testUser);
 
                 // Generate and persist a valid refresh token
@@ -351,7 +362,8 @@ class UserIntegrationTest {
                 user2.setPassword(passwordEncoder.encode("password456"));
                 user2.setPhoneNumber("0987654321");
                 user2.setRole(UserRole.USER);
-                user2.setMembershipTier(MembershipTier.SILVER);
+                user2.setLoyaltyPoints(0);
+                user2.setMembershipTier(defaultTier);
                 user2 = userRepo.save(user2);
 
                 // Generate token for user2

@@ -29,8 +29,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.api.moviebooking.models.dtos.auth.LoginRequest;
 import com.api.moviebooking.models.dtos.auth.RegisterRequest;
+import com.api.moviebooking.models.entities.MembershipTier;
 import com.api.moviebooking.models.entities.User;
-import com.api.moviebooking.models.enums.MembershipTier;
 import com.api.moviebooking.models.enums.UserRole;
 import com.api.moviebooking.repositories.UserRepo;
 
@@ -53,12 +53,16 @@ class UserServiceTest {
     private CustomUserDetailsService customUserDetailsService;
 
     @Mock
+    private MembershipTierService membershipTierService;
+
+    @Mock
     private Authentication authentication;
 
     @InjectMocks
     private UserService userService;
 
     private User mockUser;
+    private MembershipTier mockTier;
     private String testEmail;
     private UUID testUserId;
 
@@ -67,13 +71,21 @@ class UserServiceTest {
         testEmail = "test@example.com";
         testUserId = UUID.randomUUID();
 
+        // Create mock membership tier
+        mockTier = new MembershipTier();
+        mockTier.setId(UUID.randomUUID());
+        mockTier.setName("SILVER");
+        mockTier.setMinPoints(0);
+        mockTier.setIsActive(true);
+
         mockUser = new User();
         mockUser.setId(testUserId);
         mockUser.setEmail(testEmail);
         mockUser.setUsername("testuser");
         mockUser.setPassword("encodedPassword");
         mockUser.setRole(UserRole.USER);
-        mockUser.setMembershipTier(MembershipTier.BRONZE);
+        mockUser.setLoyaltyPoints(0);
+        mockUser.setMembershipTier(mockTier);
         mockUser.setRefreshTokens(new HashSet<>());
     }
 
@@ -94,18 +106,21 @@ class UserServiceTest {
 
             when(userRepo.existsByEmail(request.getEmail())).thenReturn(false);
             when(passwordEncoder.encode(request.getPassword())).thenReturn("encodedPassword123");
+            when(membershipTierService.getDefaultTier()).thenReturn(mockTier);
             when(userRepo.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
             userService.register(request);
 
             verify(userRepo).existsByEmail(request.getEmail());
             verify(passwordEncoder).encode(request.getPassword());
+            verify(membershipTierService).getDefaultTier();
             verify(userRepo).save(argThat(user -> user.getEmail().equals(request.getEmail()) &&
                     user.getUsername().equals(request.getUsername()) &&
                     user.getPassword().equals("encodedPassword123") &&
                     user.getPhoneNumber().equals(request.getPhoneNumber()) &&
                     user.getRole() == UserRole.USER &&
-                    user.getMembershipTier() == MembershipTier.BRONZE));
+                    user.getLoyaltyPoints() == 0 &&
+                    user.getMembershipTier() != null));
         }
 
         @Test

@@ -89,7 +89,7 @@ public class PromotionController {
     }
 
     @GetMapping
-    @Operation(summary = "Get all promotions or filter by status")
+    @Operation(summary = "Get all promotions or filter by status(active/valid)")
     public ResponseEntity<List<PromotionDataResponse>> getPromotions(
             @RequestParam(required = false) String filter) {
         List<PromotionDataResponse> response;

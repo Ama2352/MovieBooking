@@ -41,7 +41,7 @@ class PromotionServiceTest {
     private PromotionService promotionService;
 
     @Test
-    void addPromotion_mapsSavesAndReturnsResponse() {
+    void addPromotionPercentage_mapsSavesAndReturnsResponse() {
         AddPromotionRequest req = AddPromotionRequest.builder()
                 .code("SUMMER2025")
                 .description("Summer sale 50% off")
@@ -63,6 +63,43 @@ class PromotionServiceTest {
         PromotionDataResponse expected = PromotionDataResponse.builder()
                 .code("SUMMER2025")
                 .description("Summer sale 50% off")
+                .discountType(DiscountType.PERCENTAGE)
+                .discountValue(new BigDecimal("50.00"))
+                .build();
+
+        when(promotionRepo.existsByCodeIgnoreCase(req.getCode())).thenReturn(false);
+        when(promotionMapper.toEntity(req)).thenReturn(entity);
+        when(promotionMapper.toDataResponse(entity)).thenReturn(expected);
+
+        PromotionDataResponse result = promotionService.addPromotion(req);
+
+        verify(promotionRepo).save(entity);
+        assertSame(expected, result);
+    }
+
+        @Test
+    void addPromotionFixed_mapsSavesAndReturnsResponse() {
+        AddPromotionRequest req = AddPromotionRequest.builder()
+                .code("SUMMER2025")
+                .description("Summer sale 50$ off")
+                .discountType("FIXED_AMOUNT")
+                .discountValue(new BigDecimal("50.00"))
+                .startDate(LocalDateTime.now())
+                .endDate(LocalDateTime.now().plusDays(30))
+                .usageLimit(100)
+                .perUserLimit(1)
+                .isActive(true)
+                .build();
+
+        Promotion entity = new Promotion();
+        entity.setCode("SUMMER2025");
+        entity.setDescription("Summer sale 50$ off");
+        entity.setDiscountType(DiscountType.PERCENTAGE);
+        entity.setDiscountValue(new BigDecimal("50.00"));
+
+        PromotionDataResponse expected = PromotionDataResponse.builder()
+                .code("SUMMER2025")
+                .description("Summer sale 50$ off")
                 .discountType(DiscountType.PERCENTAGE)
                 .discountValue(new BigDecimal("50.00"))
                 .build();

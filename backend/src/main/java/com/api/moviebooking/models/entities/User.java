@@ -9,7 +9,6 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.annotations.UuidGenerator;
 
-import com.api.moviebooking.models.enums.MembershipTier;
 import com.api.moviebooking.models.enums.UserRole;
 
 import jakarta.persistence.CascadeType;
@@ -17,7 +16,10 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
@@ -46,12 +48,15 @@ public class User {
     private String provider; // e.g., "google", "facebook"
     private String avatarUrl;
     private String avatarCloudinaryId;
-    private int loyaltyPoints;
+    
+    @Column(nullable = false)
+    private Integer loyaltyPoints = 0;
 
     @Enumerated(EnumType.STRING)
     private UserRole role;
 
-    @Enumerated(EnumType.STRING)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "membership_tier_id")
     private MembershipTier membershipTier;
 
     @CreationTimestamp

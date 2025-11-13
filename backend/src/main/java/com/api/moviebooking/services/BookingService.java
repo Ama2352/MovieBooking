@@ -55,6 +55,7 @@ public class BookingService {
         private final UserRepo userRepo;
         private final BookingRepo bookingRepo;
         private final PromotionService promotionService;
+        private final UserService userService;
 
         @Value("${seat.lock.duration.minutes}")
         private int lockDurationMinutes;
@@ -246,7 +247,10 @@ public class BookingService {
                 booking.setFinalPrice(totalPrice); // Default to total price
                 booking.setStatus(BookingStatus.PENDING); // Pending payment
                 
-                // Apply promotion if provided
+                // Apply membership tier discount first
+                applyMembershipTierDiscount(booking);
+                
+                // Apply promotion if provided (stacks with membership discount)
                 if (promotionCode != null && !promotionCode.isBlank()) {
                         applyPromotionToBooking(booking, promotionCode, userId);
                 }
@@ -254,6 +258,9 @@ public class BookingService {
                 // QR code generation can be added here
 
                 bookingRepo.save(booking);
+
+                // Add loyalty points based on final price
+                userService.addLoyaltyPoints(userId, booking.getFinalPrice());
 
                 // Deactivate lock and release Redis
                 seatLock.setActive(false);
@@ -339,32 +346,107 @@ public class BookingService {
         // ========== Private Helper Methods ==========
 
         /**
+         * Apply membership tier discount to booking
+         * This is applied before promotion discount
+         */
+        private void applyMembershipTierDiscount(Booking booking) {
+                User user = booking.getUser();
+                
+                // Check if user has membership tier with discount
+                if (user.getMembershipTier() == null) {
+                        log.warn("User {} has no membership tier assigned", user.getId());
+                        return;
+                }
+                
+                var membershipTier = user.getMembershipTier();
+                
+                // Check if tier has discount configured
+                if (membershipTier.getDiscountType() == null || membershipTier.getDiscountValue() == null) {
+                        log.debug("Membership tier {} has no discount configured", membershipTier.getName());
+                        return;
+                }
+                
+                // Calculate discount based on tier
+                BigDecimal currentPrice = booking.getFinalPrice(); // Use finalPrice to allow stacking
+                BigDecimal tierDiscount = BigDecimal.ZERO;
+                
+                if (membershipTier.getDiscountType() == com.api.moviebooking.models.enums.DiscountType.PERCENTAGE) {
+                        // Percentage discount: (currentPrice * discountValue) / 100
+                        tierDiscount = currentPrice.multiply(membershipTier.getDiscountValue())
+                                        .divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+                } else {
+                        // Fixed amount discount
+                        tierDiscount = membershipTier.getDiscountValue().min(currentPrice);
+                }
+                
+                BigDecimal newFinalPrice = currentPrice.subtract(tierDiscount);
+                
+                // Ensure final price is not negative
+                if (newFinalPrice.compareTo(BigDecimal.ZERO) < 0) {
+                        newFinalPrice = BigDecimal.ZERO;
+                }
+                
+                // Update booking with tier discount
+                String tierDiscountReason = "Membership Tier: " + membershipTier.getName();
+                
+                if (booking.getDiscountReason() != null && !booking.getDiscountReason().isEmpty()) {
+                        // Append to existing discount reason
+                        booking.setDiscountReason(tierDiscountReason + "; " + booking.getDiscountReason());
+                } else {
+                        booking.setDiscountReason(tierDiscountReason);
+                }
+                
+                // Update discount value (cumulative if there are other discounts)
+                BigDecimal totalDiscount = booking.getDiscountValue() != null 
+                        ? booking.getDiscountValue().add(tierDiscount) 
+                        : tierDiscount;
+                booking.setDiscountValue(totalDiscount);
+                booking.setFinalPrice(newFinalPrice);
+                
+                log.info("Applied membership tier discount for {} tier. Discount: {}, New price: {}",
+                        membershipTier.getName(), tierDiscount, newFinalPrice);
+        }
+
+        /**
          * Apply promotion to booking
          * This method validates promotion and calculates discount
+         * Applied after membership tier discount
          */
         private void applyPromotionToBooking(Booking booking, String promotionCode, UUID userId) {
                 // Validate and get promotion
                 Promotion promotion = promotionService.validateAndGetPromotion(promotionCode, userId);
                 
-                // Calculate discount
-                BigDecimal discountAmount = promotionService.calculateDiscount(promotion, booking.getTotalPrice());
-                BigDecimal finalPrice = booking.getTotalPrice().subtract(discountAmount);
+                // Calculate discount based on current final price (after membership discount)
+                BigDecimal currentPrice = booking.getFinalPrice();
+                BigDecimal promotionDiscount = promotionService.calculateDiscount(promotion, currentPrice);
+                BigDecimal newFinalPrice = currentPrice.subtract(promotionDiscount);
                 
                 // Ensure final price is not negative
-                if (finalPrice.compareTo(BigDecimal.ZERO) < 0) {
-                        finalPrice = BigDecimal.ZERO;
+                if (newFinalPrice.compareTo(BigDecimal.ZERO) < 0) {
+                        newFinalPrice = BigDecimal.ZERO;
                 }
                 
                 // Add promotion to booking
                 booking.getPromotions().add(promotion);
                 
-                // Set discount information
-                booking.setDiscountReason("Promotion: " + promotion.getName() + " (" + promotion.getCode() + ")");
-                booking.setDiscountValue(discountAmount);
-                booking.setFinalPrice(finalPrice);
+                // Update discount information (append to existing)
+                String promotionDiscountReason = "Promotion: " + promotion.getName() + " (" + promotion.getCode() + ")";
                 
-                log.info("Applied promotion {} to booking. Original price: {}, Discount: {}, Final price: {}",
-                        promotionCode, booking.getTotalPrice(), discountAmount, finalPrice);
+                if (booking.getDiscountReason() != null && !booking.getDiscountReason().isEmpty()) {
+                        booking.setDiscountReason(booking.getDiscountReason() + "; " + promotionDiscountReason);
+                } else {
+                        booking.setDiscountReason(promotionDiscountReason);
+                }
+                
+                // Update total discount value (cumulative)
+                BigDecimal totalDiscount = booking.getDiscountValue() != null 
+                        ? booking.getDiscountValue().add(promotionDiscount) 
+                        : promotionDiscount;
+                booking.setDiscountValue(totalDiscount);
+                booking.setFinalPrice(newFinalPrice);
+                
+                log.info("Applied promotion {} to booking. Current price before promotion: {}, Promotion discount: {}, New final price: {}",
+                        promotionCode, currentPrice, promotionDiscount, newFinalPrice);
         }
 
         private BookingResponse buildBookingResponse(Booking booking) {

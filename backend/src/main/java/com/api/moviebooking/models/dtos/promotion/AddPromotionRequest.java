@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
 import com.api.moviebooking.helpers.annotations.EnumValidator;
 import com.api.moviebooking.models.enums.DiscountType;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -28,6 +29,7 @@ public class AddPromotionRequest {
     private String description; // Nullable
 
     @NotNull(message = "Discount type is required")
+    @Schema(example = "PERCENTAGE")
     @EnumValidator(enumClass = DiscountType.class, message = "Discount type must be PERCENTAGE or FIXED_AMOUNT")
     private String discountType;
 
