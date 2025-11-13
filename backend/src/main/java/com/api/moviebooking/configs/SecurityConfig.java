@@ -52,7 +52,8 @@ public class SecurityConfig {
                                 "/movies/**",
                                 "/showtimes/**",
                                 "/promotions/**",
-                                "/membership-tiers/**")
+                                "/membership-tiers/**",
+                                "/seats/**")
                         .permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(filter, UsernamePasswordAuthenticationFilter.class)
