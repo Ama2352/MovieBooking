@@ -3,6 +3,7 @@ package com.api.moviebooking.models.dtos.movie;
 import com.api.moviebooking.helpers.annotations.EnumValidator;
 import com.api.moviebooking.models.enums.MovieStatus;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -44,6 +45,7 @@ public class AddMovieRequest {
     private String trailerUrl;
 
     @NotNull(message = "Status is required")
+    @Schema(example = "SHOWING")
     @EnumValidator(enumClass = MovieStatus.class, message = "Status must be SHOWING,UPCOMING")
     private String status;
 
