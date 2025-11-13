@@ -14,5 +14,6 @@ public interface CinemaMapper {
     @Mapping(target = "id", ignore = true)
     Cinema toEntity(AddCinemaRequest request);
 
+    @Mapping(target = "cinemaId", source = "id")
     CinemaDataResponse toDataResponse(Cinema cinema);
 }

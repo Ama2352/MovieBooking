@@ -110,7 +110,7 @@ class MovieIntegrationTest {
                                 .body("duration", equalTo(148))
                                 .body("director", equalTo("Christopher Nolan"))
                                 .body("status", equalTo("SHOWING"))
-                                .body("id", notNullValue());
+                                .body("movieId", notNullValue());
         }
 
         @Test
@@ -230,7 +230,7 @@ class MovieIntegrationTest {
                                 .body("title", equalTo("Test Movie"))
                                 .body("genre", equalTo("Action"))
                                 .body("duration", equalTo(120))
-                                .body("id", equalTo(movie.getId().toString()));
+                                .body("movieId", equalTo(movie.getId().toString()));
         }
 
         @Test

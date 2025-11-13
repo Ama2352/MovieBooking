@@ -37,4 +37,6 @@ build/
 *.md
 md/
 
+backend/src/test/resources/application-test.properties
+
 debug/

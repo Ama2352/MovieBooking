@@ -418,4 +418,9 @@ public class BookingService {
                         releaseSeatsInternal(lock, true);
                 }
         }
+
+        public Booking getBookingById(UUID bookingId) {
+                return bookingRepo.findById(bookingId)
+                                .orElseThrow(() -> new ResourceNotFoundException("Booking", "id", bookingId));
+        }
 }

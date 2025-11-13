@@ -5,7 +5,10 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
+
+import com.api.moviebooking.helpers.exceptions.CustomException;
 
 @Component
 public class MappingUtils {

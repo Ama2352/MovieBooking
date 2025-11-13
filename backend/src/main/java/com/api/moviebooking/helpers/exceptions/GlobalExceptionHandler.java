@@ -127,6 +127,17 @@ public class GlobalExceptionHandler {
         }
 
         /**
+         * Handle custom exceptions with embedded status
+         */
+        @ExceptionHandler(CustomException.class)
+        public ResponseEntity<CustomError> handleCustomException(
+                        CustomException exception, WebRequest webRequest) {
+                CustomError errorDetails = new CustomError(new Date(), exception.getMessage(),
+                                webRequest.getDescription(false));
+                return new ResponseEntity<>(errorDetails, exception.getHttpStatus());
+        }
+
+        /**
          * Handle all other exceptions
          * Returns HTTP 500 Internal Server Error
          */
