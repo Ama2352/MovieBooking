@@ -46,6 +46,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(PublicEndpointConfig.DOCS).permitAll()
+                        .requestMatchers(PublicEndpointConfig.MAKE_PAYMENT).permitAll()
                         .requestMatchers(HttpMethod.POST, PublicEndpointConfig.AUTH).permitAll()
                         .requestMatchers(HttpMethod.GET, PublicEndpointConfig.MOVIES).permitAll()
                         .requestMatchers(HttpMethod.GET, PublicEndpointConfig.SHOWTIMES).permitAll()
@@ -56,6 +57,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, PublicEndpointConfig.PRICE_BASE).permitAll()
                         .requestMatchers(HttpMethod.GET, PublicEndpointConfig.PRICE_MODIFIERS).permitAll()
                         .requestMatchers(HttpMethod.GET, PublicEndpointConfig.CINEMAS).permitAll()
+                        .requestMatchers(HttpMethod.GET, PublicEndpointConfig.PAYMENTS).permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(filter, UsernamePasswordAuthenticationFilter.class)
                 .build();
