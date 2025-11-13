@@ -26,6 +26,9 @@ public class BookingResponse {
         private String roomName;
         private List<SeatDetail> seats;
         private BigDecimal totalPrice;
+        private String discountReason;
+        private BigDecimal discountValue;
+        private BigDecimal finalPrice;
         private BookingStatus status;
         private LocalDateTime bookedAt;
         private String qrCode;

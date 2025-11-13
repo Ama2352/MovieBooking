@@ -6,8 +6,8 @@ import java.time.LocalDateTime;
 import com.api.moviebooking.helpers.annotations.EnumValidator;
 import com.api.moviebooking.models.enums.DiscountType;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -23,10 +23,13 @@ public class AddPromotionRequest {
     @Pattern(regexp = "^[A-Z0-9_-]+$", message = "Code must contain only uppercase letters, numbers, hyphens and underscores")
     private String code;
 
-    @NotBlank(message = "Description is required")
-    private String description;
+    @NotBlank(message = "Promotion name is required")
+    private String name;
+
+    private String description; // Nullable
 
     @NotNull(message = "Discount type is required")
+    @Schema(example = "PERCENTAGE")
     @EnumValidator(enumClass = DiscountType.class, message = "Discount type must be PERCENTAGE or FIXED_AMOUNT")
     private String discountType;
 
@@ -38,16 +41,13 @@ public class AddPromotionRequest {
     private LocalDateTime startDate;
 
     @NotNull(message = "End date is required")
-    @Future(message = "End date must be in the future")
     private LocalDateTime endDate;
 
-    @NotNull(message = "Usage limit is required")
     @Min(value = 1, message = "Usage limit must be at least 1")
-    private Integer usageLimit;
+    private Integer usageLimit; // Nullable
 
-    @NotNull(message = "Per user limit is required")
     @Min(value = 1, message = "Per user limit must be at least 1")
-    private Integer perUserLimit;
+    private Integer perUserLimit; // Nullable
 
     private Boolean isActive;
 }

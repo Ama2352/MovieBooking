@@ -8,7 +8,6 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Arrays;
-import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -38,7 +37,11 @@ import org.testcontainers.utility.DockerImageName;
 import com.api.moviebooking.models.dtos.booking.ConfirmBookingRequest;
 import com.api.moviebooking.models.dtos.booking.LockSeatsRequest;
 import com.api.moviebooking.models.entities.*;
-import com.api.moviebooking.models.enums.*;
+import com.api.moviebooking.models.enums.DiscountType;
+import com.api.moviebooking.models.enums.MovieStatus;
+import com.api.moviebooking.models.enums.SeatStatus;
+import com.api.moviebooking.models.enums.SeatType;
+import com.api.moviebooking.models.enums.UserRole;
 import com.api.moviebooking.repositories.*;
 import com.api.moviebooking.services.BookingService;
 
@@ -102,11 +105,15 @@ class BookingIntegrationTest {
         private BookingRepo bookingRepo;
 
         @Autowired
+        private MembershipTierRepo membershipTierRepo;
+
+        @Autowired
         private BookingService bookingService; // For cleanup verification
 
         private User testUser1, testUser2;
         private Showtime testShowtime;
         private ShowtimeSeat seat1, seat2, seat3;
+        private com.api.moviebooking.models.entities.MembershipTier defaultTier, goldTier;
 
         @BeforeEach
         void setUp() {
@@ -125,20 +132,36 @@ class BookingIntegrationTest {
                 movieRepo.deleteAll();
                 cinemaRepo.deleteAll();
                 userRepo.deleteAll();
+                membershipTierRepo.deleteAll();
+
+                // Create membership tiers
+                defaultTier = new com.api.moviebooking.models.entities.MembershipTier();
+                defaultTier.setName("Bronze");
+                defaultTier.setMinPoints(0);
+                defaultTier.setDiscountType(DiscountType.PERCENTAGE);
+                defaultTier.setDiscountValue(BigDecimal.ZERO);
+                defaultTier = membershipTierRepo.save(defaultTier);
+
+                goldTier = new com.api.moviebooking.models.entities.MembershipTier();
+                goldTier.setName("Gold");
+                goldTier.setMinPoints(1000);
+                goldTier.setDiscountType(DiscountType.PERCENTAGE);
+                goldTier.setDiscountValue(BigDecimal.valueOf(10.0));
+                goldTier = membershipTierRepo.save(goldTier);
 
                 // Create test users
                 testUser1 = new User();
                 testUser1.setEmail("user1@test.com");
                 testUser1.setUsername("user1");
                 testUser1.setRole(UserRole.USER);
-                testUser1.setMembershipTier(MembershipTier.BRONZE);
+                testUser1.setMembershipTier(defaultTier);
                 testUser1 = userRepo.save(testUser1);
 
                 testUser2 = new User();
                 testUser2.setEmail("user2@test.com");
                 testUser2.setUsername("user2");
                 testUser2.setRole(UserRole.USER);
-                testUser2.setMembershipTier(MembershipTier.BRONZE);
+                testUser2.setMembershipTier(defaultTier);
                 testUser2 = userRepo.save(testUser2);
 
                 // Create admin user
@@ -146,7 +169,7 @@ class BookingIntegrationTest {
                 adminUser.setEmail("admin@test.com");
                 adminUser.setUsername("admin");
                 adminUser.setRole(UserRole.ADMIN);
-                adminUser.setMembershipTier(MembershipTier.GOLD);
+                adminUser.setMembershipTier(goldTier);
                 userRepo.save(adminUser);
 
                 // Create cinema

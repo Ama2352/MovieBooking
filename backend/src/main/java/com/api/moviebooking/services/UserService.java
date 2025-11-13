@@ -14,9 +14,9 @@ import org.springframework.stereotype.Service;
 
 import com.api.moviebooking.models.dtos.auth.LoginRequest;
 import com.api.moviebooking.models.dtos.auth.RegisterRequest;
+import com.api.moviebooking.models.entities.MembershipTier;
 import com.api.moviebooking.models.entities.RefreshToken;
 import com.api.moviebooking.models.entities.User;
-import com.api.moviebooking.models.enums.MembershipTier;
 import com.api.moviebooking.models.enums.UserRole;
 import com.api.moviebooking.repositories.UserRepo;
 
@@ -32,6 +32,7 @@ public class UserService {
     private final AuthenticationManager authManager;
     private final JwtService jwtService;
     private final CustomUserDetailsService customUserDetailsService;
+    private final MembershipTierService membershipTierService;
 
     public User findByEmail(String email) {
         return userRepo.findByEmail(email)
@@ -71,7 +72,11 @@ public class UserService {
         user.setPassword(encodedPassword);
         user.setPhoneNumber(phoneNumber);
         user.setRole(UserRole.USER);
-        user.setMembershipTier(MembershipTier.BRONZE);
+        user.setLoyaltyPoints(0);
+        
+        // Assign default membership tier
+        MembershipTier defaultTier = membershipTierService.getDefaultTier();
+        user.setMembershipTier(defaultTier);
 
         userRepo.save(user);
     }
@@ -158,6 +163,40 @@ public class UserService {
         String newAccessToken = jwtService.generateAccessToken(email, userDetails.getAuthorities());
 
         return newAccessToken;
+    }
+
+    /**
+     * Add loyalty points to user and update tier if necessary
+     * Formula: 1 point per 1000 VND spent (configurable)
+     */
+    @Transactional
+    public void addLoyaltyPoints(UUID userId, java.math.BigDecimal amountSpent) {
+        User user = findUserById(userId);
+        
+        // Calculate points: 1 point per 1000 VND
+        int pointsToAdd = amountSpent.divide(java.math.BigDecimal.valueOf(1000), 0, java.math.RoundingMode.DOWN).intValue();
+        
+        int newPoints = user.getLoyaltyPoints() + pointsToAdd;
+        user.setLoyaltyPoints(newPoints);
+        
+        // Check if user needs tier upgrade
+        updateUserTier(user);
+        
+        userRepo.save(user);
+    }
+
+    /**
+     * Update user's membership tier based on loyalty points
+     */
+    @Transactional
+    public void updateUserTier(User user) {
+        MembershipTier appropriateTier = membershipTierService.getApproppriateTier(user.getLoyaltyPoints());
+        
+        // Only update if tier is different
+        if (user.getMembershipTier() == null || 
+            !user.getMembershipTier().getId().equals(appropriateTier.getId())) {
+            user.setMembershipTier(appropriateTier);
+        }
     }
 
 }

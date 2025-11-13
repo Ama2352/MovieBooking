@@ -5,7 +5,6 @@ import java.util.UUID;
 import org.hibernate.annotations.UuidGenerator;
 
 import com.api.moviebooking.models.enums.SeatStatus;
-import com.api.moviebooking.models.enums.SeatType;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;

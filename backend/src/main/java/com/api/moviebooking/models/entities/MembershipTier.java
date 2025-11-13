@@ -17,7 +17,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
-import jakarta.persistence.ManyToMany;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -29,38 +29,27 @@ import lombok.Setter;
 @AllArgsConstructor
 @Getter
 @Setter
-@Table(name = "promotions")
-public class Promotion {
+@Table(name = "membership_tiers")
+public class MembershipTier {
 
     @Id
     @UuidGenerator
     private UUID id;
 
-    @Column(unique = true, nullable = false)
-    private String code; // Mã khuyến mãi (unique)
+    @Column(nullable = false, unique = true)
+    private String name; // SILVER, GOLD, PLATINUM
 
     @Column(nullable = false)
-    private String name; // Tên khuyến mãi
+    private Integer minPoints; // Điểm cần đạt để lên tier
+
+    @Enumerated(EnumType.STRING)
+    private DiscountType discountType; // PERCENTAGE / FIXED_AMOUNT (nullable)
+
+    @Column(precision = 10, scale = 2)
+    private BigDecimal discountValue; // Giá trị giảm giá (nullable)
 
     @Column(columnDefinition = "TEXT")
     private String description; // Mô tả (nullable)
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private DiscountType discountType;
-
-    @Column(nullable = false, precision = 10, scale = 2)
-    private BigDecimal discountValue;
-
-    @Column(nullable = false)
-    private LocalDateTime startDate;
-
-    @Column(nullable = false)
-    private LocalDateTime endDate;
-
-    private Integer usageLimit; // Tổng số lần sử dụng toàn hệ thống (nullable)
-
-    private Integer perUserLimit; // Giới hạn cho mỗi user (nullable)
 
     @Column(nullable = false)
     private Boolean isActive = true;
@@ -73,6 +62,6 @@ public class Promotion {
     @Column(nullable = false)
     private LocalDateTime updatedAt;
 
-    @ManyToMany(mappedBy = "promotions")
-    private List<Booking> bookings = new ArrayList<>();
+    @OneToMany(mappedBy = "membershipTier")
+    private List<User> users = new ArrayList<>();
 }

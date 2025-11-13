@@ -12,7 +12,10 @@ import org.hibernate.annotations.UuidGenerator;
 import com.api.moviebooking.models.enums.BookingStatus;
 
 import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
@@ -38,19 +41,45 @@ public class Booking {
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "showtime_id")
     private Showtime showtime;
 
     @CreationTimestamp
+    @Column(name = "booked_at")
     private LocalDateTime bookedAt;
 
-    private BigDecimal totalPrice;
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal totalPrice; // Giá gốc trước khi giảm
+
+    @Column(length = 500)
+    private String discountReason; // Lý do giảm giá (tên promotion hoặc lý do khác)
+
+    @Column(precision = 10, scale = 2)
+    private BigDecimal discountValue; // Số tiền được giảm
+
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal finalPrice; // Giá cuối cùng sau khi giảm
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private BookingStatus status;
+
+    @Column(name = "qr_code")
     private String qrCode;
 
     @ManyToMany(cascade = { CascadeType.PERSIST, CascadeType.MERGE })
-    @JoinTable(name = "booking_seats", joinColumns = @JoinColumn(name = "booking_id"), inverseJoinColumns = @JoinColumn(name = "showtime_seat_id"))
+    @JoinTable(name = "booking_seats", 
+               joinColumns = @JoinColumn(name = "booking_id"), 
+               inverseJoinColumns = @JoinColumn(name = "showtime_seat_id"))
     private List<ShowtimeSeat> bookedSeats = new ArrayList<>();
+
+    @ManyToMany(cascade = { CascadeType.PERSIST, CascadeType.MERGE })
+    @JoinTable(name = "booking_promotions", 
+               joinColumns = @JoinColumn(name = "booking_id"), 
+               inverseJoinColumns = @JoinColumn(name = "promotion_id"))
+    private List<Promotion> promotions = new ArrayList<>();
 }

@@ -1,4 +1,4 @@
-package com.api.moviebooking.models.dtos.promotion;
+package com.api.moviebooking.models.dtos.membershipTier;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -11,18 +11,14 @@ import lombok.Getter;
 
 @Getter
 @Builder
-public class PromotionDataResponse {
+public class MembershipTierDataResponse {
 
-    private UUID promotionId;
-    private String code;
+    private UUID id;
     private String name;
-    private String description;
+    private Integer minPoints;
     private DiscountType discountType;
     private BigDecimal discountValue;
-    private LocalDateTime startDate;
-    private LocalDateTime endDate;
-    private Integer usageLimit;
-    private Integer perUserLimit;
+    private String description;
     private Boolean isActive;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
