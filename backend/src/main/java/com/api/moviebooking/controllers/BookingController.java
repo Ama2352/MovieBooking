@@ -60,12 +60,12 @@ public class BookingController {
     @PostMapping("/confirm")
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     @SecurityRequirement(name = "bearerToken")
-    @Operation(summary = "Confirm booking", description = "Confirms the booking and creates a booking record. Transitions seats from LOCKED to BOOKED.")
+    @Operation(summary = "Confirm booking", description = "Confirms the booking and creates a booking record. Transitions seats from LOCKED to BOOKED. Optionally applies promotion code for discount.")
     public ResponseEntity<BookingResponse> confirmBooking(
             @Valid @RequestBody ConfirmBookingRequest request,
             Principal principal) {
         UUID userId = userService.getUserIdFromPrincipal(principal);
-        BookingResponse response = bookingService.confirmBooking(userId, request.getLockId());
+        BookingResponse response = bookingService.confirmBooking(userId, request.getLockId(), request.getPromotionCode());
         return ResponseEntity.ok(response);
     }
 

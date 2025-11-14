@@ -65,4 +65,18 @@ public interface ShowtimeSeatRepo extends JpaRepository<ShowtimeSeat, UUID> {
     @Query("SELECT ss FROM ShowtimeSeat ss WHERE ss.id IN :seatIds " +
             "AND (ss.status = com.api.moviebooking.models.enums.SeatStatus.LOCKED OR ss.status = com.api.moviebooking.models.enums.SeatStatus.BOOKED)")
     List<ShowtimeSeat> findUnavailableSeats(@Param("seatIds") List<UUID> seatIds);
+
+    /**
+     * Check if a specific price base is referenced in any showtime seat price breakdown
+     */
+    @Query(value = "SELECT COUNT(*) > 0 FROM showtime_seats " +
+            "WHERE price_breakdown::text LIKE '%\"basePrice\": ' || :basePrice || '%'", nativeQuery = true)
+    boolean isPriceBaseReferencedInBreakdown(@Param("basePrice") String basePrice);
+
+    /**
+     * Check if price breakdown contains reference to a price modifier
+     */
+    @Query(value = "SELECT COUNT(*) > 0 FROM showtime_seats " +
+            "WHERE price_breakdown::text LIKE CONCAT('%', :modifierName, '%')", nativeQuery = true)
+    boolean isPriceModifierReferencedInBreakdown(@Param("modifierName") String modifierName);
 }

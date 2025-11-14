@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.math.BigDecimal;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -194,7 +195,7 @@ public class PromotionService {
         Promotion promotion = findPromotionById(promotionId);
         
         // Check if promotion is used in any bookings
-        if (!promotion.getBookings().isEmpty()) {
+        if (!promotion.getBookingPromotions().isEmpty()) {
             throw new IllegalStateException("Cannot delete promotion that has been used in bookings");
         }
         
@@ -295,7 +296,7 @@ public class PromotionService {
 
         // Check usage limit (if set)
         if (promotion.getUsageLimit() != null) {
-            long totalUsageCount = promotion.getBookings().size();
+            long totalUsageCount = promotion.getBookingPromotions().size();
             if (totalUsageCount >= promotion.getUsageLimit()) {
                 throw new IllegalArgumentException("Promotion usage limit has been reached");
             }
@@ -303,8 +304,8 @@ public class PromotionService {
 
         // Check per user limit (if set)
         if (promotion.getPerUserLimit() != null && userId != null) {
-            long userUsageCount = promotion.getBookings().stream()
-                    .filter(b -> b.getUser().getId().equals(userId))
+            long userUsageCount = promotion.getBookingPromotions().stream()
+                    .filter(b -> b.getBooking().getUser().getId().equals(userId))
                     .count();
             if (userUsageCount >= promotion.getPerUserLimit()) {
                 throw new IllegalArgumentException("You have reached the usage limit for this promotion");
@@ -320,11 +321,11 @@ public class PromotionService {
      * Nodes: discountType == PERCENTAGE
      * Minimum test cases: 2
      */
-    public java.math.BigDecimal calculateDiscount(Promotion promotion, java.math.BigDecimal originalPrice) {
+    public BigDecimal calculateDiscount(Promotion promotion, BigDecimal originalPrice) {
         if (promotion.getDiscountType() == DiscountType.PERCENTAGE) {
             // Percentage discount: (originalPrice * discountValue) / 100
             return originalPrice.multiply(promotion.getDiscountValue())
-                    .divide(java.math.BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+                    .divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
         } else {
             // Fixed amount discount
             return promotion.getDiscountValue().min(originalPrice);

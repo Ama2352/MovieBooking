@@ -30,6 +30,7 @@ public class ShowtimeService {
     private final ShowtimeMapper showtimeMapper;
     private final RoomRepo roomRepo;
     private final MovieRepo movieRepo;
+    private final ShowtimeSeatService showtimeSeatService;
 
     /**
      * findShowtimeById:
@@ -105,6 +106,7 @@ public class ShowtimeService {
         newShowtime.setMovie(movie);
 
         showtimeRepo.save(newShowtime);
+        showtimeSeatService.generateShowtimeSeats(newShowtime.getId());
         return showtimeMapper.toDataResponse(newShowtime);
     }
 

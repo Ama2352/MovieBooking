@@ -10,6 +10,9 @@ import org.springframework.transaction.annotation.Transactional;
 import com.api.moviebooking.helpers.exceptions.ResourceNotFoundException;
 import com.api.moviebooking.helpers.mapstructs.SeatMapper;
 import com.api.moviebooking.models.dtos.seat.AddSeatRequest;
+import com.api.moviebooking.models.dtos.seat.BulkSeatResponse;
+import com.api.moviebooking.models.dtos.seat.GenerateSeatsRequest;
+import com.api.moviebooking.models.dtos.seat.RowLabelsResponse;
 import com.api.moviebooking.models.dtos.seat.SeatDataResponse;
 import com.api.moviebooking.models.dtos.seat.UpdateSeatRequest;
 import com.api.moviebooking.models.entities.Room;
@@ -111,9 +114,7 @@ public class SeatService {
     }
 
     @Transactional
-    public com.api.moviebooking.models.dtos.seat.BulkSeatResponse generateSeats(
-            com.api.moviebooking.models.dtos.seat.GenerateSeatsRequest request) {
-        
+    public BulkSeatResponse generateSeats(GenerateSeatsRequest request) {
         // Validate room exists
         Room room = roomRepo.findById(request.getRoomId())
                 .orElseThrow(() -> new ResourceNotFoundException("Room", "id", request.getRoomId()));
@@ -124,13 +125,35 @@ public class SeatService {
                     "Room already has seats. Please delete existing seats before generating new layout.");
         }
 
+        // Generate row labels (A, B, C, ..., Z, AA, AB, ...)
+        List<String> rowLabels = generateRowLabels(request.getRows());
+
+        // Validate VIP rows exist in generated row labels
+        if (request.getVipRows() != null) {
+            for (String vipRow : request.getVipRows()) {
+                if (!rowLabels.contains(vipRow)) {
+                    throw new IllegalArgumentException(
+                            String.format("VIP row '%s' does not exist. Available rows: %s", 
+                                    vipRow, String.join(", ", rowLabels)));
+                }
+            }
+        }
+
+        // Validate couple rows exist in generated row labels
+        if (request.getCoupleRows() != null) {
+            for (String coupleRow : request.getCoupleRows()) {
+                if (!rowLabels.contains(coupleRow)) {
+                    throw new IllegalArgumentException(
+                            String.format("Couple row '%s' does not exist. Available rows: %s", 
+                                    coupleRow, String.join(", ", rowLabels)));
+                }
+            }
+        }
+
         List<Seat> generatedSeats = new java.util.ArrayList<>();
         int normalCount = 0;
         int vipCount = 0;
         int coupleCount = 0;
-
-        // Generate row labels (A, B, C, ..., Z, AA, AB, ...)
-        List<String> rowLabels = generateRowLabels(request.getRows());
 
         for (int rowIndex = 0; rowIndex < request.getRows(); rowIndex++) {
             String rowLabel = rowLabels.get(rowIndex);
@@ -174,7 +197,7 @@ public class SeatService {
                 .map(seatMapper::toDataResponse)
                 .collect(Collectors.toList());
 
-        com.api.moviebooking.models.dtos.seat.BulkSeatResponse response = new com.api.moviebooking.models.dtos.seat.BulkSeatResponse();
+        BulkSeatResponse response = new BulkSeatResponse();
         response.setTotalSeatsGenerated(savedSeats.size());
         response.setNormalSeats(normalCount);
         response.setVipSeats(vipCount);
@@ -187,7 +210,7 @@ public class SeatService {
     /**
      * Generate row labels preview for frontend
      */
-    public com.api.moviebooking.models.dtos.seat.RowLabelsResponse getRowLabelsPreview(int numberOfRows) {
+    public RowLabelsResponse getRowLabelsPreview(int numberOfRows) {
         if (numberOfRows < 1) {
             throw new IllegalArgumentException("Number of rows must be at least 1");
         }
@@ -198,8 +221,7 @@ public class SeatService {
 
         List<String> labels = generateRowLabels(numberOfRows);
         
-        com.api.moviebooking.models.dtos.seat.RowLabelsResponse response = 
-                new com.api.moviebooking.models.dtos.seat.RowLabelsResponse();
+        RowLabelsResponse response = new RowLabelsResponse();
         response.setTotalRows(numberOfRows);
         response.setRowLabels(labels);
         
@@ -237,21 +259,21 @@ public class SeatService {
     /**
      * Determine seat type based on row label
      */
-    private com.api.moviebooking.models.enums.SeatType determineSeatType(
+    private SeatType determineSeatType(
             String rowLabel,
             List<String> vipRows,
             List<String> coupleRows) {
         
         if (coupleRows != null && coupleRows.stream()
                 .anyMatch(row -> row.equalsIgnoreCase(rowLabel))) {
-            return com.api.moviebooking.models.enums.SeatType.COUPLE;
+            return SeatType.COUPLE;
         }
         
         if (vipRows != null && vipRows.stream()
                 .anyMatch(row -> row.equalsIgnoreCase(rowLabel))) {
-            return com.api.moviebooking.models.enums.SeatType.VIP;
+            return SeatType.VIP;
         }
         
-        return com.api.moviebooking.models.enums.SeatType.NORMAL;
+        return SeatType.NORMAL;
     }
 }

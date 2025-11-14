@@ -22,6 +22,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -77,9 +78,6 @@ public class Booking {
                inverseJoinColumns = @JoinColumn(name = "showtime_seat_id"))
     private List<ShowtimeSeat> bookedSeats = new ArrayList<>();
 
-    @ManyToMany(cascade = { CascadeType.PERSIST, CascadeType.MERGE })
-    @JoinTable(name = "booking_promotions", 
-               joinColumns = @JoinColumn(name = "booking_id"), 
-               inverseJoinColumns = @JoinColumn(name = "promotion_id"))
-    private List<Promotion> promotions = new ArrayList<>();
+    @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<BookingPromotion> bookingPromotions = new ArrayList<>();
 }
