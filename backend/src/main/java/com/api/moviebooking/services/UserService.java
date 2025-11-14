@@ -2,6 +2,7 @@ package com.api.moviebooking.services;
 
 import java.security.Principal;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.security.authentication.AuthenticationManager;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Service;
 import com.api.moviebooking.models.dtos.auth.LoginRequest;
 import com.api.moviebooking.models.dtos.auth.RegisterRequest;
 import com.api.moviebooking.models.entities.MembershipTier;
+import com.api.moviebooking.models.dtos.user.CreateGuestRequest;
 import com.api.moviebooking.models.entities.RefreshToken;
 import com.api.moviebooking.models.entities.User;
 import com.api.moviebooking.models.enums.UserRole;
@@ -33,6 +35,8 @@ public class UserService {
     private final JwtService jwtService;
     private final CustomUserDetailsService customUserDetailsService;
     private final MembershipTierService membershipTierService;
+
+    private static final String VN_PHONE_REGEX = "^(03|05|07|08|09)[0-9]{8}$";
 
     public User findByEmail(String email) {
         return userRepo.findByEmail(email)
@@ -56,7 +60,9 @@ public class UserService {
         String confirmPassword = request.getConfirmPassword();
         String phoneNumber = request.getPhoneNumber();
 
-        if (userRepo.existsByEmail(email)) {
+        Optional<User> existingUser = userRepo.findByEmail(email);
+
+        if (existingUser.isPresent() && existingUser.get().getRole() != UserRole.GUEST) {
             throw new IllegalArgumentException("Email already in use");
         }
 
@@ -64,16 +70,20 @@ public class UserService {
             throw new IllegalArgumentException("Confirm passwords do not match");
         }
 
+        if (!phoneNumber.matches(VN_PHONE_REGEX)) {
+            throw new IllegalArgumentException("Invalid Vietnamese phone number");
+        }
+
         String encodedPassword = passwordEncoder.encode(password);
 
-        User user = new User();
+        User user = existingUser.orElseGet(User::new);
         user.setEmail(email);
         user.setUsername(username);
         user.setPassword(encodedPassword);
         user.setPhoneNumber(phoneNumber);
         user.setRole(UserRole.USER);
         user.setLoyaltyPoints(0);
-        
+
         // Assign default membership tier
         MembershipTier defaultTier = membershipTierService.getDefaultTier();
         user.setMembershipTier(defaultTier);
@@ -172,16 +182,17 @@ public class UserService {
     @Transactional
     public void addLoyaltyPoints(UUID userId, java.math.BigDecimal amountSpent) {
         User user = findUserById(userId);
-        
+
         // Calculate points: 1 point per 1000 VND
-        int pointsToAdd = amountSpent.divide(java.math.BigDecimal.valueOf(1000), 0, java.math.RoundingMode.DOWN).intValue();
-        
+        int pointsToAdd = amountSpent.divide(java.math.BigDecimal.valueOf(1000), 0, java.math.RoundingMode.DOWN)
+                .intValue();
+
         int newPoints = user.getLoyaltyPoints() + pointsToAdd;
         user.setLoyaltyPoints(newPoints);
-        
+
         // Check if user needs tier upgrade
         updateUserTier(user);
-        
+
         userRepo.save(user);
     }
 
@@ -191,12 +202,34 @@ public class UserService {
     @Transactional
     public void updateUserTier(User user) {
         MembershipTier appropriateTier = membershipTierService.getApproppriateTier(user.getLoyaltyPoints());
-        
+
         // Only update if tier is different
-        if (user.getMembershipTier() == null || 
-            !user.getMembershipTier().getId().equals(appropriateTier.getId())) {
+        if (user.getMembershipTier() == null ||
+                !user.getMembershipTier().getId().equals(appropriateTier.getId())) {
             user.setMembershipTier(appropriateTier);
         }
+    }
+
+    public String registerGuest(CreateGuestRequest request) {
+
+        Optional<User> existingUser = userRepo.findByEmail(request.getEmail());
+
+        if (existingUser.isPresent() && existingUser.get().getRole() != UserRole.GUEST) {
+            throw new IllegalArgumentException("Email belongs to a registered user. Please log in.");
+        }
+
+        if (!request.getPhoneNumber().matches(VN_PHONE_REGEX)) {
+            throw new IllegalArgumentException("Invalid Vietnamese phone number");
+        }
+
+        User guestUser = existingUser.orElseGet(User::new);
+        guestUser.setEmail(request.getEmail());
+        guestUser.setUsername(request.getUsername());
+        guestUser.setPhoneNumber(request.getPhoneNumber());
+        guestUser.setRole(UserRole.GUEST);
+        User savedUser = userRepo.save(guestUser);
+
+        return savedUser.getId().toString();
     }
 
 }

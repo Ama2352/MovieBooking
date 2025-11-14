@@ -48,7 +48,7 @@ public class User {
     private String provider; // e.g., "google", "facebook"
     private String avatarUrl;
     private String avatarCloudinaryId;
-    
+
     @Column(nullable = false)
     private Integer loyaltyPoints = 0;
 
