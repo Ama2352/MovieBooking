@@ -45,6 +45,11 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         User user = userRepo.findByEmail(email)
                 .orElseGet(() -> createNewUser(email, username));
 
+        if (user.getRole() == UserRole.GUEST) {
+            user.setRole(UserRole.USER);
+            userRepo.save(user);
+        }
+
         CustomUserDetails userDetails = new CustomUserDetails(user, oAuth2User.getAttributes());
 
         Authentication newAuth = new OAuth2AuthenticationToken(

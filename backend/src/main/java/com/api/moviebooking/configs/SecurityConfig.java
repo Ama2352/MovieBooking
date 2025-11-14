@@ -49,6 +49,7 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/auth/register",
                                 "/auth/login",
+                                "/auth/guest/register",
                                 "/movies/**",
                                 "/showtimes/**",
                                 "/promotions/**",

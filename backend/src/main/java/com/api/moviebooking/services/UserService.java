@@ -2,6 +2,7 @@ package com.api.moviebooking.services;
 
 import java.security.Principal;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.security.authentication.AuthenticationManager;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
 
 import com.api.moviebooking.models.dtos.auth.LoginRequest;
 import com.api.moviebooking.models.dtos.auth.RegisterRequest;
+import com.api.moviebooking.models.dtos.user.CreateGuestRequest;
 import com.api.moviebooking.models.entities.RefreshToken;
 import com.api.moviebooking.models.entities.User;
 import com.api.moviebooking.models.enums.MembershipTier;
@@ -32,6 +34,8 @@ public class UserService {
     private final AuthenticationManager authManager;
     private final JwtService jwtService;
     private final CustomUserDetailsService customUserDetailsService;
+
+    private static final String VN_PHONE_REGEX = "^(03|05|07|08|09)[0-9]{8}$";
 
     public User findByEmail(String email) {
         return userRepo.findByEmail(email)
@@ -55,7 +59,9 @@ public class UserService {
         String confirmPassword = request.getConfirmPassword();
         String phoneNumber = request.getPhoneNumber();
 
-        if (userRepo.existsByEmail(email)) {
+        Optional<User> existingUser = userRepo.findByEmail(email);
+
+        if (existingUser.isPresent() && existingUser.get().getRole() != UserRole.GUEST) {
             throw new IllegalArgumentException("Email already in use");
         }
 
@@ -63,9 +69,13 @@ public class UserService {
             throw new IllegalArgumentException("Confirm passwords do not match");
         }
 
+        if (!phoneNumber.matches(VN_PHONE_REGEX)) {
+            throw new IllegalArgumentException("Invalid Vietnamese phone number");
+        }
+
         String encodedPassword = passwordEncoder.encode(password);
 
-        User user = new User();
+        User user = existingUser.orElseGet(User::new);
         user.setEmail(email);
         user.setUsername(username);
         user.setPassword(encodedPassword);
@@ -158,6 +168,28 @@ public class UserService {
         String newAccessToken = jwtService.generateAccessToken(email, userDetails.getAuthorities());
 
         return newAccessToken;
+    }
+
+    public String registerGuest(CreateGuestRequest request) {
+
+        Optional<User> existingUser = userRepo.findByEmail(request.getEmail());
+
+        if (existingUser.isPresent() && existingUser.get().getRole() != UserRole.GUEST) {
+            throw new IllegalArgumentException("Email belongs to a registered user. Please log in.");
+        }
+
+        if (!request.getPhoneNumber().matches(VN_PHONE_REGEX)) {
+            throw new IllegalArgumentException("Invalid Vietnamese phone number");
+        }
+
+        User guestUser = existingUser.orElseGet(User::new);
+        guestUser.setEmail(request.getEmail());
+        guestUser.setUsername(request.getUsername());
+        guestUser.setPhoneNumber(request.getPhoneNumber());
+        guestUser.setRole(UserRole.GUEST);
+        User savedUser = userRepo.save(guestUser);
+
+        return savedUser.getId().toString();
     }
 
 }

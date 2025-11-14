@@ -34,20 +34,21 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/cinemas")
-@SecurityRequirement(name = "bearerToken")
-@PreAuthorize("hasRole('ADMIN')")
 @Tag(name = "Cinema Operations")
 public class CinemaController {
 
     private final CinemaService cinemaService;
 
-    // Cinema CRUD endpoints
+    @SecurityRequirement(name = "bearerToken")
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public ResponseEntity<CinemaDataResponse> addCinema(@Valid @RequestBody AddCinemaRequest request) {
         CinemaDataResponse response = cinemaService.addCinema(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    @SecurityRequirement(name = "bearerToken")
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{cinemaId}")
     public ResponseEntity<CinemaDataResponse> updateCinema(
             @PathVariable UUID cinemaId,
@@ -56,6 +57,8 @@ public class CinemaController {
         return ResponseEntity.ok(response);
     }
 
+    @SecurityRequirement(name = "bearerToken")
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{cinemaId}")
     public ResponseEntity<Void> deleteCinema(@PathVariable UUID cinemaId) {
         cinemaService.deleteCinema(cinemaId);
@@ -74,13 +77,16 @@ public class CinemaController {
         return ResponseEntity.ok(response);
     }
 
-    // Room CRUD endpoints
+    @SecurityRequirement(name = "bearerToken")
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/rooms")
     public ResponseEntity<RoomDataResponse> addRoom(@Valid @RequestBody AddRoomRequest request) {
         RoomDataResponse response = cinemaService.addRoom(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    @SecurityRequirement(name = "bearerToken")
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/rooms/{roomId}")
     public ResponseEntity<RoomDataResponse> updateRoom(
             @PathVariable UUID roomId,
@@ -89,6 +95,8 @@ public class CinemaController {
         return ResponseEntity.ok(response);
     }
 
+    @SecurityRequirement(name = "bearerToken")
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/rooms/{roomId}")
     public ResponseEntity<Void> deleteRoom(@PathVariable UUID roomId) {
         cinemaService.deleteRoom(roomId);
@@ -107,13 +115,16 @@ public class CinemaController {
         return ResponseEntity.ok(response);
     }
 
-    // Snack CRUD endpoints
+    @SecurityRequirement(name = "bearerToken")
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/snacks")
     public ResponseEntity<SnackDataResponse> addSnack(@Valid @RequestBody AddSnackRequest request) {
         SnackDataResponse response = cinemaService.addSnack(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    @SecurityRequirement(name = "bearerToken")
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/snacks/{snackId}")
     public ResponseEntity<SnackDataResponse> updateSnack(
             @PathVariable UUID snackId,
@@ -122,6 +133,8 @@ public class CinemaController {
         return ResponseEntity.ok(response);
     }
 
+    @SecurityRequirement(name = "bearerToken")
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/snacks/{snackId}")
     public ResponseEntity<Void> deleteSnack(@PathVariable UUID snackId) {
         cinemaService.deleteSnack(snackId);

@@ -52,7 +52,7 @@ public class User {
     private UserRole role;
 
     @Enumerated(EnumType.STRING)
-    private MembershipTier membershipTier;
+    private MembershipTier membershipTier; // null for GUEST users
 
     @CreationTimestamp
     private LocalDateTime createdAt;

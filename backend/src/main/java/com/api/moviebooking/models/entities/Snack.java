@@ -1,17 +1,21 @@
 package com.api.moviebooking.models.entities;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 import org.hibernate.annotations.UuidGenerator;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -37,4 +41,9 @@ public class Snack {
     private String description;
     private BigDecimal price;
     private String type; // e.g., Popcorn, Pepsi, Combo 1, etc.
+    private String imageUrl;
+    private String imageCloudinaryId;
+
+    @OneToMany(mappedBy = "snack", cascade = { CascadeType.PERSIST, CascadeType.MERGE })
+    List<BookingSnack> bookingSnacks = new ArrayList<>();
 }
