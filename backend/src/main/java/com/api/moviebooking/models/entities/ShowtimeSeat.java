@@ -2,10 +2,13 @@ package com.api.moviebooking.models.entities;
 
 import java.math.BigDecimal;
 import java.util.UUID;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UuidGenerator;
+import org.hibernate.type.SqlTypes;
 
 import com.api.moviebooking.models.enums.SeatStatus;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
@@ -36,4 +39,8 @@ public class ShowtimeSeat {
 
     private SeatStatus status;
     private BigDecimal price;
+
+    @Column(columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
+    private String priceBreakdown;
 }

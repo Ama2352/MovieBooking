@@ -23,6 +23,7 @@ import com.api.moviebooking.models.dtos.booking.LockSeatsRequest;
 import com.api.moviebooking.models.dtos.booking.LockSeatsResponse;
 import com.api.moviebooking.models.dtos.booking.SeatAvailabilityResponse;
 import com.api.moviebooking.models.entities.Booking;
+import com.api.moviebooking.models.entities.BookingPromotion;
 import com.api.moviebooking.models.entities.Promotion;
 import com.api.moviebooking.models.entities.SeatLock;
 import com.api.moviebooking.models.entities.Showtime;
@@ -387,7 +388,7 @@ public class BookingService {
                 }
                 
                 // Update booking with tier discount
-                String tierDiscountReason = "Membership Tier: " + membershipTier.getName();
+                String tierDiscountReason = "Membership Tier: " + membershipTier.getName() + "(-" + tierDiscount + ")";
                 
                 if (booking.getDiscountReason() != null && !booking.getDiscountReason().isEmpty()) {
                         // Append to existing discount reason
@@ -426,11 +427,21 @@ public class BookingService {
                         newFinalPrice = BigDecimal.ZERO;
                 }
                 
-                // Add promotion to booking
-                booking.getPromotions().add(promotion);
+                // Create and add BookingPromotion entity (intermediary)
+                BookingPromotion bookingPromotion = new BookingPromotion();
+                BookingPromotion.BookingPromotionId id = new BookingPromotion.BookingPromotionId(
+                        booking.getId(), 
+                        promotion.getId()
+                );
+                bookingPromotion.setId(id);
+                bookingPromotion.setBooking(booking);
+                bookingPromotion.setPromotion(promotion);
+                // appliedAt will be auto-populated by @CreationTimestamp
+                
+                booking.getBookingPromotions().add(bookingPromotion);
                 
                 // Update discount information (append to existing)
-                String promotionDiscountReason = "Promotion: " + promotion.getName() + " (" + promotion.getCode() + ")";
+                String promotionDiscountReason = "Promotion: " + promotion.getName() + " - " + promotion.getCode() + "(-" + promotionDiscount + ")";
                 
                 if (booking.getDiscountReason() != null && !booking.getDiscountReason().isEmpty()) {
                         booking.setDiscountReason(booking.getDiscountReason() + "; " + promotionDiscountReason);

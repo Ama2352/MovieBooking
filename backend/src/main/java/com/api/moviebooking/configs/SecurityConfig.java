@@ -53,7 +53,10 @@ public class SecurityConfig {
                                 "/showtimes/**",
                                 "/promotions/**",
                                 "/membership-tiers/**",
-                                "/seats/**")
+                                "/seats/**",
+                                "/showtime-seats/**",
+                                "/price-base/**",
+                                "/price-modifiers/**")
                         .permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(filter, UsernamePasswordAuthenticationFilter.class)
