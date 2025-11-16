@@ -52,7 +52,7 @@ import io.restassured.module.mockmvc.RestAssuredMockMvc;
  * Tests payment validation, database operations, and business logic with real
  * dependencies.
  * 
- * NOTE: External payment gateways (PayPal/VNPay) require sandbox credentials
+ * NOTE: External payment gateways (PayPal/momo) require sandbox credentials
  * and manual testing.
  * See PAYMENT_TESTING_GUIDE.md for complete end-to-end testing instructions.
  */
@@ -123,22 +123,21 @@ class PaymentIntegrationTest {
         }
 
         // ========================================================================
-        // VNPay Payment Flow Tests
+        // momo Payment Flow Tests
         // ========================================================================
 
         @Nested
-        @DisplayName("VNPay Payment Flow")
-        class VNPayPaymentFlowTests {
+        @DisplayName("momo Payment Flow")
+        class momoPaymentFlowTests {
 
                 @Test
                 @WithMockUser(username = "test@payment.com", roles = "USER")
-                @DisplayName("Should successfully initiate VNPay payment and create PENDING record")
-                void testInitiateVNPayPayment() {
+                @DisplayName("Should successfully initiate momo payment and create PENDING record")
+                void testInitiatemomoPayment() {
                         InitiatePaymentRequest request = InitiatePaymentRequest.builder()
                                         .bookingId(testBooking.getId())
-                                        .paymentMethod("VNPAY")
+                                        .paymentMethod("momo")
                                         .amount(new BigDecimal("100.00"))
-                                        .ipAddress("127.0.0.1")
                                         .build();
 
                         given()
@@ -150,37 +149,37 @@ class PaymentIntegrationTest {
                                         .statusCode(HttpStatus.OK.value())
                                         .body("txnRef", notNullValue())
                                         .body("paymentUrl", notNullValue())
-                                        .body("paymentUrl", containsString("vnpayment.vn"));
+                                        .body("paymentUrl", containsString("test-payment.momo.vn"));
 
                         // Verify payment was created in database
                         Optional<Payment> savedPayment = paymentRepo.findByBookingIdAndMethodAndStatus(
-                                        testBooking.getId(), PaymentMethod.VNPAY, PaymentStatus.PENDING);
+                                        testBooking.getId(), PaymentMethod.MOMO, PaymentStatus.PENDING);
                         assertTrue(savedPayment.isPresent(), "Payment should be created with PENDING status");
                         assertEquals(PaymentStatus.PENDING, savedPayment.get().getStatus());
-                        assertEquals(PaymentMethod.VNPAY, savedPayment.get().getMethod());
+                        assertEquals(PaymentMethod.MOMO, savedPayment.get().getMethod());
                         assertEquals(new BigDecimal("100.00"), savedPayment.get().getAmount());
                 }
 
                 @Test
                 @WithMockUser(username = "test@payment.com", roles = "USER")
-                @DisplayName("Should successfully verify completed VNPay payment")
-                void testVerifyVNPayPayment() {
+                @DisplayName("Should successfully verify completed momo payment")
+                void testVerifymomoPayment() {
                         // Create completed payment (simulating IPN callback already processed)
                         Payment payment = new Payment();
                         payment.setBooking(testBooking);
-                        payment.setMethod(PaymentMethod.VNPAY);
-                        payment.setStatus(PaymentStatus.COMPLETED);
+                        payment.setMethod(PaymentMethod.MOMO);
+                        payment.setStatus(PaymentStatus.SUCCESS);
                         payment.setAmount(new BigDecimal("100.00"));
                         payment.setCurrency("VND");
                         payment.setCompletedAt(LocalDateTime.now());
                         payment = paymentRepo.save(payment);
-                        // Set transactionId to paymentId (as VNPayService does)
+                        // Set transactionId to paymentId (as momoService does)
                         payment.setTransactionId(payment.getId().toString());
                         payment = paymentRepo.save(payment);
 
                         // Prepare request
                         ConfirmPaymentRequest request = ConfirmPaymentRequest.builder()
-                                        .paymentMethod("VNPAY")
+                                        .paymentMethod("momo")
                                         .transactionId(payment.getId().toString())
                                         .build();
 
@@ -192,8 +191,8 @@ class PaymentIntegrationTest {
                                         .post("/payments/order/capture")
                                         .then()
                                         .statusCode(HttpStatus.OK.value())
-                                        .body("status", equalTo("COMPLETED"))
-                                        .body("method", equalTo("VNPAY"));
+                                        .body("status", equalTo("SUCCESS"))
+                                        .body("method", equalTo("momo"));
 
                         // Verify transactionId in DB matches paymentId
                         Payment dbPayment = paymentRepo.findById(payment.getId()).orElseThrow();
@@ -204,9 +203,9 @@ class PaymentIntegrationTest {
                 @Test
                 @WithMockUser(username = "test@payment.com", roles = "USER")
                 @DisplayName("Should return payment not found for invalid transaction ID")
-                void testVerifyVNPayPaymentNotFound() {
+                void testVerifymomoPaymentNotFound() {
                         ConfirmPaymentRequest request = ConfirmPaymentRequest.builder()
-                                        .paymentMethod("VNPAY")
+                                        .paymentMethod("momo")
                                         .transactionId("INVALID_TXN")
                                         .build();
 
@@ -232,14 +231,13 @@ class PaymentIntegrationTest {
                 @WithMockUser(username = "test@payment.com", roles = "USER")
                 @DisplayName("Should reject payment for non-confirmed booking")
                 void testRejectPaymentForUnconfirmedBooking() {
-                        testBooking.setStatus(BookingStatus.PENDING);
+                        testBooking.setStatus(BookingStatus.PENDING_PAYMENT);
                         bookingRepo.save(testBooking);
 
                         InitiatePaymentRequest request = InitiatePaymentRequest.builder()
                                         .bookingId(testBooking.getId())
-                                        .paymentMethod("VNPAY")
+                                        .paymentMethod("momo")
                                         .amount(new BigDecimal("100.00"))
-                                        .ipAddress("127.0.0.1")
                                         .build();
 
                         given()
@@ -257,9 +255,8 @@ class PaymentIntegrationTest {
                 void testRejectPaymentWithMismatchedAmount() {
                         InitiatePaymentRequest request = InitiatePaymentRequest.builder()
                                         .bookingId(testBooking.getId())
-                                        .paymentMethod("VNPAY")
+                                        .paymentMethod("momo")
                                         .amount(new BigDecimal("50.00")) // Wrong amount
-                                        .ipAddress("127.0.0.1")
                                         .build();
 
                         given()
@@ -295,9 +292,8 @@ class PaymentIntegrationTest {
                 void testRejectPaymentWithoutAuth() {
                         InitiatePaymentRequest request = InitiatePaymentRequest.builder()
                                         .bookingId(testBooking.getId())
-                                        .paymentMethod("VNPAY")
+                                        .paymentMethod("momo")
                                         .amount(new BigDecimal("100.00"))
-                                        .ipAddress("127.0.0.1")
                                         .build();
 
                         given()
@@ -315,9 +311,8 @@ class PaymentIntegrationTest {
                 void testRejectPaymentWithNullBookingId() {
                         InitiatePaymentRequest request = InitiatePaymentRequest.builder()
                                         .bookingId(null)
-                                        .paymentMethod("VNPAY")
+                                        .paymentMethod("momo")
                                         .amount(new BigDecimal("100.00"))
-                                        .ipAddress("127.0.0.1")
                                         .build();
 
                         given()
@@ -345,8 +340,8 @@ class PaymentIntegrationTest {
                         // Create test payment
                         Payment payment = new Payment();
                         payment.setBooking(testBooking);
-                        payment.setMethod(PaymentMethod.VNPAY);
-                        payment.setStatus(PaymentStatus.COMPLETED);
+                        payment.setMethod(PaymentMethod.MOMO);
+                        payment.setStatus(PaymentStatus.SUCCESS);
                         payment.setAmount(new BigDecimal("100.00"));
                         payment.setCurrency("VND");
                         payment.setTransactionId("TXN_SEARCH_123");
@@ -369,7 +364,7 @@ class PaymentIntegrationTest {
                         // Create test payments with different statuses
                         Payment payment1 = new Payment();
                         payment1.setBooking(testBooking);
-                        payment1.setMethod(PaymentMethod.VNPAY);
+                        payment1.setMethod(PaymentMethod.MOMO);
                         payment1.setStatus(PaymentStatus.PENDING);
                         payment1.setAmount(new BigDecimal("100.00"));
                         payment1.setCurrency("VND");
@@ -408,7 +403,7 @@ class PaymentIntegrationTest {
                 void testPaymentInitialState() {
                         Payment payment = new Payment();
                         payment.setBooking(testBooking);
-                        payment.setMethod(PaymentMethod.VNPAY);
+                        payment.setMethod(PaymentMethod.MOMO);
                         payment.setStatus(PaymentStatus.PENDING);
                         payment.setAmount(new BigDecimal("100.00"));
                         payment.setCurrency("VND");
@@ -423,11 +418,11 @@ class PaymentIntegrationTest {
                 }
 
                 @Test
-                @DisplayName("Should update payment to COMPLETED with timestamp")
+                @DisplayName("Should update payment to SUCCESS with timestamp")
                 void testPaymentCompletedState() {
                         Payment payment = new Payment();
                         payment.setBooking(testBooking);
-                        payment.setMethod(PaymentMethod.VNPAY);
+                        payment.setMethod(PaymentMethod.MOMO);
                         payment.setStatus(PaymentStatus.PENDING);
                         payment.setAmount(new BigDecimal("100.00"));
                         payment.setCurrency("VND");
@@ -435,11 +430,11 @@ class PaymentIntegrationTest {
                         payment = paymentRepo.save(payment);
 
                         // Update to completed
-                        payment.setStatus(PaymentStatus.COMPLETED);
+                        payment.setStatus(PaymentStatus.SUCCESS);
                         payment.setCompletedAt(LocalDateTime.now());
                         Payment updated = paymentRepo.save(payment);
 
-                        assertEquals(PaymentStatus.COMPLETED, updated.getStatus());
+                        assertEquals(PaymentStatus.SUCCESS, updated.getStatus());
                         assertNotNull(updated.getCompletedAt());
                 }
 
@@ -448,7 +443,7 @@ class PaymentIntegrationTest {
                 void testPaymentFailedState() {
                         Payment payment = new Payment();
                         payment.setBooking(testBooking);
-                        payment.setMethod(PaymentMethod.VNPAY);
+                        payment.setMethod(PaymentMethod.MOMO);
                         payment.setStatus(PaymentStatus.PENDING);
                         payment.setAmount(new BigDecimal("100.00"));
                         payment.setCurrency("VND");
@@ -460,7 +455,7 @@ class PaymentIntegrationTest {
                         payment.setErrorMessage("Payment declined");
                         paymentRepo.save(payment);
 
-                        testBooking.setStatus(BookingStatus.CANCELED);
+                        testBooking.setStatus(BookingStatus.CANCELLED);
                         bookingRepo.save(testBooking);
 
                         // Verify
@@ -468,7 +463,7 @@ class PaymentIntegrationTest {
                         Booking updatedBooking = bookingRepo.findById(testBooking.getId()).orElseThrow();
 
                         assertEquals(PaymentStatus.FAILED, updatedPayment.getStatus());
-                        assertEquals(BookingStatus.CANCELED, updatedBooking.getStatus());
+                        assertEquals(BookingStatus.CANCELLED, updatedBooking.getStatus());
                 }
         }
 }

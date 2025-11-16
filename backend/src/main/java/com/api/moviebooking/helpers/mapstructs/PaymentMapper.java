@@ -12,5 +12,7 @@ public interface PaymentMapper {
 
     @Mapping(target = "paymentId", source = "id")
     @Mapping(target = "bookingId", source = "booking.id")
+    @Mapping(target = "bookingStatus", source = "booking.status")
+    @Mapping(target = "qrPayload", source = "booking.qrPayload")
     PaymentResponse toPaymentResponse(Payment payment);
 }

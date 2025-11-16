@@ -1,10 +1,10 @@
 package com.api.moviebooking.services;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
+import java.math.BigDecimal;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -22,7 +22,6 @@ import com.api.moviebooking.models.entities.Payment;
 import com.api.moviebooking.models.enums.BookingStatus;
 import com.api.moviebooking.models.enums.PaymentMethod;
 import com.api.moviebooking.models.enums.PaymentStatus;
-import com.api.moviebooking.repositories.BookingRepo;
 import com.api.moviebooking.repositories.PaymentRepo;
 import com.paypal.core.PayPalHttpClient;
 import com.paypal.http.HttpResponse;
@@ -35,16 +34,18 @@ import com.paypal.orders.OrdersCaptureRequest;
 import com.paypal.orders.OrdersCreateRequest;
 import com.paypal.orders.PurchaseUnitRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class PayPalService {
 
     private final PayPalHttpClient payPalHttpClient;
     private final PaymentRepo paymentRepo;
     private final BookingService bookingService;
-    private final BookingRepo bookingRepo;
     private final PaymentMapper paymentMapper;
+    private final CheckoutLifecycleService checkoutLifecycleService;
 
     @Value("${paypal.return.url}")
     private String returnUrl;
@@ -58,12 +59,13 @@ public class PayPalService {
             // Validate booking exists and is in correct status
             Booking booking = bookingService.getBookingById(request.getBookingId());
 
-            if (booking.getStatus() != BookingStatus.CONFIRMED) {
-                throw new CustomException("Booking must be confirmed before payment", HttpStatus.BAD_REQUEST);
+            if (booking.getStatus() != BookingStatus.PENDING_PAYMENT) {
+                throw new CustomException("Booking must be pending payment before PayPal initiation",
+                        HttpStatus.BAD_REQUEST);
             }
 
             // Verify amount matches booking total
-            if (request.getAmount().compareTo(booking.getTotalPrice()) != 0) {
+            if (request.getAmount().compareTo(booking.getFinalPrice()) != 0) {
                 throw new CustomException("Payment amount does not match booking total", HttpStatus.BAD_REQUEST);
             }
 
@@ -111,7 +113,7 @@ public class PayPalService {
                     .map(LinkDescription::href)
                     .orElseThrow(() -> new RuntimeException("Approval URL not found"));
 
-            return new InitiatePaymentResponse(order.id(), null, approvalUrl);
+            return new InitiatePaymentResponse(payment.getId(), order.id(), null, approvalUrl);
 
         } catch (IOException e) {
             throw new CustomException("Failed to create PayPal order: " + e.getMessage(),
@@ -141,26 +143,32 @@ public class PayPalService {
                     .get(0).payments().captures().get(0).id();
 
             // Update payment record based on outcome
+            var capture = result.purchaseUnits().get(0).payments().captures().get(0);
+            BigDecimal capturedAmount = capture.amount() != null && capture.amount().value() != null
+                    ? new BigDecimal(capture.amount().value())
+                    : null;
+
+            Payment updatedPayment;
             if ("COMPLETED".equalsIgnoreCase(status)) {
-                payment.setStatus(PaymentStatus.COMPLETED);
-                payment.setTransactionId(transactionId); // Update with capture transaction ID
-                payment.setCompletedAt(LocalDateTime.now());
-
+                updatedPayment = checkoutLifecycleService.handleSuccessfulPayment(payment, capturedAmount,
+                        transactionId);
             } else {
-                payment.setStatus(PaymentStatus.FAILED);
-                payment.setErrorMessage("PayPal capture status: " + status);
-
-                Booking booking = payment.getBooking();
-                booking.setStatus(BookingStatus.CANCELED);
-                bookingRepo.save(booking);
+                updatedPayment = checkoutLifecycleService.handleFailedPayment(payment,
+                        "PayPal capture status: " + status);
             }
-            Payment savedPayment = paymentRepo.save(payment);
 
-            return paymentMapper.toPaymentResponse(savedPayment);
+            return paymentMapper.toPaymentResponse(updatedPayment);
         } catch (IOException e) {
             throw new CustomException("Failed to capture PayPal order: " + e.getMessage(),
                     HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
+    }
+
+    public String refundPayment(Payment payment, BigDecimal amount, String reason) {
+        // TODO: integrate with PayPal capture refund API. For now, log and return
+        // synthetic txn id.
+        log.info("Initiating PayPal refund for payment {} amount {}", payment.getId(), amount);
+        return "PAYPAL-REF-" + UUID.randomUUID();
     }
 }

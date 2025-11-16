@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.UUID;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import com.api.moviebooking.models.dtos.payment.ConfirmPaymentRequest;
@@ -45,19 +44,19 @@ public class PaymentController {
      * Frontend calls this after PayPal redirects back to your returnUrl.
      */
     @PostMapping("/order/capture")
-    @Operation(summary = "Confirm payment", description = "Captures a PayPal/VNPay order after user approval")
+    @Operation(summary = "Confirm payment", description = "Captures a PayPal/Momo order after user approval")
     public ResponseEntity<PaymentResponse> confirmPayment(@Valid @RequestBody ConfirmPaymentRequest request) {
         var result = paymentService.confirmPayment(request);
         return ResponseEntity.ok(result);
     }
 
     /**
-     * VNPay IPN response handler
-     * callback URL: https://cinesverse.com.vn/payment/vnpay/ipn
+     * Momo IPN response handler
+     * callback URL: https://cinesverse.com.vn/payment/momo/ipn
      */
-    @RequestMapping(value = "/vnpay/ipn", method = { RequestMethod.GET, RequestMethod.POST })
+    @RequestMapping(value = "/momo/ipn", method = { RequestMethod.GET, RequestMethod.POST })
     public ResponseEntity<IpnResponse> ipn(HttpServletRequest request) {
-        IpnResponse result = paymentService.processVNPayIpn(request);
+        IpnResponse result = paymentService.processMomoIpn(request);
         return ResponseEntity.ok(result);
     }
 
@@ -76,4 +75,5 @@ public class PaymentController {
                 method, startDate, endDate);
         return ResponseEntity.ok(responses);
     }
+
 }

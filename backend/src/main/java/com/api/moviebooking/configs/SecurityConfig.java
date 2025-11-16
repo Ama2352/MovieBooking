@@ -46,7 +46,9 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(PublicEndpointConfig.DOCS).permitAll()
+                        .requestMatchers(PublicEndpointConfig.BOOKING_LOCKS).permitAll()
                         .requestMatchers(PublicEndpointConfig.MAKE_PAYMENT).permitAll()
+                        .requestMatchers(PublicEndpointConfig.CHECKOUT).permitAll()
                         .requestMatchers(HttpMethod.POST, PublicEndpointConfig.AUTH).permitAll()
                         .requestMatchers(HttpMethod.GET, PublicEndpointConfig.MOVIES).permitAll()
                         .requestMatchers(HttpMethod.GET, PublicEndpointConfig.SHOWTIMES).permitAll()

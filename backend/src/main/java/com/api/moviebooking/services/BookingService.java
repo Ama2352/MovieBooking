@@ -14,10 +14,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.api.moviebooking.helpers.exceptions.ConcurrentBookingException;
+import com.api.moviebooking.helpers.exceptions.CustomException;
 import com.api.moviebooking.helpers.exceptions.LockExpiredException;
 import com.api.moviebooking.helpers.exceptions.MaxSeatsExceededException;
 import com.api.moviebooking.helpers.exceptions.ResourceNotFoundException;
 import com.api.moviebooking.helpers.exceptions.SeatLockedException;
+import com.api.moviebooking.helpers.mapstructs.BookingMapper;
 import com.api.moviebooking.models.dtos.booking.BookingResponse;
 import com.api.moviebooking.models.dtos.booking.ConfirmBookingRequest;
 import com.api.moviebooking.models.dtos.booking.LockSeatsRequest;
@@ -57,7 +59,8 @@ public class BookingService {
         private final UserRepo userRepo;
         private final BookingRepo bookingRepo;
         private final PromotionService promotionService;
-        private final UserService userService;
+        private final CheckoutLifecycleService checkoutLifecycleService;
+        private final BookingMapper bookingMapper;
 
         @Value("${seat.lock.duration.minutes}")
         private int lockDurationMinutes;
@@ -219,7 +222,7 @@ public class BookingService {
                         throw new LockExpiredException("Lock has expired. Please lock seats again.");
                 }
 
-                // Update seats to BOOKED
+                // Update seats to BOOKED to prevent concurrent purchases
                 List<UUID> seatIds = seatLock.getLockedSeats().stream()
                                 .map(ShowtimeSeat::getId)
                                 .collect(Collectors.toList());
@@ -238,7 +241,14 @@ public class BookingService {
                 booking.setBookedSeats(new ArrayList<>(seatLock.getLockedSeats()));
                 booking.setTotalPrice(totalPrice);
                 booking.setFinalPrice(totalPrice); // Default to total price
-                booking.setStatus(BookingStatus.PENDING); // Pending payment
+                booking.setStatus(BookingStatus.PENDING_PAYMENT);
+                booking.setPaymentExpiresAt(seatLock.getExpiresAt());
+                booking.setQrPayload(null);
+                booking.setQrCode(null);
+                booking.setLoyaltyPointsAwarded(false);
+                booking.setRefunded(false);
+                booking.setRefundReason(null);
+                booking.setRefundedAt(null);
 
                 // Apply membership tier discount first
                 applyMembershipTierDiscount(booking);
@@ -252,9 +262,6 @@ public class BookingService {
 
                 bookingRepo.save(booking);
 
-                // Add loyalty points based on final price
-                userService.addLoyaltyPoints(request.getUserId(), booking.getFinalPrice());
-
                 // Deactivate lock and release Redis
                 seatLock.setActive(false);
                 seatLockRepo.save(seatLock);
@@ -264,9 +271,9 @@ public class BookingService {
                 redisLockService.releaseMultipleSeatsLock(
                                 seatLock.getShowtime().getId(), seatIds, lockToken);
 
-                log.info("Booking confirmed: {} for user {}", booking.getId(), request.getUserId());
+                log.info("Booking pending payment: {} for user {}", booking.getId(), request.getUserId());
 
-                return buildBookingResponse(booking);
+                return bookingMapper.toBookingResponse(booking);
         }
 
         /**
@@ -332,8 +339,36 @@ public class BookingService {
         public List<BookingResponse> getUserBookings(UUID userId) {
                 List<Booking> bookings = bookingRepo.findByUserId(userId);
                 return bookings.stream()
-                                .map(this::buildBookingResponse)
+                                .map(bookingMapper::toBookingResponse)
                                 .collect(Collectors.toList());
+        }
+
+        public BookingResponse getBookingForUser(UUID bookingId, UUID userId) {
+                Booking booking = bookingRepo.findById(bookingId)
+                                .orElseThrow(() -> new ResourceNotFoundException("Booking", "id", bookingId));
+
+                if (!booking.getUser().getId().equals(userId)) {
+                        throw new CustomException("You do not have access to this booking",
+                                        org.springframework.http.HttpStatus.FORBIDDEN);
+                }
+
+                return bookingMapper.toBookingResponse(booking);
+        }
+
+        @Transactional
+        public BookingResponse updateQrCode(UUID bookingId, UUID userId, String qrCodeUrl) {
+                Booking booking = bookingRepo.findByIdAndUserId(bookingId, userId)
+                                .orElseThrow(() -> new ResourceNotFoundException("Booking", "id", bookingId));
+
+                if (booking.getStatus() != BookingStatus.CONFIRMED) {
+                        throw new CustomException("QR code can only be attached to confirmed bookings",
+                                        org.springframework.http.HttpStatus.BAD_REQUEST);
+                }
+
+                booking.setQrCode(qrCodeUrl);
+                bookingRepo.save(booking);
+
+                return bookingMapper.toBookingResponse(booking);
         }
 
         // ========== Private Helper Methods ==========
@@ -452,36 +487,6 @@ public class BookingService {
                                 promotionCode, currentPrice, promotionDiscount, newFinalPrice);
         }
 
-        private BookingResponse buildBookingResponse(Booking booking) {
-                List<BookingResponse.SeatDetail> seatDetails = booking.getBookedSeats().stream()
-                                .map(s -> BookingResponse.SeatDetail.builder()
-                                                .rowLabel(s.getSeat().getRowLabel())
-                                                .seatNumber(s.getSeat().getSeatNumber())
-                                                .seatType(s.getSeat().getSeatType().toString())
-                                                .price(s.getPrice())
-                                                .build())
-                                .collect(Collectors.toList());
-
-                return BookingResponse.builder()
-                                .bookingId(booking.getId())
-                                .showtimeId(booking.getShowtime().getId())
-                                .movieTitle(booking.getShowtime().getMovie().getTitle())
-                                .showtimeStartTime(booking.getShowtime().getStartTime())
-                                .cinemaName(booking.getShowtime().getRoom().getCinema().getName())
-                                .roomName("Room " + booking.getShowtime().getRoom().getRoomNumber() +
-                                                " (" + booking.getShowtime().getRoom().getRoomType() + ")")
-                                .seats(seatDetails)
-                                .totalPrice(booking.getTotalPrice())
-                                .discountReason(booking.getDiscountReason())
-                                .discountValue(booking.getDiscountValue())
-                                .finalPrice(booking.getFinalPrice())
-                                .status(booking.getStatus())
-                                .bookedAt(booking.getBookedAt())
-                                .qrCode(booking.getQrCode())
-                                .message("Booking created successfully")
-                                .build();
-        }
-
         private LockSeatsResponse buildLockResponse(SeatLock seatLock, List<ShowtimeSeat> seats,
                         int lockDurationMinutes) {
 
@@ -553,6 +558,20 @@ public class BookingService {
                 for (SeatLock lock : expiredLocks) {
                         releaseSeatsInternal(lock, true);
                 }
+        }
+
+        @Transactional
+        public void cleanupExpiredPendingPayments() {
+                List<Booking> expiredBookings = bookingRepo
+                                .findByStatusAndPaymentExpiresAtBefore(BookingStatus.PENDING_PAYMENT,
+                                                LocalDateTime.now());
+
+                if (expiredBookings.isEmpty()) {
+                        return;
+                }
+
+                log.info("Expiring {} pending bookings due to payment timeout", expiredBookings.size());
+                expiredBookings.forEach(checkoutLifecycleService::handlePaymentTimeout);
         }
 
         public Booking getBookingById(UUID bookingId) {

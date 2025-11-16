@@ -32,6 +32,8 @@ public class BookingResponse {
         private BookingStatus status;
         private LocalDateTime bookedAt;
         private String qrCode;
+        private String qrPayload;
+        private LocalDateTime paymentExpiresAt;
         private String message;
 
         @Data

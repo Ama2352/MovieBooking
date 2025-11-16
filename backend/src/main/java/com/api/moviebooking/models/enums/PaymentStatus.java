@@ -2,7 +2,9 @@ package com.api.moviebooking.models.enums;
 
 public enum PaymentStatus {
     PENDING,
-    COMPLETED,
+    SUCCESS,
     FAILED,
-    REFUNDED
+    REFUND_PENDING,
+    REFUNDED,
+    REFUND_FAILED
 }

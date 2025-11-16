@@ -13,6 +13,7 @@ public interface SnackMapper {
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "cinema", ignore = true)
+    @Mapping(target = "bookingSnacks", ignore = true)
     Snack toEntity(AddSnackRequest request);
 
     @Mapping(target = "cinemaId", source = "cinema.id")

@@ -160,7 +160,7 @@ class BookingServiceTest {
         @DisplayName("TC-1: Should successfully lock available seats")
         void testLockSeats_Success() {
             // Arrange
-            LockSeatsRequest request = new LockSeatsRequest(showtimeId, Arrays.asList(seatId1, seatId2));
+            LockSeatsRequest request = new LockSeatsRequest(showtimeId, userId, Arrays.asList(seatId1, seatId2));
 
             when(seatLockRepo.findAllActiveLocksForUser(userId))
                     .thenReturn(Arrays.asList()); // No existing locks
@@ -178,7 +178,7 @@ class BookingServiceTest {
                     });
 
             // Act
-            LockSeatsResponse response = bookingService.lockSeats(userId, request);
+            LockSeatsResponse response = bookingService.lockSeats(request);
 
             // Assert
             assertNotNull(response);
@@ -204,11 +204,11 @@ class BookingServiceTest {
                     UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
                     UUID.randomUUID(), UUID.randomUUID() // 11 seats
             );
-            LockSeatsRequest request = new LockSeatsRequest(showtimeId, tooManySeats);
+            LockSeatsRequest request = new LockSeatsRequest(showtimeId, userId, tooManySeats);
 
             // Act & Assert
             assertThrows(MaxSeatsExceededException.class, () -> {
-                bookingService.lockSeats(userId, request);
+                bookingService.lockSeats(request);
             });
         }
 
@@ -219,7 +219,7 @@ class BookingServiceTest {
         @DisplayName("TC-3: Should throw ConcurrentBookingException when user has lock for same showtime")
         void testLockSeats_UserHasLockForSameShowtime() {
             // Arrange
-            LockSeatsRequest request = new LockSeatsRequest(showtimeId, Arrays.asList(seatId1));
+            LockSeatsRequest request = new LockSeatsRequest(showtimeId, userId, Arrays.asList(seatId1));
 
             SeatLock existingLock = new SeatLock();
             existingLock.setId(UUID.randomUUID());
@@ -232,7 +232,7 @@ class BookingServiceTest {
 
             // Act & Assert
             assertThrows(ConcurrentBookingException.class, () -> {
-                bookingService.lockSeats(userId, request);
+                bookingService.lockSeats(request);
             });
 
             verify(userRepo, never()).findById(any());
@@ -246,7 +246,7 @@ class BookingServiceTest {
         void testLockSeats_ReleasesLocksForDifferentShowtimes() {
             // Arrange
             UUID differentShowtimeId = UUID.randomUUID();
-            LockSeatsRequest request = new LockSeatsRequest(showtimeId, Arrays.asList(seatId1));
+            LockSeatsRequest request = new LockSeatsRequest(showtimeId, userId, Arrays.asList(seatId1));
 
             Showtime differentShowtime = new Showtime();
             differentShowtime.setId(differentShowtimeId);
@@ -277,7 +277,7 @@ class BookingServiceTest {
                     });
 
             // Act
-            bookingService.lockSeats(userId, request);
+            bookingService.lockSeats(request);
 
             // Assert - Old lock should be released
             verify(showtimeSeatRepo, atLeastOnce()).updateMultipleSeatsStatus(anyList(), eq(SeatStatus.AVAILABLE));
@@ -291,7 +291,7 @@ class BookingServiceTest {
         @DisplayName("TC-5: Should throw ResourceNotFoundException when user not found")
         void testLockSeats_UserNotFound() {
             // Arrange
-            LockSeatsRequest request = new LockSeatsRequest(showtimeId, Arrays.asList(seatId1));
+            LockSeatsRequest request = new LockSeatsRequest(showtimeId, userId, Arrays.asList(seatId1));
 
             when(seatLockRepo.findAllActiveLocksForUser(userId))
                     .thenReturn(Arrays.asList());
@@ -299,7 +299,7 @@ class BookingServiceTest {
 
             // Act & Assert
             assertThrows(ResourceNotFoundException.class, () -> {
-                bookingService.lockSeats(userId, request);
+                bookingService.lockSeats(request);
             });
         }
 
@@ -310,7 +310,7 @@ class BookingServiceTest {
         @DisplayName("TC-6: Should throw ResourceNotFoundException when showtime not found")
         void testLockSeats_ShowtimeNotFound() {
             // Arrange
-            LockSeatsRequest request = new LockSeatsRequest(showtimeId, Arrays.asList(seatId1));
+            LockSeatsRequest request = new LockSeatsRequest(showtimeId, userId, Arrays.asList(seatId1));
 
             when(seatLockRepo.findAllActiveLocksForUser(userId))
                     .thenReturn(Arrays.asList());
@@ -319,7 +319,7 @@ class BookingServiceTest {
 
             // Act & Assert
             assertThrows(ResourceNotFoundException.class, () -> {
-                bookingService.lockSeats(userId, request);
+                bookingService.lockSeats(request);
             });
         }
 
@@ -330,7 +330,7 @@ class BookingServiceTest {
         @DisplayName("TC-7: Should throw ResourceNotFoundException when seats not found")
         void testLockSeats_SeatsNotFound() {
             // Arrange
-            LockSeatsRequest request = new LockSeatsRequest(showtimeId, Arrays.asList(seatId1, seatId2));
+            LockSeatsRequest request = new LockSeatsRequest(showtimeId, userId, Arrays.asList(seatId1, seatId2));
 
             when(seatLockRepo.findAllActiveLocksForUser(userId))
                     .thenReturn(Arrays.asList());
@@ -341,7 +341,7 @@ class BookingServiceTest {
 
             // Act & Assert
             assertThrows(ResourceNotFoundException.class, () -> {
-                bookingService.lockSeats(userId, request);
+                bookingService.lockSeats(request);
             });
         }
 
@@ -353,7 +353,7 @@ class BookingServiceTest {
         void testLockSeats_SeatsAlreadyLocked() {
             // Arrange
             mockSeat1.setStatus(SeatStatus.LOCKED);
-            LockSeatsRequest request = new LockSeatsRequest(showtimeId, Arrays.asList(seatId1, seatId2));
+            LockSeatsRequest request = new LockSeatsRequest(showtimeId, userId, Arrays.asList(seatId1, seatId2));
 
             when(seatLockRepo.findAllActiveLocksForUser(userId))
                     .thenReturn(Arrays.asList()); // No existing locks
@@ -364,7 +364,7 @@ class BookingServiceTest {
 
             // Act & Assert
             assertThrows(SeatLockedException.class, () -> {
-                bookingService.lockSeats(userId, request);
+                bookingService.lockSeats(request);
             });
 
             verify(redisLockService, never()).acquireMultipleSeatsLock(any(), any(), any(), anyLong());
@@ -377,7 +377,7 @@ class BookingServiceTest {
         @DisplayName("TC-9: Should throw ConcurrentBookingException when Redis lock fails")
         void testLockSeats_RedisLockFails() {
             // Arrange
-            LockSeatsRequest request = new LockSeatsRequest(showtimeId, Arrays.asList(seatId1, seatId2));
+            LockSeatsRequest request = new LockSeatsRequest(showtimeId, userId, Arrays.asList(seatId1, seatId2));
 
             when(seatLockRepo.findAllActiveLocksForUser(userId))
                     .thenReturn(Arrays.asList()); // No existing locks
@@ -390,7 +390,7 @@ class BookingServiceTest {
 
             // Act & Assert
             assertThrows(ConcurrentBookingException.class, () -> {
-                bookingService.lockSeats(userId, request);
+                bookingService.lockSeats(request);
             });
 
             verify(showtimeSeatRepo, never()).updateMultipleSeatsStatus(any(), any());
@@ -404,7 +404,7 @@ class BookingServiceTest {
         @DisplayName("TC-10: Should rollback Redis lock on database error")
         void testLockSeats_RollbackOnDatabaseError() {
             // Arrange
-            LockSeatsRequest request = new LockSeatsRequest(showtimeId, Arrays.asList(seatId1));
+            LockSeatsRequest request = new LockSeatsRequest(showtimeId, userId, Arrays.asList(seatId1));
 
             when(seatLockRepo.findAllActiveLocksForUser(userId))
                     .thenReturn(Arrays.asList());
@@ -420,7 +420,7 @@ class BookingServiceTest {
 
             // Act & Assert
             assertThrows(RuntimeException.class, () -> {
-                bookingService.lockSeats(userId, request);
+                bookingService.lockSeats(request);
             });
 
             // Verify rollback: Redis lock should be released
@@ -467,7 +467,10 @@ class BookingServiceTest {
                     });
 
             // Act
-            var response = bookingService.confirmBooking(userId, lockId);
+            com.api.moviebooking.models.dtos.booking.ConfirmBookingRequest confirmRequest = new com.api.moviebooking.models.dtos.booking.ConfirmBookingRequest();
+            confirmRequest.setLockId(lockId);
+            confirmRequest.setUserId(userId);
+            var response = bookingService.confirmBooking(confirmRequest);
 
             // Assert
             assertNotNull(response);
@@ -499,7 +502,10 @@ class BookingServiceTest {
 
             // Act & Assert
             assertThrows(LockExpiredException.class, () -> {
-                bookingService.confirmBooking(userId, lockId);
+                com.api.moviebooking.models.dtos.booking.ConfirmBookingRequest confirmRequest = new com.api.moviebooking.models.dtos.booking.ConfirmBookingRequest();
+                confirmRequest.setLockId(lockId);
+                confirmRequest.setUserId(userId);
+                bookingService.confirmBooking(confirmRequest);
             });
         }
 
@@ -525,7 +531,10 @@ class BookingServiceTest {
 
             // Act & Assert
             assertThrows(IllegalArgumentException.class, () -> {
-                bookingService.confirmBooking(userId, lockId);
+                com.api.moviebooking.models.dtos.booking.ConfirmBookingRequest confirmRequest = new com.api.moviebooking.models.dtos.booking.ConfirmBookingRequest();
+                confirmRequest.setLockId(lockId);
+                confirmRequest.setUserId(userId);
+                bookingService.confirmBooking(confirmRequest);
             });
         }
 
@@ -542,7 +551,10 @@ class BookingServiceTest {
 
             // Act & Assert
             assertThrows(ResourceNotFoundException.class, () -> {
-                bookingService.confirmBooking(userId, lockId);
+                com.api.moviebooking.models.dtos.booking.ConfirmBookingRequest confirmRequest = new com.api.moviebooking.models.dtos.booking.ConfirmBookingRequest();
+                confirmRequest.setLockId(lockId);
+                confirmRequest.setUserId(userId);
+                bookingService.confirmBooking(confirmRequest);
             });
         }
 
@@ -565,7 +577,10 @@ class BookingServiceTest {
 
             // Act & Assert
             assertThrows(LockExpiredException.class, () -> {
-                bookingService.confirmBooking(userId, lockId);
+                com.api.moviebooking.models.dtos.booking.ConfirmBookingRequest confirmRequest = new com.api.moviebooking.models.dtos.booking.ConfirmBookingRequest();
+                confirmRequest.setLockId(lockId);
+                confirmRequest.setUserId(userId);
+                bookingService.confirmBooking(confirmRequest);
             });
         }
     }

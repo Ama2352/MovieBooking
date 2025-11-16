@@ -4,22 +4,18 @@ import java.security.Principal;
 import java.util.List;
 import java.util.UUID;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.api.moviebooking.models.dtos.booking.BookingResponse;
 import com.api.moviebooking.models.dtos.booking.ConfirmBookingRequest;
-import com.api.moviebooking.models.dtos.booking.LockSeatsRequest;
-import com.api.moviebooking.models.dtos.booking.LockSeatsResponse;
-import com.api.moviebooking.models.dtos.booking.SeatAvailabilityResponse;
+import com.api.moviebooking.models.dtos.booking.UpdateQrCodeRequest;
 import com.api.moviebooking.services.BookingService;
 import com.api.moviebooking.services.UserService;
 
@@ -40,58 +36,12 @@ public class BookingController {
     private final UserService userService;
 
     /**
-     * Lock seats for booking (Step 1: User proceeds to checkout) (Allow Guest)
-     */
-    @PostMapping("/lock")
-    @Operation(summary = "Lock seats for booking", description = "Locks selected seats for 10 minutes. User must confirm booking before timeout.")
-    public ResponseEntity<LockSeatsResponse> lockSeats(@Valid @RequestBody LockSeatsRequest request) {
-        LockSeatsResponse response = bookingService.lockSeats(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
-
-    /**
      * Confirm booking (Step 2: After lock, before payment) (Allow Guest)
      */
     @PostMapping("/confirm")
     @Operation(summary = "Confirm booking", description = "Confirms the booking and creates a booking record. Transitions seats from LOCKED to BOOKED. Optionally applies promotion code for discount.")
     public ResponseEntity<BookingResponse> confirmBooking(@Valid @RequestBody ConfirmBookingRequest request) {
         BookingResponse response = bookingService.confirmBooking(request);
-        return ResponseEntity.ok(response);
-    }
-
-    /**
-     * Release seats (User cancels or navigates away) (Allow Guest)
-     */
-    @DeleteMapping("/release")
-    @Operation(summary = "Release locked seats", description = "Manually releases locked seats before confirmation.")
-    public ResponseEntity<Void> releaseSeats(
-            @RequestParam UUID showtimeId,
-            @RequestParam UUID userId) {
-        bookingService.releaseSeats(userId, showtimeId);
-        return ResponseEntity.ok().build();
-    }
-
-    /**
-     * Handle back button - Releases all locked seats immediately (Allow Guest)
-     */
-    @PostMapping("/back")
-    @Operation(summary = "Handle back button", description = "Releases all locked seats immediately when user presses back. Seats become available to everyone.")
-    public ResponseEntity<Void> handleBackButton(
-            @RequestParam UUID showtimeId,
-            @RequestParam UUID userId) {
-        bookingService.handleBackButton(userId, showtimeId);
-        return ResponseEntity.ok().build();
-    }
-
-    /**
-     * Check seat availability for a showtime (Allow Guest)
-     */
-    @GetMapping("/availability/{showtimeId}")
-    @Operation(summary = "Check seat availability", description = "Returns available, locked, and booked seats for a showtime. Releases any existing locks for the user.")
-    public ResponseEntity<SeatAvailabilityResponse> checkAvailability(
-            @PathVariable UUID showtimeId,
-            @RequestParam UUID userId) {
-        SeatAvailabilityResponse response = bookingService.checkAvailability(showtimeId, userId);
         return ResponseEntity.ok(response);
     }
 
@@ -114,7 +64,19 @@ public class BookingController {
     public ResponseEntity<BookingResponse> getBooking(
             @PathVariable UUID bookingId,
             Principal principal) {
-        // Implementation would fetch single booking with authorization check
-        return ResponseEntity.ok().build();
+        UUID userId = userService.getUserIdFromPrincipal(principal);
+        BookingResponse response = bookingService.getBookingForUser(bookingId, userId);
+        return ResponseEntity.ok(response);
+    }
+
+    @PatchMapping("/{bookingId}/qr")
+    @Operation(summary = "Attach Cloudinary QR code URL", description = "Accepts FE-provided Cloudinary URL after QR generation")
+    public ResponseEntity<BookingResponse> updateQrCode(
+            @PathVariable UUID bookingId,
+            Principal principal,
+            @Valid @RequestBody UpdateQrCodeRequest request) {
+        UUID userId = userService.getUserIdFromPrincipal(principal);
+        BookingResponse response = bookingService.updateQrCode(bookingId, userId, request.getQrCodeUrl());
+        return ResponseEntity.ok(response);
     }
 }

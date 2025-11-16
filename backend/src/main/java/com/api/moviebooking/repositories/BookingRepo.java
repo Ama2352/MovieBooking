@@ -14,45 +14,47 @@ import com.api.moviebooking.models.enums.BookingStatus;
 
 public interface BookingRepo extends JpaRepository<Booking, UUID> {
 
-    /**
-     * Find bookings by user ID
-     */
-    @Query("SELECT b FROM Booking b WHERE b.user.id = :userId ORDER BY b.bookedAt DESC")
-    List<Booking> findByUserId(@Param("userId") UUID userId);
+        /**
+         * Find bookings by user ID
+         */
+        @Query("SELECT b FROM Booking b WHERE b.user.id = :userId ORDER BY b.bookedAt DESC")
+        List<Booking> findByUserId(@Param("userId") UUID userId);
 
-    /**
-     * Find bookings by showtime ID
-     */
-    @Query("SELECT b FROM Booking b WHERE b.showtime.id = :showtimeId")
-    List<Booking> findByShowtimeId(@Param("showtimeId") UUID showtimeId);
+        /**
+         * Find bookings by showtime ID
+         */
+        @Query("SELECT b FROM Booking b WHERE b.showtime.id = :showtimeId")
+        List<Booking> findByShowtimeId(@Param("showtimeId") UUID showtimeId);
 
-    /**
-     * Find booking by ID and user ID (for authorization)
-     */
-    @Query("SELECT b FROM Booking b WHERE b.id = :bookingId AND b.user.id = :userId")
-    Optional<Booking> findByIdAndUserId(@Param("bookingId") UUID bookingId, @Param("userId") UUID userId);
+        /**
+         * Find booking by ID and user ID (for authorization)
+         */
+        @Query("SELECT b FROM Booking b WHERE b.id = :bookingId AND b.user.id = :userId")
+        Optional<Booking> findByIdAndUserId(@Param("bookingId") UUID bookingId, @Param("userId") UUID userId);
 
-    /**
-     * Find bookings by status
-     */
-    @Query("SELECT b FROM Booking b WHERE b.status = :status")
-    List<Booking> findByStatus(@Param("status") BookingStatus status);
+        /**
+         * Find bookings by status
+         */
+        @Query("SELECT b FROM Booking b WHERE b.status = :status")
+        List<Booking> findByStatus(@Param("status") BookingStatus status);
 
-    /**
-     * Find user bookings within date range
-     */
-    @Query("SELECT b FROM Booking b WHERE b.user.id = :userId " +
-            "AND b.bookedAt BETWEEN :startDate AND :endDate ORDER BY b.bookedAt DESC")
-    List<Booking> findByUserIdAndDateRange(
-            @Param("userId") UUID userId,
-            @Param("startDate") LocalDateTime startDate,
-            @Param("endDate") LocalDateTime endDate);
+        /**
+         * Find user bookings within date range
+         */
+        @Query("SELECT b FROM Booking b WHERE b.user.id = :userId " +
+                        "AND b.bookedAt BETWEEN :startDate AND :endDate ORDER BY b.bookedAt DESC")
+        List<Booking> findByUserIdAndDateRange(
+                        @Param("userId") UUID userId,
+                        @Param("startDate") LocalDateTime startDate,
+                        @Param("endDate") LocalDateTime endDate);
 
-    /**
-     * Count user's active bookings
-     */
-    @Query("SELECT COUNT(b) FROM Booking b WHERE b.user.id = :userId " +
-            "AND (b.status = com.api.moviebooking.models.enums.BookingStatus.CONFIRMED " +
-            "OR b.status = com.api.moviebooking.models.enums.BookingStatus.PENDING)")
-    long countActiveBookingsByUserId(@Param("userId") UUID userId);
+        /**
+         * Count user's active bookings
+         */
+        @Query("SELECT COUNT(b) FROM Booking b WHERE b.user.id = :userId " +
+                        "AND (b.status = com.api.moviebooking.models.enums.BookingStatus.CONFIRMED " +
+                        "OR b.status = com.api.moviebooking.models.enums.BookingStatus.PENDING_PAYMENT)")
+        long countActiveBookingsByUserId(@Param("userId") UUID userId);
+
+        List<Booking> findByStatusAndPaymentExpiresAtBefore(BookingStatus status, LocalDateTime timestamp);
 }

@@ -22,6 +22,10 @@ public final class PublicEndpointConfig {
                         "/payments/vnpay/ipn"
         };
 
+        public static final String[] CHECKOUT = {
+                        "/checkout"
+        };
+
         // Public read-only resources (GET only)
         public static final String[] MOVIES = { "/movies/**" };
         public static final String[] SHOWTIMES = { "/showtimes/**" };
@@ -33,4 +37,6 @@ public final class PublicEndpointConfig {
         public static final String[] PRICE_MODIFIERS = { "/price-modifiers/**" };
         public static final String[] CINEMAS = { "/cinemas/**" };
         public static final String[] PAYMENTS = { "/payments/**" };
+        public static final String[] BOOKINGS = { "/bookings/**" };
+        public static final String[] BOOKING_LOCKS = { "/bookings/lock/**" };
 }

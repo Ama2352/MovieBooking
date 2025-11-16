@@ -19,6 +19,4 @@ public class ConfirmBookingRequest {
     private UUID userId;
 
     private String promotionCode; // Optional promotion code for discount
-
-    private String paymentMethod; // For future payment integration
 }

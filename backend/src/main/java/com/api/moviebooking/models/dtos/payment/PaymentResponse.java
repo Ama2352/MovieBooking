@@ -13,4 +13,6 @@ public class PaymentResponse {
     private String currency;
     private String status;
     private String method;
+    private String bookingStatus;
+    private String qrPayload;
 }

@@ -28,6 +28,4 @@ public class InitiatePaymentRequest {
 
     @NotNull(message = "Amount is required")
     private BigDecimal amount;
-
-    private String ipAddress; // For VNPAY validation purpose
 }

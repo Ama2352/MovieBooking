@@ -1,5 +1,7 @@
 package com.api.moviebooking.services;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.security.Principal;
 import java.util.Map;
 import java.util.Optional;
@@ -180,11 +182,11 @@ public class UserService {
      * Formula: 1 point per 1000 VND spent (configurable)
      */
     @Transactional
-    public void addLoyaltyPoints(UUID userId, java.math.BigDecimal amountSpent) {
+    public void addLoyaltyPoints(UUID userId, BigDecimal amountSpent) {
         User user = findUserById(userId);
 
         // Calculate points: 1 point per 1000 VND
-        int pointsToAdd = amountSpent.divide(java.math.BigDecimal.valueOf(1000), 0, java.math.RoundingMode.DOWN)
+        int pointsToAdd = amountSpent.divide(BigDecimal.valueOf(1000), 0, java.math.RoundingMode.DOWN)
                 .intValue();
 
         int newPoints = user.getLoyaltyPoints() + pointsToAdd;
@@ -193,6 +195,17 @@ public class UserService {
         // Check if user needs tier upgrade
         updateUserTier(user);
 
+        userRepo.save(user);
+    }
+
+    @Transactional
+    public void revokeLoyaltyPoints(UUID userId, BigDecimal amount) {
+        User user = findUserById(userId);
+        int pointsToRemove = amount.divide(BigDecimal.valueOf(1000), 0, RoundingMode.DOWN)
+                .intValue();
+        int newPoints = Math.max(0, user.getLoyaltyPoints() - pointsToRemove);
+        user.setLoyaltyPoints(newPoints);
+        updateUserTier(user);
         userRepo.save(user);
     }
 

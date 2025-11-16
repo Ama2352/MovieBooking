@@ -42,21 +42,20 @@ public class Booking {
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
+    @JoinColumn(nullable = false)
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "showtime_id")
+    @JoinColumn(nullable = false)
     private Showtime showtime;
 
     @CreationTimestamp
-    @Column(name = "booked_at")
+    @Column(nullable = false, updatable = false)
     private LocalDateTime bookedAt;
 
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal totalPrice; // Giá gốc trước khi giảm
 
-    @Column(length = 500)
     private String discountReason; // Lý do giảm giá (tên promotion hoặc lý do khác)
 
     @Column(precision = 10, scale = 2)
@@ -69,13 +68,25 @@ public class Booking {
     @Column(nullable = false)
     private BookingStatus status;
 
-    @Column(name = "qr_code")
     private String qrCode;
 
+    @Column(columnDefinition = "TEXT")
+    private String qrPayload;
+
+    private LocalDateTime paymentExpiresAt;
+
+    @Column(nullable = false)
+    private boolean loyaltyPointsAwarded = false;
+
+    @Column(nullable = false)
+    private boolean refunded = false;
+
+    private LocalDateTime refundedAt;
+
+    private String refundReason;
+
     @ManyToMany(cascade = { CascadeType.PERSIST, CascadeType.MERGE })
-    @JoinTable(name = "booking_seats", 
-               joinColumns = @JoinColumn(name = "booking_id"), 
-               inverseJoinColumns = @JoinColumn(name = "showtime_seat_id"))
+    @JoinTable(name = "booking_seats", joinColumns = @JoinColumn(name = "booking_id"), inverseJoinColumns = @JoinColumn(name = "showtime_seat_id"))
     private List<ShowtimeSeat> bookedSeats = new ArrayList<>();
 
     @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true)
