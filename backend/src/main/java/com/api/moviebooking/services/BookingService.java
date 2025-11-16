@@ -19,6 +19,7 @@ import com.api.moviebooking.helpers.exceptions.MaxSeatsExceededException;
 import com.api.moviebooking.helpers.exceptions.ResourceNotFoundException;
 import com.api.moviebooking.helpers.exceptions.SeatLockedException;
 import com.api.moviebooking.models.dtos.booking.BookingResponse;
+import com.api.moviebooking.models.dtos.booking.ConfirmBookingRequest;
 import com.api.moviebooking.models.dtos.booking.LockSeatsRequest;
 import com.api.moviebooking.models.dtos.booking.LockSeatsResponse;
 import com.api.moviebooking.models.dtos.booking.SeatAvailabilityResponse;
@@ -72,9 +73,9 @@ public class BookingService {
          * try-catch
          */
         @Transactional
-        public LockSeatsResponse lockSeats(UUID userId, LockSeatsRequest request) {
+        public LockSeatsResponse lockSeats(LockSeatsRequest request) {
                 log.info("User {} attempting to lock {} seats for showtime {}",
-                                userId, request.getShowtimeSeatIds().size(), request.getShowtimeId());
+                                request.getUserId(), request.getShowtimeSeatIds().size(), request.getShowtimeId());
 
                 // Validate request
                 if (request.getShowtimeSeatIds().size() > maxSeatsPerBooking) {
@@ -82,7 +83,7 @@ public class BookingService {
                 }
 
                 // Safety check: Handle existing locks
-                List<SeatLock> existingLocks = seatLockRepo.findAllActiveLocksForUser(userId);
+                List<SeatLock> existingLocks = seatLockRepo.findAllActiveLocksForUser(request.getUserId());
 
                 if (!existingLocks.isEmpty()) {
                         // Check if user has lock for THIS showtime (multi-tab scenario)
@@ -101,13 +102,13 @@ public class BookingService {
 
                         // Release locks for DIFFERENT showtimes
                         log.warn("User {} has {} active lock(s) for other showtimes - releasing them",
-                                        userId, existingLocks.size());
+                                        request.getUserId(), existingLocks.size());
                         existingLocks.forEach(lock -> releaseSeatsInternal(lock, false));
                 }
 
                 // Fetch entities
-                User user = userRepo.findById(userId)
-                                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+                User user = userRepo.findById(request.getUserId())
+                                .orElseThrow(() -> new ResourceNotFoundException("User", "id", request.getUserId()));
                 Showtime showtime = showtimeRepo.findById(request.getShowtimeId())
                                 .orElseThrow(() -> new ResourceNotFoundException("Showtime", "id",
                                                 request.getShowtimeId()));
@@ -161,7 +162,7 @@ public class BookingService {
                         seatLockRepo.save(seatLock);
 
                         log.info("Successfully locked {} seats for user {}, lockId: {}",
-                                        seats.size(), userId, seatLock.getId());
+                                        seats.size(), request.getUserId(), seatLock.getId());
 
                         // Build response
                         return buildLockResponse(seatLock, seats, lockDurationMinutes);
@@ -192,30 +193,20 @@ public class BookingService {
         }
 
         /**
-         * Confirm booking and transition from LOCKED to BOOKED (without promotion)
-         * Predicate nodes (d): 4 -> V(G) = d + 1 = 5
-         * Nodes: findSeatLock, !equals(userId), !isActive, isAfter(expiresAt)
-         */
-        @Transactional
-        public BookingResponse confirmBooking(UUID userId, UUID lockId) {
-                return confirmBooking(userId, lockId, null);
-        }
-
-        /**
          * Confirm booking with optional promotion
          * Predicate nodes (d): 5 -> V(G) = d + 1 = 6
          * Nodes: findSeatLock, !equals(userId), !isActive, isAfter(expiresAt),
          * promotionCode != null
          */
         @Transactional
-        public BookingResponse confirmBooking(UUID userId, UUID lockId, String promotionCode) {
-                log.info("User {} confirming booking for lock {}", userId, lockId);
+        public BookingResponse confirmBooking(ConfirmBookingRequest request) {
+                log.info("User {} confirming booking for lock {}", request.getUserId(), request.getLockId());
 
                 // Find and validate lock
-                SeatLock seatLock = seatLockRepo.findById(lockId)
+                SeatLock seatLock = seatLockRepo.findById(request.getLockId())
                                 .orElseThrow(() -> new ResourceNotFoundException("Seat lock not found"));
 
-                if (!seatLock.getUser().getId().equals(userId)) {
+                if (!seatLock.getUser().getId().equals(request.getUserId())) {
                         throw new IllegalArgumentException("Lock does not belong to this user");
                 }
 
@@ -253,8 +244,8 @@ public class BookingService {
                 applyMembershipTierDiscount(booking);
 
                 // Apply promotion if provided (stacks with membership discount)
-                if (promotionCode != null && !promotionCode.isBlank()) {
-                        applyPromotionToBooking(booking, promotionCode, userId);
+                if (request.getPromotionCode() != null && !request.getPromotionCode().isBlank()) {
+                        applyPromotionToBooking(booking, request.getPromotionCode(), request.getUserId());
                 }
 
                 // QR code generation can be added here
@@ -262,7 +253,7 @@ public class BookingService {
                 bookingRepo.save(booking);
 
                 // Add loyalty points based on final price
-                userService.addLoyaltyPoints(userId, booking.getFinalPrice());
+                userService.addLoyaltyPoints(request.getUserId(), booking.getFinalPrice());
 
                 // Deactivate lock and release Redis
                 seatLock.setActive(false);
@@ -273,7 +264,7 @@ public class BookingService {
                 redisLockService.releaseMultipleSeatsLock(
                                 seatLock.getShowtime().getId(), seatIds, lockToken);
 
-                log.info("Booking confirmed: {} for user {}", booking.getId(), userId);
+                log.info("Booking confirmed: {} for user {}", booking.getId(), request.getUserId());
 
                 return buildBookingResponse(booking);
         }

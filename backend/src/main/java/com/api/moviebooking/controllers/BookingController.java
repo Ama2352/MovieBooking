@@ -40,67 +40,57 @@ public class BookingController {
     private final UserService userService;
 
     /**
-     * Lock seats for booking (Step 1: User proceeds to checkout)
+     * Lock seats for booking (Step 1: User proceeds to checkout) (Allow Guest)
      */
     @PostMapping("/lock")
     @Operation(summary = "Lock seats for booking", description = "Locks selected seats for 10 minutes. User must confirm booking before timeout.")
-    public ResponseEntity<LockSeatsResponse> lockSeats(
-            @Valid @RequestBody LockSeatsRequest request,
-            Principal principal) {
-        UUID userId = userService.getUserIdFromPrincipal(principal);
-        LockSeatsResponse response = bookingService.lockSeats(userId, request);
+    public ResponseEntity<LockSeatsResponse> lockSeats(@Valid @RequestBody LockSeatsRequest request) {
+        LockSeatsResponse response = bookingService.lockSeats(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     /**
-     * Confirm booking (Step 2: After lock, before payment)
+     * Confirm booking (Step 2: After lock, before payment) (Allow Guest)
      */
     @PostMapping("/confirm")
     @Operation(summary = "Confirm booking", description = "Confirms the booking and creates a booking record. Transitions seats from LOCKED to BOOKED. Optionally applies promotion code for discount.")
-    public ResponseEntity<BookingResponse> confirmBooking(
-            @Valid @RequestBody ConfirmBookingRequest request,
-            Principal principal) {
-        UUID userId = userService.getUserIdFromPrincipal(principal);
-        BookingResponse response = bookingService.confirmBooking(userId, request.getLockId(),
-                request.getPromotionCode());
+    public ResponseEntity<BookingResponse> confirmBooking(@Valid @RequestBody ConfirmBookingRequest request) {
+        BookingResponse response = bookingService.confirmBooking(request);
         return ResponseEntity.ok(response);
     }
 
     /**
-     * Release seats (User cancels or navigates away)
+     * Release seats (User cancels or navigates away) (Allow Guest)
      */
     @DeleteMapping("/release")
     @Operation(summary = "Release locked seats", description = "Manually releases locked seats before confirmation.")
     public ResponseEntity<Void> releaseSeats(
             @RequestParam UUID showtimeId,
-            Principal principal) {
-        UUID userId = userService.getUserIdFromPrincipal(principal);
+            @RequestParam UUID userId) {
         bookingService.releaseSeats(userId, showtimeId);
         return ResponseEntity.ok().build();
     }
 
     /**
-     * Handle back button - Releases all locked seats immediately
+     * Handle back button - Releases all locked seats immediately (Allow Guest)
      */
     @PostMapping("/back")
     @Operation(summary = "Handle back button", description = "Releases all locked seats immediately when user presses back. Seats become available to everyone.")
     public ResponseEntity<Void> handleBackButton(
             @RequestParam UUID showtimeId,
-            Principal principal) {
-        UUID userId = userService.getUserIdFromPrincipal(principal);
+            @RequestParam UUID userId) {
         bookingService.handleBackButton(userId, showtimeId);
         return ResponseEntity.ok().build();
     }
 
     /**
-     * Check seat availability for a showtime
+     * Check seat availability for a showtime (Allow Guest)
      */
     @GetMapping("/availability/{showtimeId}")
     @Operation(summary = "Check seat availability", description = "Returns available, locked, and booked seats for a showtime. Releases any existing locks for the user.")
     public ResponseEntity<SeatAvailabilityResponse> checkAvailability(
             @PathVariable UUID showtimeId,
-            Principal principal) {
-        UUID userId = userService.getUserIdFromPrincipal(principal);
+            @RequestParam UUID userId) {
         SeatAvailabilityResponse response = bookingService.checkAvailability(showtimeId, userId);
         return ResponseEntity.ok(response);
     }

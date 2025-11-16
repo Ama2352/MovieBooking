@@ -17,6 +17,9 @@ public class LockSeatsRequest {
     @NotNull(message = "Showtime ID is required")
     private UUID showtimeId;
 
+    @NotNull(message = "User ID is required")
+    private UUID userId;
+
     @NotEmpty(message = "At least one seat must be selected")
     // @Size(min = 1, max = 10, message = "You can book between 1 and 10 seats")
     private List<UUID> showtimeSeatIds;
