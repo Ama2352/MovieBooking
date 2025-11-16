@@ -13,6 +13,8 @@ public interface RoomMapper {
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "cinema", ignore = true)
+    @Mapping(target = "showtimes", ignore = true)
+    @Mapping(target = "seats", ignore = true)
     Room toEntity(AddRoomRequest request);
 
     @Mapping(target = "cinemaId", source = "cinema.id")

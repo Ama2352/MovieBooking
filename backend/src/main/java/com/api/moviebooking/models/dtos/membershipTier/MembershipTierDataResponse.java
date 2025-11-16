@@ -13,7 +13,7 @@ import lombok.Getter;
 @Builder
 public class MembershipTierDataResponse {
 
-    private UUID id;
+    private UUID membershipTierId;
     private String name;
     private Integer minPoints;
     private DiscountType discountType;

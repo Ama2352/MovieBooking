@@ -6,7 +6,6 @@ import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -33,6 +32,7 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("/bookings")
 @RequiredArgsConstructor
+@SecurityRequirement(name = "bearerToken")
 @Tag(name = "Booking Operations")
 public class BookingController {
 
@@ -43,8 +43,6 @@ public class BookingController {
      * Lock seats for booking (Step 1: User proceeds to checkout)
      */
     @PostMapping("/lock")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
-    @SecurityRequirement(name = "bearerToken")
     @Operation(summary = "Lock seats for booking", description = "Locks selected seats for 10 minutes. User must confirm booking before timeout.")
     public ResponseEntity<LockSeatsResponse> lockSeats(
             @Valid @RequestBody LockSeatsRequest request,
@@ -58,14 +56,13 @@ public class BookingController {
      * Confirm booking (Step 2: After lock, before payment)
      */
     @PostMapping("/confirm")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
-    @SecurityRequirement(name = "bearerToken")
     @Operation(summary = "Confirm booking", description = "Confirms the booking and creates a booking record. Transitions seats from LOCKED to BOOKED. Optionally applies promotion code for discount.")
     public ResponseEntity<BookingResponse> confirmBooking(
             @Valid @RequestBody ConfirmBookingRequest request,
             Principal principal) {
         UUID userId = userService.getUserIdFromPrincipal(principal);
-        BookingResponse response = bookingService.confirmBooking(userId, request.getLockId(), request.getPromotionCode());
+        BookingResponse response = bookingService.confirmBooking(userId, request.getLockId(),
+                request.getPromotionCode());
         return ResponseEntity.ok(response);
     }
 
@@ -73,8 +70,6 @@ public class BookingController {
      * Release seats (User cancels or navigates away)
      */
     @DeleteMapping("/release")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
-    @SecurityRequirement(name = "bearerToken")
     @Operation(summary = "Release locked seats", description = "Manually releases locked seats before confirmation.")
     public ResponseEntity<Void> releaseSeats(
             @RequestParam UUID showtimeId,
@@ -88,8 +83,6 @@ public class BookingController {
      * Handle back button - Releases all locked seats immediately
      */
     @PostMapping("/back")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
-    @SecurityRequirement(name = "bearerToken")
     @Operation(summary = "Handle back button", description = "Releases all locked seats immediately when user presses back. Seats become available to everyone.")
     public ResponseEntity<Void> handleBackButton(
             @RequestParam UUID showtimeId,
@@ -103,8 +96,6 @@ public class BookingController {
      * Check seat availability for a showtime
      */
     @GetMapping("/availability/{showtimeId}")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
-    @SecurityRequirement(name = "bearerToken")
     @Operation(summary = "Check seat availability", description = "Returns available, locked, and booked seats for a showtime. Releases any existing locks for the user.")
     public ResponseEntity<SeatAvailabilityResponse> checkAvailability(
             @PathVariable UUID showtimeId,
@@ -118,8 +109,6 @@ public class BookingController {
      * Get user's booking history
      */
     @GetMapping("/my-bookings")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
-    @SecurityRequirement(name = "bearerToken")
     @Operation(summary = "Get user's booking history", description = "Returns all bookings for the authenticated user.")
     public ResponseEntity<List<BookingResponse>> getMyBookings(Principal principal) {
         UUID userId = userService.getUserIdFromPrincipal(principal);
@@ -131,8 +120,6 @@ public class BookingController {
      * Get specific booking details
      */
     @GetMapping("/{bookingId}")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
-    @SecurityRequirement(name = "bearerToken")
     @Operation(summary = "Get booking details", description = "Returns details of a specific booking.")
     public ResponseEntity<BookingResponse> getBooking(
             @PathVariable UUID bookingId,

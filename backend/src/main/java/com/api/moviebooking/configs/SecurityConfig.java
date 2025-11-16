@@ -3,6 +3,7 @@ package com.api.moviebooking.configs;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -44,20 +45,17 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                "/v3/api-docs/**",
-                                "/swagger-ui/**",
-                                "/auth/register",
-                                "/auth/login",
-                                "/movies/**",
-                                "/showtimes/**",
-                                "/promotions/**",
-                                "/membership-tiers/**",
-                                "/seats/**",
-                                "/showtime-seats/**",
-                                "/price-base/**",
-                                "/price-modifiers/**")
-                        .permitAll()
+                        .requestMatchers(PublicEndpointConfig.DOCS).permitAll()
+                        .requestMatchers(HttpMethod.POST, PublicEndpointConfig.AUTH).permitAll()
+                        .requestMatchers(HttpMethod.GET, PublicEndpointConfig.MOVIES).permitAll()
+                        .requestMatchers(HttpMethod.GET, PublicEndpointConfig.SHOWTIMES).permitAll()
+                        .requestMatchers(HttpMethod.GET, PublicEndpointConfig.PROMOTIONS).permitAll()
+                        .requestMatchers(HttpMethod.GET, PublicEndpointConfig.MEMBERSHIP_TIERS).permitAll()
+                        .requestMatchers(HttpMethod.GET, PublicEndpointConfig.SEATS).permitAll()
+                        .requestMatchers(HttpMethod.GET, PublicEndpointConfig.SHOWTIME_SEATS).permitAll()
+                        .requestMatchers(HttpMethod.GET, PublicEndpointConfig.PRICE_BASE).permitAll()
+                        .requestMatchers(HttpMethod.GET, PublicEndpointConfig.PRICE_MODIFIERS).permitAll()
+                        .requestMatchers(HttpMethod.GET, PublicEndpointConfig.CINEMAS).permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(filter, UsernamePasswordAuthenticationFilter.class)
                 .build();

@@ -12,7 +12,10 @@ import com.api.moviebooking.models.entities.Cinema;
 public interface CinemaMapper {
 
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "rooms", ignore = true)
+    @Mapping(target = "snacks", ignore = true)
     Cinema toEntity(AddCinemaRequest request);
 
+    @Mapping(target = "cinemaId", source = "id")
     CinemaDataResponse toDataResponse(Cinema cinema);
 }

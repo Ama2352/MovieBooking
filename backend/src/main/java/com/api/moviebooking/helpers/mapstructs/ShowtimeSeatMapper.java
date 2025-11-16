@@ -9,6 +9,7 @@ import com.api.moviebooking.models.entities.ShowtimeSeat;
 @Mapper(componentModel = "spring")
 public interface ShowtimeSeatMapper {
 
+    @Mapping(target = "showtimeSeatId", source = "id")
     @Mapping(target = "showtimeId", source = "showtime.id")
     @Mapping(target = "seatId", source = "seat.id")
     @Mapping(target = "rowLabel", source = "seat.rowLabel")

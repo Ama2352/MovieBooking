@@ -44,4 +44,10 @@ public class Showtime {
     @OneToMany(mappedBy = "showtime", cascade = { CascadeType.PERSIST, CascadeType.MERGE })
     List<ShowtimeSeat> showtimeSeats = new ArrayList<>();
 
+    @OneToMany(mappedBy = "showtime", cascade = { CascadeType.PERSIST, CascadeType.MERGE })
+    List<SeatLock> seatLocks = new ArrayList<>();
+
+    @OneToMany(mappedBy = "showtime", cascade = { CascadeType.PERSIST, CascadeType.MERGE })
+    List<Booking> bookings = new ArrayList<>();
+
 }

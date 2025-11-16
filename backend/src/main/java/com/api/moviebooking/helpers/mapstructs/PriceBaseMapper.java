@@ -16,5 +16,6 @@ public interface PriceBaseMapper {
     @Mapping(target = "updatedAt", ignore = true)
     PriceBase toEntity(AddPriceBaseRequest request);
 
+    @Mapping(target = "priceBaseId", source = "id")
     PriceBaseDataResponse toDataResponse(PriceBase priceBase);
 }

@@ -19,5 +19,5 @@ public class LockSeatsRequest {
 
     @NotEmpty(message = "At least one seat must be selected")
     // @Size(min = 1, max = 10, message = "You can book between 1 and 10 seats")
-    private List<UUID> seatIds;
+    private List<UUID> showtimeSeatIds;
 }

@@ -15,6 +15,7 @@ public interface SeatMapper {
     @Mapping(target = "showtimeSeats", ignore = true)
     Seat toEntity(AddSeatRequest request);
 
+    @Mapping(target = "seatId", source = "id")
     @Mapping(target = "roomId", source = "room.id")
     @Mapping(target = "roomNumber", expression = "java(String.valueOf(seat.getRoom().getRoomNumber()))")
     @Mapping(target = "cinemaName", source = "room.cinema.name")

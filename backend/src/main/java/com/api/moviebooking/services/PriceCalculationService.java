@@ -1,6 +1,7 @@
 package com.api.moviebooking.services;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.DayOfWeek;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -57,8 +58,8 @@ public class PriceCalculationService {
         for (PriceModifier modifier : modifiers) {
             if (isModifierApplicable(modifier, showtime, seat)) {
                 applicableModifiers.add(modifier);
-                log.debug("Applicable modifier: {} - {} = {}", 
-                    modifier.getName(), modifier.getConditionType(), modifier.getConditionValue());
+                log.debug("Applicable modifier: {} - {} = {}",
+                        modifier.getName(), modifier.getConditionType(), modifier.getConditionValue());
             }
         }
 
@@ -67,21 +68,21 @@ public class PriceCalculationService {
             BigDecimal beforePrice = finalPrice;
             finalPrice = applyModifier(finalPrice, modifier);
             BigDecimal change = finalPrice.subtract(beforePrice);
-            
+
             // Add to breakdown
             PriceBreakdown.ModifierInfo modifierInfo = new PriceBreakdown.ModifierInfo();
             modifierInfo.setName(modifier.getName());
             modifierInfo.setType(modifier.getConditionType().toString() + ":" + modifier.getConditionValue());
             modifierInfo.setValue(change);
             breakdown.getModifiers().add(modifierInfo);
-            
+
             log.debug("After applying {}: {}", modifier.getName(), finalPrice);
         }
 
         // Round to 2 decimal places
-        finalPrice = finalPrice.setScale(2, java.math.RoundingMode.HALF_UP);
+        finalPrice = finalPrice.setScale(2, RoundingMode.HALF_UP);
         breakdown.setFinalPrice(finalPrice);
-        
+
         // Convert breakdown to JSON
         String breakdownJson = null;
         try {
@@ -90,11 +91,11 @@ public class PriceCalculationService {
             log.error("Failed to serialize price breakdown", e);
             breakdownJson = "{}";
         }
-        
-        log.info("Final calculated price for showtime {} seat {}{}: {}", 
-            showtime.getId(), seat.getRowLabel(), seat.getSeatNumber(), finalPrice);
 
-        return new Object[]{finalPrice, breakdownJson};
+        log.info("Final calculated price for showtime {} seat {}{}: {}",
+                showtime.getId(), seat.getRowLabel(), seat.getSeatNumber(), finalPrice);
+
+        return new Object[] { finalPrice, breakdownJson };
     }
 
     /**
@@ -107,25 +108,26 @@ public class PriceCalculationService {
 
     /**
      * Check if a modifier should be applied based on conditions
-     * Check if the conditions of the modifier match the showtime and seat attributes
+     * Check if the conditions of the modifier match the showtime and seat
+     * attributes
      */
     private boolean isModifierApplicable(PriceModifier modifier, Showtime showtime, Seat seat) {
         switch (modifier.getConditionType()) {
             case DAY_TYPE:
                 return checkDayType(modifier.getConditionValue(), showtime.getStartTime());
-            
+
             case TIME_RANGE:
                 return checkTimeRange(modifier.getConditionValue(), showtime.getStartTime());
-            
+
             case FORMAT:
                 return checkFormat(modifier.getConditionValue(), showtime.getFormat());
-            
+
             case ROOM_TYPE:
                 return checkRoomType(modifier.getConditionValue(), showtime.getRoom().getRoomType());
-            
+
             case SEAT_TYPE:
                 return checkSeatType(modifier.getConditionValue(), seat.getSeatType().toString());
-            
+
             default:
                 return false;
         }
@@ -139,7 +141,7 @@ public class PriceCalculationService {
             // Percentage: multiply by (1 + percentage/100)
             // Example: 20% increase = multiply by 1.2
             BigDecimal multiplier = BigDecimal.ONE.add(
-                modifier.getModifierValue().divide(BigDecimal.valueOf(100)));
+                    modifier.getModifierValue().divide(BigDecimal.valueOf(100)));
             return currentPrice.multiply(multiplier);
         } else {
             // Fixed: add the fixed amount
@@ -153,9 +155,9 @@ public class PriceCalculationService {
     private boolean checkDayType(String conditionValue, LocalDateTime startTime) {
         DayOfWeek dayOfWeek = startTime.getDayOfWeek();
         boolean isWeekend = dayOfWeek == DayOfWeek.SATURDAY || dayOfWeek == DayOfWeek.SUNDAY;
-        
+
         return (conditionValue.equalsIgnoreCase("WEEKEND") && isWeekend) ||
-               (conditionValue.equalsIgnoreCase("WEEKDAY") && !isWeekend);
+                (conditionValue.equalsIgnoreCase("WEEKDAY") && !isWeekend);
     }
 
     /**
@@ -163,7 +165,7 @@ public class PriceCalculationService {
      */
     private boolean checkTimeRange(String conditionValue, LocalDateTime startTime) {
         LocalTime time = startTime.toLocalTime();
-        
+
         switch (conditionValue.toUpperCase()) {
             case "MORNING":
                 return !time.isBefore(LocalTime.of(6, 0)) && time.isBefore(LocalTime.of(12, 0));

@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.api.moviebooking.helpers.exceptions.ResourceNotFoundException;
+import com.api.moviebooking.helpers.exceptions.EntityDeletionForbiddenException;
 import com.api.moviebooking.helpers.mapstructs.ShowtimeMapper;
 import com.api.moviebooking.models.dtos.showtime.AddShowtimeRequest;
 import com.api.moviebooking.models.dtos.showtime.ShowtimeDataResponse;
@@ -64,7 +65,6 @@ public class ShowtimeService {
         return movieRepo.findById(movieId)
                 .orElseThrow(() -> new ResourceNotFoundException("Movie", "id", movieId));
     }
-
 
     /**
      * validateNoOverlap:
@@ -164,6 +164,19 @@ public class ShowtimeService {
     @Transactional
     public void deleteShowtime(UUID showtimeId) {
         Showtime showtime = findShowtimeById(showtimeId);
+
+        if (!showtime.getSeatLocks().isEmpty()) {
+            throw new EntityDeletionForbiddenException();
+        }
+
+        if (!showtime.getShowtimeSeats().isEmpty()) {
+            throw new EntityDeletionForbiddenException();
+        }
+
+        if (!showtime.getBookings().isEmpty()) {
+            throw new EntityDeletionForbiddenException();
+        }
+
         showtimeRepo.delete(showtime);
     }
 

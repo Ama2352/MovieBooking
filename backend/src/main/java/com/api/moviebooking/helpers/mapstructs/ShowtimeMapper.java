@@ -14,6 +14,9 @@ public interface ShowtimeMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "room", ignore = true)
     @Mapping(target = "movie", ignore = true)
+    @Mapping(target = "bookings", ignore = true)
+    @Mapping(target = "seatLocks", ignore = true)
+    @Mapping(target = "showtimeSeats", ignore = true)
     Showtime toEntity(AddShowtimeRequest request);
 
     @Mapping(target = "showtimeId", source = "id")

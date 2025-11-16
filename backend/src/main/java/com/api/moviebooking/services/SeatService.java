@@ -1,5 +1,6 @@
 package com.api.moviebooking.services;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -133,7 +134,7 @@ public class SeatService {
             for (String vipRow : request.getVipRows()) {
                 if (!rowLabels.contains(vipRow)) {
                     throw new IllegalArgumentException(
-                            String.format("VIP row '%s' does not exist. Available rows: %s", 
+                            String.format("VIP row '%s' does not exist. Available rows: %s",
                                     vipRow, String.join(", ", rowLabels)));
                 }
             }
@@ -144,13 +145,13 @@ public class SeatService {
             for (String coupleRow : request.getCoupleRows()) {
                 if (!rowLabels.contains(coupleRow)) {
                     throw new IllegalArgumentException(
-                            String.format("Couple row '%s' does not exist. Available rows: %s", 
+                            String.format("Couple row '%s' does not exist. Available rows: %s",
                                     coupleRow, String.join(", ", rowLabels)));
                 }
             }
         }
 
-        List<Seat> generatedSeats = new java.util.ArrayList<>();
+        List<Seat> generatedSeats = new ArrayList<>();
         int normalCount = 0;
         int vipCount = 0;
         int coupleCount = 0;
@@ -165,7 +166,7 @@ public class SeatService {
                 seat.setSeatNumber(seatNumber);
 
                 // Determine seat type based on row
-                com.api.moviebooking.models.enums.SeatType seatType = determineSeatType(
+                SeatType seatType = determineSeatType(
                         rowLabel,
                         request.getVipRows(),
                         request.getCoupleRows());
@@ -214,17 +215,17 @@ public class SeatService {
         if (numberOfRows < 1) {
             throw new IllegalArgumentException("Number of rows must be at least 1");
         }
-        
+
         if (numberOfRows > 100) {
             throw new IllegalArgumentException("Number of rows cannot exceed 100");
         }
 
         List<String> labels = generateRowLabels(numberOfRows);
-        
+
         RowLabelsResponse response = new RowLabelsResponse();
         response.setTotalRows(numberOfRows);
         response.setRowLabels(labels);
-        
+
         return response;
     }
 
@@ -232,7 +233,7 @@ public class SeatService {
      * Generate row labels: A, B, C, ..., Z, AA, AB, AC, ...
      */
     private List<String> generateRowLabels(int numberOfRows) {
-        List<String> labels = new java.util.ArrayList<>();
+        List<String> labels = new ArrayList<>();
         for (int i = 0; i < numberOfRows; i++) {
             labels.add(getColumnLabel(i));
         }
@@ -246,13 +247,13 @@ public class SeatService {
     private String getColumnLabel(int index) {
         StringBuilder label = new StringBuilder();
         index++; // Make it 1-based for easier calculation
-        
+
         while (index > 0) {
             index--; // Adjust for 0-based modulo
             label.insert(0, (char) ('A' + (index % 26)));
             index /= 26;
         }
-        
+
         return label.toString();
     }
 
@@ -263,17 +264,17 @@ public class SeatService {
             String rowLabel,
             List<String> vipRows,
             List<String> coupleRows) {
-        
+
         if (coupleRows != null && coupleRows.stream()
                 .anyMatch(row -> row.equalsIgnoreCase(rowLabel))) {
             return SeatType.COUPLE;
         }
-        
+
         if (vipRows != null && vipRows.stream()
                 .anyMatch(row -> row.equalsIgnoreCase(rowLabel))) {
             return SeatType.VIP;
         }
-        
+
         return SeatType.NORMAL;
     }
 }

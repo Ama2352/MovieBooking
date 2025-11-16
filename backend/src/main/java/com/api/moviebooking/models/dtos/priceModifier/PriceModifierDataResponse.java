@@ -18,7 +18,7 @@ import lombok.Setter;
 @AllArgsConstructor
 public class PriceModifierDataResponse {
 
-    private UUID id;
+    private UUID priceModifierId;
     private String name;
     private ConditionType conditionType;
     private String conditionValue;

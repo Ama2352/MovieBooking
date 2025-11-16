@@ -18,5 +18,6 @@ public interface PriceModifierMapper {
     @Mapping(target = "updatedAt", ignore = true)
     PriceModifier toEntity(AddPriceModifierRequest request);
 
+    @Mapping(target = "priceModifierId", source = "id")
     PriceModifierDataResponse toDataResponse(PriceModifier priceModifier);
 }

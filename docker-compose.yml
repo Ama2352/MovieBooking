@@ -30,7 +30,7 @@ services:
     container_name: moviebooking-app
     ports:
       - "8080:8080"
-      - "5005:5005"  # <--- Thêm dòng này để mở cổng debug
+      - "5005:5005" 
     env_file:
       - ./backend/.env
     depends_on:

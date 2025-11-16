@@ -15,7 +15,7 @@ import lombok.Setter;
 @AllArgsConstructor
 public class SeatDataResponse {
 
-    private UUID id;
+    private UUID seatId;
     private UUID roomId;
     private String roomNumber;
     private String cinemaName;

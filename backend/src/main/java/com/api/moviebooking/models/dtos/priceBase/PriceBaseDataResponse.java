@@ -15,7 +15,7 @@ import lombok.Setter;
 @AllArgsConstructor
 public class PriceBaseDataResponse {
 
-    private UUID id;
+    private UUID priceBaseId;
     private String name;
     private BigDecimal basePrice;
     private Boolean isActive;

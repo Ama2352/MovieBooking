@@ -17,7 +17,7 @@ import lombok.Setter;
 @AllArgsConstructor
 public class ShowtimeSeatDataResponse {
 
-    private UUID id;
+    private UUID showtimeSeatId;
     private UUID showtimeId;
     private UUID seatId;
     private String rowLabel;

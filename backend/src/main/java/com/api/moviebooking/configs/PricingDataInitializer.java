@@ -1,4 +1,4 @@
-package com.api.moviebooking.config;
+package com.api.moviebooking.configs;
 
 import java.math.BigDecimal;
 
@@ -46,68 +46,68 @@ public class PricingDataInitializer {
             // ============================================
             // 1. DAY_TYPE Modifiers
             // ============================================
-            createModifier(priceModifierRepo, "Weekend Surcharge", 
-                ConditionType.DAY_TYPE, "WEEKEND", ModifierType.PERCENTAGE, new BigDecimal("20"));
+            createModifier(priceModifierRepo, "Weekend Surcharge",
+                    ConditionType.DAY_TYPE, "WEEKEND", ModifierType.PERCENTAGE, new BigDecimal("20"));
 
-            createModifier(priceModifierRepo, "Weekday Discount", 
-                ConditionType.DAY_TYPE, "WEEKDAY", ModifierType.PERCENTAGE, new BigDecimal("-10"));
+            createModifier(priceModifierRepo, "Weekday Discount",
+                    ConditionType.DAY_TYPE, "WEEKDAY", ModifierType.PERCENTAGE, new BigDecimal("-10"));
 
             // ============================================
             // 2. TIME_RANGE Modifiers
             // ============================================
-            createModifier(priceModifierRepo, "Early Bird Morning Discount", 
-                ConditionType.TIME_RANGE, "MORNING", ModifierType.PERCENTAGE, new BigDecimal("-15"));
+            createModifier(priceModifierRepo, "Early Bird Morning Discount",
+                    ConditionType.TIME_RANGE, "MORNING", ModifierType.PERCENTAGE, new BigDecimal("-15"));
 
-            createModifier(priceModifierRepo, "Afternoon Standard", 
-                ConditionType.TIME_RANGE, "AFTERNOON", ModifierType.PERCENTAGE, new BigDecimal("0"));
+            createModifier(priceModifierRepo, "Afternoon Standard",
+                    ConditionType.TIME_RANGE, "AFTERNOON", ModifierType.PERCENTAGE, new BigDecimal("0"));
 
-            createModifier(priceModifierRepo, "Evening Prime Time Surcharge", 
-                ConditionType.TIME_RANGE, "EVENING", ModifierType.FIXED_AMOUNT, new BigDecimal("10000"));
+            createModifier(priceModifierRepo, "Evening Prime Time Surcharge",
+                    ConditionType.TIME_RANGE, "EVENING", ModifierType.FIXED_AMOUNT, new BigDecimal("10000"));
 
-            createModifier(priceModifierRepo, "Late Night Surcharge", 
-                ConditionType.TIME_RANGE, "NIGHT", ModifierType.FIXED_AMOUNT, new BigDecimal("5000"));
+            createModifier(priceModifierRepo, "Late Night Surcharge",
+                    ConditionType.TIME_RANGE, "NIGHT", ModifierType.FIXED_AMOUNT, new BigDecimal("5000"));
 
             // ============================================
             // 3. FORMAT Modifiers
             // ============================================
-            createModifier(priceModifierRepo, "2D Standard Format", 
-                ConditionType.FORMAT, "2D", ModifierType.FIXED_AMOUNT, new BigDecimal("0"));
+            createModifier(priceModifierRepo, "2D Standard Format",
+                    ConditionType.FORMAT, "2D", ModifierType.FIXED_AMOUNT, new BigDecimal("0"));
 
-            createModifier(priceModifierRepo, "3D Format Premium", 
-                ConditionType.FORMAT, "3D", ModifierType.FIXED_AMOUNT, new BigDecimal("25000"));
+            createModifier(priceModifierRepo, "3D Format Premium",
+                    ConditionType.FORMAT, "3D", ModifierType.FIXED_AMOUNT, new BigDecimal("25000"));
 
-            createModifier(priceModifierRepo, "IMAX Format Premium", 
-                ConditionType.FORMAT, "IMAX", ModifierType.PERCENTAGE, new BigDecimal("50"));
+            createModifier(priceModifierRepo, "IMAX Format Premium",
+                    ConditionType.FORMAT, "IMAX", ModifierType.PERCENTAGE, new BigDecimal("50"));
 
-            createModifier(priceModifierRepo, "4DX Format Premium", 
-                ConditionType.FORMAT, "4DX", ModifierType.FIXED_AMOUNT, new BigDecimal("60000"));
+            createModifier(priceModifierRepo, "4DX Format Premium",
+                    ConditionType.FORMAT, "4DX", ModifierType.FIXED_AMOUNT, new BigDecimal("60000"));
 
             // ============================================
             // 4. ROOM_TYPE Modifiers
             // ============================================
-            createModifier(priceModifierRepo, "Standard Room", 
-                ConditionType.ROOM_TYPE, "STANDARD", ModifierType.FIXED_AMOUNT, new BigDecimal("0"));
+            createModifier(priceModifierRepo, "Standard Room",
+                    ConditionType.ROOM_TYPE, "STANDARD", ModifierType.FIXED_AMOUNT, new BigDecimal("0"));
 
-            createModifier(priceModifierRepo, "VIP Room Premium", 
-                ConditionType.ROOM_TYPE, "VIP", ModifierType.FIXED_AMOUNT, new BigDecimal("30000"));
+            createModifier(priceModifierRepo, "VIP Room Premium",
+                    ConditionType.ROOM_TYPE, "VIP", ModifierType.FIXED_AMOUNT, new BigDecimal("30000"));
 
-            createModifier(priceModifierRepo, "IMAX Room Premium", 
-                ConditionType.ROOM_TYPE, "IMAX", ModifierType.FIXED_AMOUNT, new BigDecimal("40000"));
+            createModifier(priceModifierRepo, "IMAX Room Premium",
+                    ConditionType.ROOM_TYPE, "IMAX", ModifierType.FIXED_AMOUNT, new BigDecimal("40000"));
 
-            createModifier(priceModifierRepo, "Starium Room Premium", 
-                ConditionType.ROOM_TYPE, "STARIUM", ModifierType.PERCENTAGE, new BigDecimal("35"));
+            createModifier(priceModifierRepo, "Starium Room Premium",
+                    ConditionType.ROOM_TYPE, "STARIUM", ModifierType.PERCENTAGE, new BigDecimal("35"));
 
             // ============================================
             // 5. SEAT_TYPE Modifiers
             // ============================================
-            createModifier(priceModifierRepo, "Normal Seat", 
-                ConditionType.SEAT_TYPE, "NORMAL", ModifierType.FIXED_AMOUNT, new BigDecimal("0"));
+            createModifier(priceModifierRepo, "Normal Seat",
+                    ConditionType.SEAT_TYPE, "NORMAL", ModifierType.FIXED_AMOUNT, new BigDecimal("0"));
 
-            createModifier(priceModifierRepo, "VIP Seat Premium", 
-                ConditionType.SEAT_TYPE, "VIP", ModifierType.FIXED_AMOUNT, new BigDecimal("20000"));
+            createModifier(priceModifierRepo, "VIP Seat Premium",
+                    ConditionType.SEAT_TYPE, "VIP", ModifierType.FIXED_AMOUNT, new BigDecimal("20000"));
 
-            createModifier(priceModifierRepo, "Couple Seat Premium", 
-                ConditionType.SEAT_TYPE, "COUPLE", ModifierType.FIXED_AMOUNT, new BigDecimal("40000"));
+            createModifier(priceModifierRepo, "Couple Seat Premium",
+                    ConditionType.SEAT_TYPE, "COUPLE", ModifierType.FIXED_AMOUNT, new BigDecimal("40000"));
 
             log.info("Successfully initialized {} price modifiers", priceModifierRepo.count());
             log.info("Pricing examples:");
@@ -116,10 +116,10 @@ public class PricingDataInitializer {
         };
     }
 
-    private void createModifier(PriceModifierRepo repo, String name, 
+    private void createModifier(PriceModifierRepo repo, String name,
             ConditionType conditionType, String conditionValue,
             ModifierType modifierType, BigDecimal modifierValue) {
-        
+
         PriceModifier modifier = new PriceModifier();
         modifier.setName(name);
         modifier.setConditionType(conditionType);
@@ -128,10 +128,10 @@ public class PricingDataInitializer {
         modifier.setModifierValue(modifierValue);
         modifier.setIsActive(true);
         repo.save(modifier);
-        
-        log.debug("Created modifier: {} - {}:{} = {} {}", 
-            name, conditionType, conditionValue, 
-            modifierType == ModifierType.PERCENTAGE ? modifierValue + "%" : modifierValue + " VND",
-            modifierType);
+
+        log.debug("Created modifier: {} - {}:{} = {} {}",
+                name, conditionType, conditionValue,
+                modifierType == ModifierType.PERCENTAGE ? modifierValue + "%" : modifierValue + " VND",
+                modifierType);
     }
 }
