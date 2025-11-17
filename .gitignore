@@ -34,7 +34,6 @@ build/
 
 .env
 
-*.md
 md/
 
 debug/
