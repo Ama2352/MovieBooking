@@ -2,9 +2,11 @@ package com.api.moviebooking.models.entities;
 
 import java.util.UUID;
 import org.hibernate.annotations.UuidGenerator;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
@@ -25,10 +27,13 @@ public class BookingSnack {
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(nullable = false)
     private Booking booking;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(nullable = false)
     private Snack snack;
 
+    @Column(nullable = false)
     private int quantity;
 }

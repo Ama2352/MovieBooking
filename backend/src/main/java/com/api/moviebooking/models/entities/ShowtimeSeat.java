@@ -10,8 +10,11 @@ import com.api.moviebooking.models.enums.SeatStatus;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
@@ -32,12 +35,18 @@ public class ShowtimeSeat {
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(nullable = false)
     private Showtime showtime;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(nullable = false)
     private Seat seat;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private SeatStatus status;
+
+    @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal price;
 
     @Column(columnDefinition = "jsonb")

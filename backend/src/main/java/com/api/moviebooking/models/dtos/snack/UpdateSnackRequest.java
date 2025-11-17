@@ -16,4 +16,6 @@ public class UpdateSnackRequest {
     private String description;
     private BigDecimal price;
     private String type;
+    private String imageUrl;
+    private String imageCloudinaryId;
 }

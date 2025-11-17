@@ -52,9 +52,11 @@ public class SeatLock {
     private String lockKey;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(nullable = false)
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(nullable = false)
     private Showtime showtime;
 
     /**
@@ -65,7 +67,12 @@ public class SeatLock {
     private List<ShowtimeSeat> lockedSeats = new ArrayList<>();
 
     @CreationTimestamp
+    @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    @Column(nullable = false)
     private LocalDateTime expiresAt;
+
+    @Column(nullable = false)
     private boolean active = true;
 }

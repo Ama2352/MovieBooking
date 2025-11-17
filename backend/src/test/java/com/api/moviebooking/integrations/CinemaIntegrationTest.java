@@ -135,7 +135,7 @@ class CinemaIntegrationTest {
                                 .body("name", equalTo("CGV Vincom"))
                                 .body("address", equalTo("123 Nguyen Hue St, District 1"))
                                 .body("hotline", equalTo("1900-6017"))
-                                .body("id", notNullValue());
+                                .body("cinemaId", notNullValue());
         }
 
         @Test
@@ -290,7 +290,7 @@ class CinemaIntegrationTest {
                                 .statusCode(HttpStatus.CREATED.value())
                                 .body("roomType", equalTo("IMAX"))
                                 .body("roomNumber", equalTo(1))
-                                .body("id", notNullValue());
+                                .body("cinemaId", notNullValue());
         }
 
         @Test
@@ -337,7 +337,7 @@ class CinemaIntegrationTest {
                                 .post("/cinemas/rooms")
                                 .then()
                                 .statusCode(HttpStatus.CREATED.value())
-                                .extract().path("id");
+                                .extract().path("roomId");
 
                 given()
                                 .when()
@@ -372,7 +372,7 @@ class CinemaIntegrationTest {
                                 .post("/cinemas/rooms")
                                 .then()
                                 .statusCode(HttpStatus.CREATED.value())
-                                .extract().path("id");
+                                .extract().path("roomId");
 
                 UpdateRoomRequest updateRequest = UpdateRoomRequest.builder()
                                 .roomType("VIP")
@@ -414,7 +414,7 @@ class CinemaIntegrationTest {
                                 .post("/cinemas/rooms")
                                 .then()
                                 .statusCode(HttpStatus.CREATED.value())
-                                .extract().path("id");
+                                .extract().path("roomId");
 
                 given()
                                 .when()
@@ -458,7 +458,7 @@ class CinemaIntegrationTest {
                                 .body("description", equalTo("Large size popcorn with butter"))
                                 .body("price", equalTo(50000))
                                 .body("type", equalTo("FOOD"))
-                                .body("id", notNullValue());
+                                .body("snackId", notNullValue());
         }
 
         @Test
@@ -509,7 +509,7 @@ class CinemaIntegrationTest {
                                 .post("/cinemas/snacks")
                                 .then()
                                 .statusCode(HttpStatus.CREATED.value())
-                                .extract().path("id");
+                                .extract().path("snackId");
 
                 given()
                                 .when()
@@ -548,7 +548,7 @@ class CinemaIntegrationTest {
                                 .post("/cinemas/snacks")
                                 .then()
                                 .statusCode(HttpStatus.CREATED.value())
-                                .extract().path("id");
+                                .extract().path("snackId");
 
                 UpdateSnackRequest updateRequest = UpdateSnackRequest.builder()
                                 .name("Updated Snack")
@@ -596,7 +596,7 @@ class CinemaIntegrationTest {
                                 .post("/cinemas/snacks")
                                 .then()
                                 .statusCode(HttpStatus.CREATED.value())
-                                .extract().path("id");
+                                .extract().path("snackId");
 
                 given()
                                 .when()

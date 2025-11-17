@@ -5,7 +5,6 @@ import java.util.Map;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -15,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.api.moviebooking.models.dtos.auth.LoginRequest;
 import com.api.moviebooking.models.dtos.auth.RegisterRequest;
+import com.api.moviebooking.models.dtos.user.CreateGuestRequest;
 import com.api.moviebooking.services.CookieService;
 import com.api.moviebooking.services.UserService;
 
@@ -75,4 +75,11 @@ public class AuthController {
                         cookieService.createAccessTokenCookie(newAccessToken).toString())
                 .build();
     }
+
+    @PostMapping("/guest/register")
+    public ResponseEntity<Map<String, String>> registerGuest(@Valid @RequestBody CreateGuestRequest request) {
+        String userId = userService.registerGuest(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("userId", userId));
+    }
+
 }

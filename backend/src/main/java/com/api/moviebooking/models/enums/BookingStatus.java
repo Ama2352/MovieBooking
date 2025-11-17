@@ -1,8 +1,10 @@
 package com.api.moviebooking.models.enums;
 
 public enum BookingStatus {
-    PENDING,
+    PENDING_PAYMENT,
     CONFIRMED,
-    CANCELED,
-    EXPIRED
+    CANCELLED,
+    EXPIRED,
+    REFUND_PENDING,
+    REFUNDED
 }

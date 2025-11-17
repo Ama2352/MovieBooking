@@ -258,6 +258,12 @@ public class CinemaService {
         if (request.getType() != null) {
             snack.setType(request.getType());
         }
+        if (request.getImageUrl() != null) {
+            snack.setImageUrl(request.getImageUrl());
+        }
+        if (request.getImageCloudinaryId() != null) {
+            snack.setImageCloudinaryId(request.getImageCloudinaryId());
+        }
         snackRepo.save(snack);
         return snackMapper.toDataResponse(snack);
     }
@@ -269,6 +275,9 @@ public class CinemaService {
      */
     public void deleteSnack(UUID id) {
         Snack snack = findSnackById(id);
+        if (!snack.getBookingSnacks().isEmpty()) {
+            throw new EntityDeletionForbiddenException("Cannot delete snack with existing bookings");
+        }
         snackRepo.delete(snack);
     }
 

@@ -253,8 +253,7 @@ class BookingIntegrationTest {
         @DisplayName("Should successfully lock seats when authenticated")
         void testLockSeats_Success() {
                 LockSeatsRequest request = new LockSeatsRequest(
-                                testShowtime.getId(),
-                                Arrays.asList(seat1.getId(), seat2.getId()));
+                                testShowtime.getId(), testUser1.getId(), Arrays.asList(seat1.getId(), seat2.getId()));
 
                 given()
                                 .contentType(ContentType.JSON)
@@ -277,8 +276,7 @@ class BookingIntegrationTest {
         @DisplayName("Should fail to lock seats when not authenticated")
         void testLockSeats_Unauthorized() {
                 LockSeatsRequest request = new LockSeatsRequest(
-                                testShowtime.getId(),
-                                Arrays.asList(seat1.getId()));
+                                testShowtime.getId(), testUser1.getId(), Arrays.asList(seat1.getId()));
 
                 given()
                                 .contentType(ContentType.JSON)
@@ -294,8 +292,7 @@ class BookingIntegrationTest {
         void testConfirmBooking_Success() {
                 // First lock seats
                 LockSeatsRequest lockRequest = new LockSeatsRequest(
-                                testShowtime.getId(),
-                                Arrays.asList(seat1.getId(), seat2.getId()));
+                                testShowtime.getId(), testUser1.getId(), Arrays.asList(seat1.getId(), seat2.getId()));
 
                 String lockId = given()
                                 .contentType(ContentType.JSON)
@@ -309,6 +306,7 @@ class BookingIntegrationTest {
                 // Then confirm booking
                 ConfirmBookingRequest confirmRequest = new ConfirmBookingRequest();
                 confirmRequest.setLockId(UUID.fromString(lockId));
+                confirmRequest.setUserId(testUser1.getId());
 
                 given()
                                 .contentType(ContentType.JSON)
@@ -318,7 +316,7 @@ class BookingIntegrationTest {
                                 .then()
                                 .statusCode(HttpStatus.OK.value())
                                 .body("bookingId", notNullValue())
-                                .body("status", equalTo("PENDING"))
+                                .body("status", equalTo("PENDING_PAYMENT"))
                                 .body("totalPrice", equalTo(20.00f));
 
                 // Verify seats are now booked
@@ -344,8 +342,7 @@ class BookingIntegrationTest {
         void testReleaseSeats_Success() {
                 // First lock seats
                 LockSeatsRequest lockRequest = new LockSeatsRequest(
-                                testShowtime.getId(),
-                                Arrays.asList(seat1.getId()));
+                                testShowtime.getId(), testUser1.getId(), Arrays.asList(seat1.getId()));
 
                 given()
                                 .contentType(ContentType.JSON)
@@ -377,8 +374,7 @@ class BookingIntegrationTest {
         void testHandleBackButton_Success() {
                 // Lock seats
                 LockSeatsRequest lockRequest = new LockSeatsRequest(
-                                testShowtime.getId(),
-                                Arrays.asList(seat1.getId(), seat2.getId()));
+                                testShowtime.getId(), testUser1.getId(), Arrays.asList(seat1.getId(), seat2.getId()));
 
                 given()
                                 .contentType(ContentType.JSON)
@@ -424,10 +420,6 @@ class BookingIntegrationTest {
                 AtomicInteger successCount = new AtomicInteger(0);
                 AtomicInteger failureCount = new AtomicInteger(0);
 
-                LockSeatsRequest request = new LockSeatsRequest(
-                                testShowtime.getId(),
-                                Arrays.asList(seat1.getId(), seat2.getId()));
-
                 // User1 and User2 try to lock same seats concurrently
                 UUID[] userIds = { testUser1.getId(), testUser2.getId() };
 
@@ -436,7 +428,10 @@ class BookingIntegrationTest {
                         executor.submit(() -> {
                                 try {
                                         latch.await();
-                                        bookingService.lockSeats(userId, request);
+                                        LockSeatsRequest request = new LockSeatsRequest(
+                                                        testShowtime.getId(), userId,
+                                                        Arrays.asList(seat1.getId(), seat2.getId()));
+                                        bookingService.lockSeats(request);
                                         successCount.incrementAndGet();
                                 } catch (Exception e) {
                                         failureCount.incrementAndGet();
@@ -462,8 +457,7 @@ class BookingIntegrationTest {
         void testPartialSeatOverlap() {
                 // User1 locks seat1 and seat2
                 LockSeatsRequest user1Request = new LockSeatsRequest(
-                                testShowtime.getId(),
-                                Arrays.asList(seat1.getId(), seat2.getId()));
+                                testShowtime.getId(), testUser1.getId(), Arrays.asList(seat1.getId(), seat2.getId()));
 
                 given()
                                 .contentType(ContentType.JSON)
@@ -475,8 +469,7 @@ class BookingIntegrationTest {
 
                 // User2 tries to lock seat2 and seat3 (overlaps on seat2)
                 LockSeatsRequest user2Request = new LockSeatsRequest(
-                                testShowtime.getId(),
-                                Arrays.asList(seat2.getId(), seat3.getId()));
+                                testShowtime.getId(), testUser2.getId(), Arrays.asList(seat2.getId(), seat3.getId()));
 
                 given()
                                 .contentType(ContentType.JSON)
@@ -499,8 +492,7 @@ class BookingIntegrationTest {
         void testMultiTabPrevention() {
                 // Lock seats in "Tab 1"
                 LockSeatsRequest tab1Request = new LockSeatsRequest(
-                                testShowtime.getId(),
-                                Arrays.asList(seat1.getId()));
+                                testShowtime.getId(), testUser1.getId(), Arrays.asList(seat1.getId()));
 
                 given()
                                 .contentType(ContentType.JSON)
@@ -512,8 +504,7 @@ class BookingIntegrationTest {
 
                 // Try to lock different seats in "Tab 2" for SAME showtime
                 LockSeatsRequest tab2Request = new LockSeatsRequest(
-                                testShowtime.getId(),
-                                Arrays.asList(seat2.getId()));
+                                testShowtime.getId(), testUser1.getId(), Arrays.asList(seat2.getId()));
 
                 given()
                                 .contentType(ContentType.JSON)
@@ -534,8 +525,7 @@ class BookingIntegrationTest {
         void testLockExpiration() {
                 // Lock seats
                 LockSeatsRequest lockRequest = new LockSeatsRequest(
-                                testShowtime.getId(),
-                                Arrays.asList(seat1.getId()));
+                                testShowtime.getId(), testUser1.getId(), Arrays.asList(seat1.getId()));
 
                 String lockId = given()
                                 .contentType(ContentType.JSON)
@@ -568,8 +558,7 @@ class BookingIntegrationTest {
         @DisplayName("Should handle invalid showtime ID")
         void testLockSeats_InvalidShowtimeId() {
                 LockSeatsRequest request = new LockSeatsRequest(
-                                UUID.randomUUID(),
-                                Arrays.asList(seat1.getId()));
+                                UUID.randomUUID(), testUser1.getId(), Arrays.asList(seat1.getId()));
 
                 given()
                                 .contentType(ContentType.JSON)
@@ -587,7 +576,7 @@ class BookingIntegrationTest {
         @DisplayName("Should handle invalid seat IDs")
         void testLockSeats_InvalidSeatIds() {
                 LockSeatsRequest request = new LockSeatsRequest(
-                                testShowtime.getId(),
+                                testShowtime.getId(), testUser1.getId(),
                                 Arrays.asList(UUID.randomUUID(), UUID.randomUUID()));
 
                 given()
@@ -606,8 +595,7 @@ class BookingIntegrationTest {
         @DisplayName("Should handle empty seat list")
         void testLockSeats_EmptySeatList() {
                 LockSeatsRequest request = new LockSeatsRequest(
-                                testShowtime.getId(),
-                                Arrays.asList());
+                                testShowtime.getId(), testUser1.getId(), Arrays.asList());
 
                 given()
                                 .contentType(ContentType.JSON)
@@ -644,8 +632,7 @@ class BookingIntegrationTest {
         @DisplayName("Should deny access to booking operations for unauthenticated users")
         void testBookingOperations_Unauthenticated() {
                 LockSeatsRequest lockRequest = new LockSeatsRequest(
-                                testShowtime.getId(),
-                                Arrays.asList(seat1.getId()));
+                                testShowtime.getId(), testUser1.getId(), Arrays.asList(seat1.getId()));
 
                 // Lock seats
                 given()

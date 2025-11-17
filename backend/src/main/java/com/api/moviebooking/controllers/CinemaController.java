@@ -34,13 +34,11 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/cinemas")
-@PreAuthorize("hasRole('ADMIN')")
 @Tag(name = "Cinema Operations")
 public class CinemaController {
 
     private final CinemaService cinemaService;
 
-    // Cinema CRUD endpoints
     @PostMapping
     @SecurityRequirement(name = "bearerToken")
     @PreAuthorize("hasRole('ADMIN')")
@@ -79,7 +77,6 @@ public class CinemaController {
         return ResponseEntity.ok(response);
     }
 
-    // Room CRUD endpoints
     @PostMapping("/rooms")
     @SecurityRequirement(name = "bearerToken")
     @PreAuthorize("hasRole('ADMIN')")
@@ -118,7 +115,6 @@ public class CinemaController {
         return ResponseEntity.ok(response);
     }
 
-    // Snack CRUD endpoints
     @PostMapping("/snacks")
     @SecurityRequirement(name = "bearerToken")
     @PreAuthorize("hasRole('ADMIN')")

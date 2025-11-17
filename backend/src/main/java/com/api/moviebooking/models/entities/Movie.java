@@ -33,6 +33,7 @@ public class Movie {
     @UuidGenerator
     private UUID id;
 
+    @Column(nullable = false)
     private String title;
 
     private String genre;
@@ -40,8 +41,10 @@ public class Movie {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    @Column(nullable = false)
     private int duration; // in minutes
 
+    @Column(nullable = false)
     private int minimumAge;
 
     private String director;
@@ -50,12 +53,11 @@ public class Movie {
     private String actors;
 
     private String posterUrl;
-
     private String posterCloudinaryId;
-
     private String trailerUrl;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private MovieStatus status;
 
     private String language;

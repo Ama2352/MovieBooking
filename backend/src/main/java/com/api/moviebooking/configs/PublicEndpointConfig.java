@@ -1,29 +1,43 @@
 package com.api.moviebooking.configs;
 
 public final class PublicEndpointConfig {
-    private PublicEndpointConfig() {
-    }
+        private PublicEndpointConfig() {
+        }
 
-    // OpenAPI/Swagger docs
-    public static final String[] DOCS = {
-            "/v3/api-docs/**",
-            "/swagger-ui/**"
-    };
+        // OpenAPI/Swagger docs
+        public static final String[] DOCS = {
+                        "/v3/api-docs/**",
+                        "/swagger-ui/**"
+        };
 
-    // Auth endpoints that are public (no authentication)
-    public static final String[] AUTH = {
-            "/auth/register",
-            "/auth/login"
-    };
+        // Auth endpoints that are public (no authentication)
+        public static final String[] AUTH = {
+                        "/auth/register",
+                        "/auth/login"
+        };
 
-    // Public read-only resources (GET only)
-    public static final String[] MOVIES = { "/movies/**" };
-    public static final String[] SHOWTIMES = { "/showtimes/**" };
-    public static final String[] PROMOTIONS = { "/promotions/**" };
-    public static final String[] MEMBERSHIP_TIERS = { "/membership-tiers/**" };
-    public static final String[] SEATS = { "/seats/**" };
-    public static final String[] SHOWTIME_SEATS = { "/showtime-seats/**" };
-    public static final String[] PRICE_BASE = { "/price-base/**" };
-    public static final String[] PRICE_MODIFIERS = { "/price-modifiers/**" };
-    public static final String[] CINEMAS = { "/cinemas/**" };
+        public static final String[] MAKE_PAYMENT = {
+                        "/payments/order",
+                        "/payments/order/capture",
+                        "/payments/vnpay/ipn"
+        };
+
+        public static final String[] CHECKOUT = { "/checkout" };
+
+        public static final String[] REFUNDS = { "/payments/*/refund" };
+
+        // Public read-only resources (GET only)
+        public static final String[] MOVIES = { "/movies/**" };
+        public static final String[] SHOWTIMES = { "/showtimes/**" };
+        public static final String[] PROMOTIONS = { "/promotions/**" };
+        public static final String[] MEMBERSHIP_TIERS = { "/membership-tiers/**" };
+        public static final String[] SEATS = { "/seats/**" };
+        public static final String[] SHOWTIME_SEATS = { "/showtime-seats/**" };
+        public static final String[] PRICE_BASE = { "/price-base/**" };
+        public static final String[] PRICE_MODIFIERS = { "/price-modifiers/**" };
+        public static final String[] CINEMAS = { "/cinemas/**" };
+        public static final String[] PAYMENTS = { "/payments/**" };
+        public static final String[] BOOKINGS = { "/bookings/**" };
+        public static final String[] BOOKING_LOCKS = { "/bookings/lock/**" };
+        public static final String[] TESTS = { "/test/**" };
 }

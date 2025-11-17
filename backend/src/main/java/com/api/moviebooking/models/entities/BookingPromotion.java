@@ -2,6 +2,7 @@ package com.api.moviebooking.models.entities;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 import org.hibernate.annotations.CreationTimestamp;
 
@@ -9,7 +10,6 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
 import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
-import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.MapsId;
 import jakarta.persistence.Table;
@@ -32,16 +32,14 @@ public class BookingPromotion {
 
     @ManyToOne
     @MapsId("bookingId")
-    @JoinColumn(name = "booking_id")
     private Booking booking;
 
     @ManyToOne
     @MapsId("promotionId")
-    @JoinColumn(name = "promotion_id")
     private Promotion promotion;
 
     @CreationTimestamp
-    @Column(name = "applied_at", nullable = false, updatable = false)
+    @Column(nullable = false, updatable = false)
     private LocalDateTime appliedAt;
 
     @Embeddable
@@ -49,7 +47,7 @@ public class BookingPromotion {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class BookingPromotionId implements Serializable {
-        private java.util.UUID bookingId;
-        private java.util.UUID promotionId;
+        private UUID bookingId;
+        private UUID promotionId;
     }
 }

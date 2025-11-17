@@ -40,3 +40,4 @@ md/
 debug/
 
 testing/
+backend/src/test/resources/application-test.properties
