@@ -58,6 +58,9 @@ public class MomoService {
     @Value("${momo.ipn.url}")
     private String ipnUrl;
 
+    @Value("${currency.default:VND}")
+    private String baseCurrency;
+
     private final PaymentRepo paymentRepo;
     private final BookingService bookingService;
     private final PaymentMapper paymentMapper;
@@ -93,14 +96,20 @@ public class MomoService {
                     Payment newPayment = new Payment();
                     newPayment.setMethod(PaymentMethod.MOMO);
                     newPayment.setStatus(PaymentStatus.PENDING);
-                    newPayment.setCurrency("VND");
+                    newPayment.setCurrency(baseCurrency);
+                    newPayment.setGatewayCurrency(baseCurrency);
+                    newPayment.setGatewayAmount(request.getAmount());
+                    newPayment.setExchangeRate(BigDecimal.ONE);
                     newPayment.setAmount(request.getAmount());
                     newPayment.setBooking(booking);
                     return paymentRepo.save(newPayment);
                 });
 
         payment.setAmount(request.getAmount());
-        payment.setCurrency("VND");
+        payment.setCurrency(baseCurrency);
+        payment.setGatewayAmount(request.getAmount());
+        payment.setGatewayCurrency(baseCurrency);
+        payment.setExchangeRate(BigDecimal.ONE);
         paymentRepo.save(payment);
 
         String orderId = payment.getId().toString();

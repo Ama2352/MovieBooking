@@ -52,6 +52,14 @@ public class Payment {
     @Column(nullable = false)
     private String currency;
 
+    @Column(precision = 10, scale = 2)
+    private BigDecimal gatewayAmount;
+
+    private String gatewayCurrency;
+
+    @Column(precision = 19, scale = 8)
+    private BigDecimal exchangeRate;
+
     private LocalDateTime completedAt;
 
     @Column(columnDefinition = "TEXT")

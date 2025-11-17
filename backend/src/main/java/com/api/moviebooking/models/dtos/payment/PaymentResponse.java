@@ -11,6 +11,9 @@ public class PaymentResponse {
     private String bookingId;
     private BigDecimal amount;
     private String currency;
+    private BigDecimal gatewayAmount;
+    private String gatewayCurrency;
+    private BigDecimal exchangeRate;
     private String status;
     private String method;
     private String bookingStatus;

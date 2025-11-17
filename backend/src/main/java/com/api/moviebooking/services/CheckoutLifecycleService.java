@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +34,9 @@ public class CheckoutLifecycleService {
     private final ShowtimeSeatRepo showtimeSeatRepo;
     private final UserService userService;
     private final RefundService refundService;
+
+    @Value("${currency.default:VND}")
+    private String baseCurrency;
 
     public CheckoutLifecycleService(
             BookingRepo bookingRepo,
@@ -63,9 +67,12 @@ public class CheckoutLifecycleService {
             return handleLatePayment(payment, gatewayAmount, gatewayTxnId);
         }
 
-        if (gatewayAmount != null && booking.getFinalPrice().compareTo(gatewayAmount) != 0) {
-            log.error("Gateway amount mismatch for booking {}. Expected {}, got {}", booking.getId(),
-                    booking.getFinalPrice(), gatewayAmount);
+        BigDecimal expectedGatewayAmount = resolveGatewayAmount(payment);
+        if (gatewayAmount != null && expectedGatewayAmount != null
+                && expectedGatewayAmount.compareTo(gatewayAmount) != 0) {
+            String currency = resolveGatewayCurrency(payment);
+            log.error("Gateway amount mismatch for payment {}. Expected {} {}, got {} {}", payment.getId(),
+                    expectedGatewayAmount, currency, gatewayAmount, currency);
             return handleFailedPayment(payment, "Gateway amount mismatch");
         }
 
@@ -145,9 +152,12 @@ public class CheckoutLifecycleService {
         Booking booking = payment.getBooking();
 
         // Validate amount first
-        if (gatewayAmount != null && booking.getFinalPrice().compareTo(gatewayAmount) != 0) {
-            log.error("Gateway amount mismatch for late payment. Booking {}, Expected {}, got {}",
-                    booking.getId(), booking.getFinalPrice(), gatewayAmount);
+        BigDecimal expectedGatewayAmount = resolveGatewayAmount(payment);
+        if (gatewayAmount != null && expectedGatewayAmount != null
+                && expectedGatewayAmount.compareTo(gatewayAmount) != 0) {
+            String currency = resolveGatewayCurrency(payment);
+            log.error("Gateway amount mismatch for late payment. Booking {}, Expected {} {}, got {} {}",
+                    booking.getId(), expectedGatewayAmount, currency, gatewayAmount, currency);
             return handleFailedPayment(payment, "Gateway amount mismatch - payment received after expiry");
         }
 
@@ -264,5 +274,25 @@ public class CheckoutLifecycleService {
             booking.setStatus(BookingStatus.CONFIRMED);
             bookingRepo.save(booking);
         }
+    }
+
+    private BigDecimal resolveGatewayAmount(Payment payment) {
+        if (payment.getGatewayAmount() != null) {
+            return payment.getGatewayAmount();
+        }
+        if (payment.getCurrency() != null && payment.getCurrency().equalsIgnoreCase(baseCurrency)) {
+            return payment.getAmount();
+        }
+        return null;
+    }
+
+    private String resolveGatewayCurrency(Payment payment) {
+        if (payment.getGatewayCurrency() != null) {
+            return payment.getGatewayCurrency();
+        }
+        if (payment.getCurrency() != null) {
+            return payment.getCurrency();
+        }
+        return baseCurrency;
     }
 }
