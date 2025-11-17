@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Status - Movie Booking</title>
+    <link rel="stylesheet" th:href="@{/css/payment-test.css}">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎬 Payment Status</h1>
+            <p>Verifying your payment...</p>
+        </div>
+
+        <div class="card">
+            <div class="loading" id="loadingSection">
+                <div class="spinner"></div>
+                <p>Please wait while we verify your payment...</p>
+            </div>
+
+            <div id="successSection" style="display: none; text-align: center;">
+                <div class="status-icon success">✅</div>
+                <h2>Payment Successful!</h2>
+                <p>Your booking has been confirmed.</p>
+                
+                <div class="booking-details" id="bookingInfo"></div>
+                
+                <div class="qr-code" id="qrSection" style="display: none;">
+                    <h3>Your Booking QR Code</h3>
+                    <canvas id="qrCanvas"></canvas>
+                    <p><small>Show this QR code at the cinema entrance</small></p>
+                </div>
+
+                <button class="btn btn-primary" onclick="window.location.href='/test'">
+                    Make Another Booking
+                </button>
+            </div>
+
+            <div id="failureSection" style="display: none; text-align: center;">
+                <div class="status-icon error">❌</div>
+                <h2>Payment Failed</h2>
+                <p id="errorMessage">Something went wrong with your payment.</p>
+                
+                <div class="alert alert-error" id="errorDetails" style="text-align: left;"></div>
+
+                <button class="btn btn-primary" onclick="window.location.href='/test'">
+                    Try Again
+                </button>
+            </div>
+
+            <div id="expiredSection" style="display: none; text-align: center;">
+                <div class="status-icon warning">⚠️</div>
+                <h2>Booking Expired</h2>
+                <p>Your payment was received, but the booking had already expired.</p>
+                
+                <div class="alert alert-warning">
+                    <strong>What happened?</strong>
+                    <ul style="text-align: left; margin-top: 10px;">
+                        <li>Payment window (17 minutes) exceeded</li>
+                        <li>Seats were released back to inventory</li>
+                        <li id="refundStatus">Refund status: Processing...</li>
+                    </ul>
+                </div>
+
+                <button class="btn btn-primary" onclick="window.location.href='/test'">
+                    Book New Seats
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
+    <script th:inline="javascript">
+        const params = new URLSearchParams(window.location.search);
+        const paymentMethod = params.get('method') || params.get('paymentMethod') || 'PAYPAL';
+        const transactionId = params.get('token') || params.get('orderId') || params.get('orderInfo');
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            if (!transactionId) {
+                showError('No transaction ID provided');
+                return;
+            }
+
+            verifyPayment();
+        });
+
+        function verifyPayment() {
+            // Capture/verify the payment
+            fetch('/payments/order/capture', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    transactionId: transactionId,
+                    paymentMethod: paymentMethod.toUpperCase()
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => {
+                        throw new Error(err.message || 'Payment verification failed');
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Payment response:', data);
+                document.getElementById('loadingSection').style.display = 'none';
+                
+                if (data.status === 'SUCCESS') {
+                    // Fetch full booking details
+                    fetchBookingDetails(data.bookingId).then(booking => {
+                        showSuccess(data, booking);
+                    }).catch(err => {
+                        // Show success even if booking fetch fails
+                        showSuccess(data, null);
+                    });
+                } else if (data.status === 'FAILED' || data.status === 'PENDING') {
+                    // Check if this is a late payment scenario
+                    if (data.bookingStatus === 'EXPIRED' || data.bookingStatus === 'FAILED') {
+                        showExpired(data);
+                    } else {
+                        showFailure(data);
+                    }
+                } else {
+                    showError('Unknown payment status: ' + data.status);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('loadingSection').style.display = 'none';
+                showError(error.message);
+            });
+        }
+
+        function fetchBookingDetails(bookingId) {
+            if (!bookingId) {
+                return Promise.reject('No booking ID');
+            }
+
+            return fetch(`/bookings/${bookingId}`)
+                .then(response => {
+                    if (!response.ok) throw new Error('Failed to fetch booking');
+                    return response.json();
+                });
+        }
+
+        function showSuccess(payment, booking) {
+            document.getElementById('successSection').style.display = 'block';
+            
+            if (booking) {
+                const seats = booking.seats.map(s => `${s.rowLabel}${s.seatNumber}`).join(', ');
+                
+                document.getElementById('bookingInfo').innerHTML = `
+                    <div class="detail-row">
+                        <span>Booking ID:</span>
+                        <span>${booking.bookingId}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span>Movie:</span>
+                        <span>${booking.movieTitle || 'N/A'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span>Time:</span>
+                        <span>${booking.showtimeStartTime ? new Date(booking.showtimeStartTime).toLocaleString() : 'N/A'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span>Cinema:</span>
+                        <span>${booking.cinemaName || 'N/A'} - ${booking.roomName || 'N/A'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span>Seats:</span>
+                        <span>${seats}</span>
+                    </div>
+                    <div class="detail-row" style="font-weight: bold;">
+                        <span>Total Paid:</span>
+                        <span>$${booking.finalPrice ? booking.finalPrice.toFixed(2) : payment.amount.toFixed(2)}</span>
+                    </div>
+                `;
+
+                if (payment.qrPayload || booking.qrPayload) {
+                    document.getElementById('qrSection').style.display = 'block';
+                    generateQRCode(payment.qrPayload || booking.qrPayload);
+                }
+            } else {
+                // Show limited info from payment
+                document.getElementById('bookingInfo').innerHTML = `
+                    <div class="detail-row">
+                        <span>Payment ID:</span>
+                        <span>${payment.paymentId}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span>Booking ID:</span>
+                        <span>${payment.bookingId || 'N/A'}</span>
+                    </div>
+                    <div class="detail-row" style="font-weight: bold;">
+                        <span>Amount Paid:</span>
+                        <span>$${payment.amount.toFixed(2)}</span>
+                    </div>
+                `;
+
+                if (payment.qrPayload) {
+                    document.getElementById('qrSection').style.display = 'block';
+                    generateQRCode(payment.qrPayload);
+                }
+            }
+        }
+
+        function showFailure(payment) {
+            document.getElementById('failureSection').style.display = 'block';
+            
+            let errorMsg = 'Your payment could not be processed.';
+            if (payment.status === 'PENDING') {
+                errorMsg = 'Your payment is still pending. Please wait a few moments and check again.';
+            }
+            
+            document.getElementById('errorMessage').textContent = errorMsg;
+            
+            document.getElementById('errorDetails').innerHTML = `
+                <strong>Payment Details:</strong><br>
+                Payment ID: ${payment.paymentId || 'N/A'}<br>
+                Booking ID: ${payment.bookingId || 'N/A'}<br>
+                Status: ${payment.status}<br>
+                Method: ${payment.method}
+            `;
+        }
+
+        function showExpired(payment) {
+            document.getElementById('expiredSection').style.display = 'block';
+            
+            // Determine refund status based on booking status
+            let refundMsg = 'Refund status: Processing automatically...';
+            if (payment.bookingStatus === 'FAILED') {
+                refundMsg = 'Refund status: Your payment will be refunded automatically';
+            }
+            
+            document.getElementById('refundStatus').textContent = refundMsg;
+            
+            // Add payment details
+            const expiredDetails = document.querySelector('#expiredSection .alert');
+            if (expiredDetails) {
+                expiredDetails.innerHTML += `
+                    <br><br>
+                    <strong>Payment Details:</strong><br>
+                    Payment ID: ${payment.paymentId}<br>
+                    Booking ID: ${payment.bookingId || 'N/A'}<br>
+                    Amount: $${payment.amount ? payment.amount.toFixed(2) : '0.00'}
+                `;
+            }
+        }
+
+        function showError(message) {
+            document.getElementById('loadingSection').style.display = 'none';
+            document.getElementById('failureSection').style.display = 'block';
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('errorDetails').textContent = 'Please try again or contact support for assistance.';
+        }
+
+        function generateQRCode(payload) {
+            new QRious({
+                element: document.getElementById('qrCanvas'),
+                value: payload,
+                size: 250
+            });
+        }
+    </script>
+</body>
+</html>

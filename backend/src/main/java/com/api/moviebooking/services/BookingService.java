@@ -68,6 +68,9 @@ public class BookingService {
         @Value("${seat.lock.max.seats.per.booking}")
         private int maxSeatsPerBooking;
 
+        @Value("${payment.timeout.minutes}")
+        private int paymentTimeoutMinutes;
+
         /**
          * Predicate nodes (d): 9 -> V(G) = d + 1 = 10
          * Nodes: size>max, !isEmpty(existingLocks), isPresent(sameShowtimeLock),
@@ -242,7 +245,8 @@ public class BookingService {
                 booking.setTotalPrice(totalPrice);
                 booking.setFinalPrice(totalPrice); // Default to total price
                 booking.setStatus(BookingStatus.PENDING_PAYMENT);
-                booking.setPaymentExpiresAt(seatLock.getExpiresAt());
+                // Payment expiry will be set by CheckoutService (17 minutes from checkout)
+                booking.setPaymentExpiresAt(LocalDateTime.now().plusMinutes(paymentTimeoutMinutes));
                 booking.setQrPayload(null);
                 booking.setQrCode(null);
                 booking.setLoyaltyPointsAwarded(false);

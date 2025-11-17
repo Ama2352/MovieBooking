@@ -33,6 +33,11 @@ import com.paypal.orders.OrderRequest;
 import com.paypal.orders.OrdersCaptureRequest;
 import com.paypal.orders.OrdersCreateRequest;
 import com.paypal.orders.PurchaseUnitRequest;
+import com.paypal.payments.CapturesRefundRequest;
+import com.paypal.payments.Money;
+import com.paypal.payments.Refund;
+import com.paypal.payments.RefundRequest;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -165,10 +170,51 @@ public class PayPalService {
 
     }
 
+    /**
+     * Refund a captured PayPal payment
+     * 
+     * @return PayPal refund transaction ID
+     */
     public String refundPayment(Payment payment, BigDecimal amount, String reason) {
-        // TODO: integrate with PayPal capture refund API. For now, log and return
-        // synthetic txn id.
-        log.info("Initiating PayPal refund for payment {} amount {}", payment.getId(), amount);
-        return "PAYPAL-REF-" + UUID.randomUUID();
+        try {
+            String captureId = payment.getTransactionId();
+            if (captureId == null || captureId.isBlank()) {
+                throw new CustomException("No PayPal capture ID found for this payment", HttpStatus.BAD_REQUEST);
+            }
+
+            log.info("Initiating PayPal refund for payment {} (capture: {}), amount: {}",
+                    payment.getId(), captureId, amount);
+
+            // Build refund request
+            RefundRequest refundRequest = new RefundRequest();
+            Money refundAmount = new Money()
+                    .currencyCode("USD")
+                    .value(String.format("%.2f", amount));
+            refundRequest.amount(refundAmount);
+            refundRequest.noteToPayer(reason != null ? reason : "Booking refund");
+
+            // Execute refund via PayPal SDK
+            CapturesRefundRequest request = new CapturesRefundRequest(captureId);
+            request.requestBody(refundRequest);
+
+            HttpResponse<Refund> response = payPalHttpClient.execute(request);
+            Refund refund = response.result();
+
+            String refundId = refund.id();
+            String status = refund.status();
+
+            log.info("PayPal refund completed: refundId={}, status={}", refundId, status);
+
+            if (!"COMPLETED".equalsIgnoreCase(status)) {
+                log.warn("PayPal refund not completed immediately. Status: {}", status);
+            }
+
+            return refundId;
+
+        } catch (IOException e) {
+            log.error("PayPal refund failed for payment {}", payment.getId(), e);
+            throw new CustomException("Failed to process PayPal refund: " + e.getMessage(),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 }

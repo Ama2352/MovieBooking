@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -260,10 +261,75 @@ public class MomoService {
 
     /**
      * Refund payment via Momo
+     * 
+     * @return Momo refund transaction ID
      */
     public String refundPayment(Payment payment, BigDecimal amount, String reason) {
-        // TODO: integrate Momo refund API. Returning placeholder reference for now.
-        log.info("Initiating Momo refund for payment {} amount {}", payment.getId(), amount);
-        return "MOMO-REF-" + payment.getId();
+        try {
+            String orderId = payment.getTransactionId();
+            String transId = payment.getTransactionId(); // Momo transaction ID from original payment
+
+            if (orderId == null || orderId.isBlank()) {
+                throw new CustomException("No Momo transaction ID found for this payment", HttpStatus.BAD_REQUEST);
+            }
+
+            log.info("Initiating Momo refund for payment {} (orderId: {}), amount: {}",
+                    payment.getId(), orderId, amount);
+
+            String requestId = UUID.randomUUID().toString();
+            String refundAmount = amount.toBigInteger().toString();
+            String description = reason != null ? reason : "Booking refund";
+
+            // Build raw signature string for refund
+            String rawSignature = "accessKey=" + accessKey +
+                    "&amount=" + refundAmount +
+                    "&description=" + description +
+                    "&orderId=" + orderId +
+                    "&partnerCode=" + partnerCode +
+                    "&requestId=" + requestId +
+                    "&transId=" + transId;
+
+            String signature = SecurityUtils.HmacSHA256sign(secretKey, rawSignature);
+
+            // Build refund request body
+            Map<String, String> requestBody = new HashMap<>();
+            requestBody.put("partnerCode", partnerCode);
+            requestBody.put("orderId", orderId);
+            requestBody.put("requestId", requestId);
+            requestBody.put("amount", refundAmount);
+            requestBody.put("transId", transId);
+            requestBody.put("lang", "en");
+            requestBody.put("description", description);
+            requestBody.put("signature", signature);
+
+            // Call Momo Refund API
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpEntity<Map<String, String>> entity = new HttpEntity<>(requestBody, headers);
+
+            String refundUrl = apiEndpoint + "/refund";
+            ResponseEntity<JsonNode> responseEntity = restTemplate.postForEntity(refundUrl, entity, JsonNode.class);
+            JsonNode response = responseEntity.getBody();
+
+            if (response == null) {
+                throw new CustomException("No response from Momo refund API", HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+
+            int resultCode = response.get("resultCode").asInt();
+            if (resultCode != 0) {
+                String message = response.has("message") ? response.get("message").asText() : "Unknown error";
+                throw new CustomException("Momo refund failed: " + message, HttpStatus.BAD_REQUEST);
+            }
+
+            String refundTransId = response.has("transId") ? response.get("transId").asText() : requestId;
+            log.info("Momo refund completed: refundTransId={}", refundTransId);
+
+            return refundTransId;
+
+        } catch (Exception e) {
+            log.error("Momo refund failed for payment {}", payment.getId(), e);
+            throw new CustomException("Failed to process Momo refund: " + e.getMessage(),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 }

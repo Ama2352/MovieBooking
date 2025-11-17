@@ -40,14 +40,18 @@ public class CleanupScheduler {
     }
 
     /**
-     * Runs every 2 minutes to cleanup expired pending payments
+     * Runs every 60 seconds to expire pending payments that exceeded timeout
+     * Releases seats back to inventory for bookings with PENDING_PAYMENT status
+     * whose paymentExpiresAt timestamp has passed
      */
-    @Scheduled(fixedDelay = 120000) // Every 2 minutes
+    @Scheduled(fixedDelay = 60000, initialDelay = 60000)
     public void cleanupExpiredPendingPayments() {
-        List<Booking> expiredBookings = bookingRepo
-                .findByStatusAndPaymentExpiresAtBefore(
-                        BookingStatus.PENDING_PAYMENT,
-                        LocalDateTime.now());
-        expiredBookings.forEach(checkoutLifecycleService::handlePaymentTimeout);
+        log.debug("Running payment timeout cleanup task");
+        try {
+            bookingService.cleanupExpiredPendingPayments();
+        } catch (Exception e) {
+            log.error("Error during payment timeout cleanup", e);
+        }
     }
+
 }
