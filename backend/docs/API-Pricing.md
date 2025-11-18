@@ -21,8 +21,8 @@ Creates a new base price configuration.
 #### Request Body
 ```json
 {
-  "name": "string (required)",
-  "basePrice": 80000.00 (number, required, positive)
+  "name": "Standard Base Price 2024",
+  "basePrice": 80000.00
 }
 ```
 
@@ -31,7 +31,7 @@ Creates a new base price configuration.
 - **Body**:
 ```json
 {
-  "id": "uuid",
+  "priceBaseId": "3e4a8c9f-1234-5678-90ab-cdef12345678",
   "name": "Standard Base Price 2024",
   "basePrice": 80000.00,
   "isActive": true,
@@ -57,8 +57,8 @@ Updates base price configuration.
 #### Request Body
 ```json
 {
-  "name": "string (optional)",
-  "isActive": true (boolean, optional)
+  "name": "Standard Base Price 2025",
+  "isActive": true
 }
 ```
 
@@ -135,7 +135,7 @@ Retrieves the currently active base price.
 - **Body**:
 ```json
 {
-  "id": "uuid",
+  "priceBaseId": "3e4a8c9f-1234-5678-90ab-cdef12345678",
   "name": "Standard Base Price 2024",
   "basePrice": 80000.00,
   "isActive": true,
@@ -167,11 +167,11 @@ Creates a new price modifier rule.
 #### Request Body
 ```json
 {
-  "name": "string (required)",
-  "conditionType": "string (required, values: DAY_TYPE, TIME_RANGE, FORMAT, ROOM_TYPE, SEAT_TYPE)",
-  "conditionValue": "string (required)",
-  "modifierType": "string (required, values: ADD, MULTIPLY)",
-  "modifierValue": 20000.00 (number, required)
+  "name": "VIP Seat Premium",
+  "conditionType": "SEAT_TYPE",
+  "conditionValue": "VIP",
+  "modifierType": "FIXED_AMOUNT",
+  "modifierValue": 20000.00
 }
 ```
 
@@ -179,21 +179,21 @@ Creates a new price modifier rule.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | name | String | Yes | Display name for the modifier |
-| conditionType | String | Yes | When this modifier applies |
+| conditionType | String | Yes | When this modifier applies (DAY_TYPE, TIME_RANGE, FORMAT, ROOM_TYPE, SEAT_TYPE) |
 | conditionValue | String | Yes | Specific condition value |
-| modifierType | String | Yes | How to apply the modifier |
-| modifierValue | Number | Yes | Amount to add or multiply |
+| modifierType | String | Yes | How to apply the modifier (PERCENTAGE, FIXED_AMOUNT) |
+| modifierValue | Number | Yes | Amount to add or percentage multiplier |
 
 #### Response
 - **Status Code**: `201 CREATED`
 - **Body**:
 ```json
 {
-  "id": "uuid",
+  "priceModifierId": "7b2e9a1c-4567-89ab-cdef-123456789012",
   "name": "VIP Seat Premium",
   "conditionType": "SEAT_TYPE",
   "conditionValue": "VIP",
-  "modifierType": "ADD",
+  "modifierType": "FIXED_AMOUNT",
   "modifierValue": 20000.00,
   "isActive": true,
   "createdAt": "2024-11-17T10:00:00",
@@ -218,8 +218,8 @@ Updates a price modifier's status.
 #### Request Body
 ```json
 {
-  "name": "string (optional)",
-  "isActive": false (boolean, optional)
+  "name": "VIP Seat Premium Updated",
+  "isActive": false
 }
 ```
 
@@ -380,7 +380,7 @@ Applies based on day of the week.
   "name": "Weekend Premium",
   "conditionType": "DAY_TYPE",
   "conditionValue": "WEEKEND",
-  "modifierType": "MULTIPLY",
+  "modifierType": "PERCENTAGE",
   "modifierValue": 1.2
 }
 ```
@@ -402,7 +402,7 @@ Applies based on showtime start hour.
   "name": "Prime Time Surcharge",
   "conditionType": "TIME_RANGE",
   "conditionValue": "EVENING",
-  "modifierType": "ADD",
+  "modifierType": "FIXED_AMOUNT",
   "modifierValue": 10000.00
 }
 ```
@@ -426,7 +426,7 @@ Applies based on movie format.
   "name": "3D Glasses Fee",
   "conditionType": "FORMAT",
   "conditionValue": "3D",
-  "modifierType": "ADD",
+  "modifierType": "FIXED_AMOUNT",
   "modifierValue": 15000.00
 }
 ```
@@ -448,7 +448,7 @@ Applies based on screening room type.
   "name": "IMAX Premium",
   "conditionType": "ROOM_TYPE",
   "conditionValue": "IMAX",
-  "modifierType": "MULTIPLY",
+  "modifierType": "PERCENTAGE",
   "modifierValue": 1.5
 }
 ```
@@ -469,7 +469,7 @@ Applies based on seat type.
   "name": "VIP Seat Fee",
   "conditionType": "SEAT_TYPE",
   "conditionValue": "VIP",
-  "modifierType": "ADD",
+  "modifierType": "FIXED_AMOUNT",
   "modifierValue": 20000.00
 }
 ```
@@ -478,7 +478,7 @@ Applies based on seat type.
 
 ## Modifier Types
 
-### ADD
+### FIXED_AMOUNT
 Adds a fixed amount to the base price.
 
 **Formula:** `Final Price = Base Price + Modifier Value`
@@ -490,7 +490,7 @@ Adds a fixed amount to the base price.
 
 ---
 
-### MULTIPLY
+### PERCENTAGE
 Multiplies the current price by a factor.
 
 **Formula:** `Final Price = Current Price × Modifier Value`
@@ -508,24 +508,24 @@ Multiplies the current price by a factor.
 ```
 1. Start with Base Price: 80,000 VND
 
-2. Apply SEAT_TYPE modifier (ADD):
+2. Apply SEAT_TYPE modifier (FIXED_AMOUNT):
    80,000 + 20,000 = 100,000 VND
 
-3. Apply FORMAT modifier (ADD):
+3. Apply FORMAT modifier (FIXED_AMOUNT):
    100,000 + 15,000 = 115,000 VND
 
-4. Apply TIME_RANGE modifier (ADD):
+4. Apply TIME_RANGE modifier (FIXED_AMOUNT):
    115,000 + 10,000 = 125,000 VND
 
-5. Apply DAY_TYPE modifier (MULTIPLY):
+5. Apply DAY_TYPE modifier (PERCENTAGE):
    125,000 × 1.2 = 150,000 VND
 
 Final Ticket Price: 150,000 VND
 ```
 
 ### Calculation Order
-1. All **ADD** modifiers applied first (in any order)
-2. All **MULTIPLY** modifiers applied second (in sequence)
+1. All **FIXED_AMOUNT** modifiers applied first (in any order)
+2. All **PERCENTAGE** modifiers applied second (in sequence)
 
 ---
 
@@ -559,27 +559,27 @@ async function calculateTicketPrice(seat, showtime) {
     modifiers: []
   };
   
-  // Apply ADD modifiers
+  // Apply FIXED_AMOUNT modifiers
   applicableModifiers
-    .filter(m => m.modifierType === 'ADD')
+    .filter(m => m.modifierType === 'FIXED_AMOUNT')
     .forEach(mod => {
       currentPrice += mod.modifierValue;
       breakdown.modifiers.push({
         name: mod.name,
-        type: 'ADD',
+        type: 'FIXED_AMOUNT',
         value: mod.modifierValue
       });
     });
   
-  // Apply MULTIPLY modifiers
+  // Apply PERCENTAGE modifiers
   applicableModifiers
-    .filter(m => m.modifierType === 'MULTIPLY')
+    .filter(m => m.modifierType === 'PERCENTAGE')
     .forEach(mod => {
       const addedValue = currentPrice * (mod.modifierValue - 1);
       currentPrice *= mod.modifierValue;
       breakdown.modifiers.push({
         name: mod.name,
-        type: 'MULTIPLY',
+        type: 'PERCENTAGE',
         value: addedValue
       });
     });
@@ -603,7 +603,7 @@ async function createWeekendSurcharge() {
       name: 'Weekend Surcharge',
       conditionType: 'DAY_TYPE',
       conditionValue: 'WEEKEND',
-      modifierType: 'MULTIPLY',
+      modifierType: 'PERCENTAGE',
       modifierValue: 1.2 // 20% increase
     })
   });
@@ -617,25 +617,27 @@ async function createWeekendSurcharge() {
 ### 400 Bad Request
 ```json
 {
-  "message": "Invalid modifier data",
-  "errors": [
-    "modifierValue must be positive",
-    "Invalid conditionType"
-  ]
+  "timestamp": "2025-11-18T12:34:56.789+00:00",
+  "message": "modifierValue: must be positive, conditionType: invalid value",
+  "details": "uri=/price-modifiers"
 }
 ```
 
 ### 404 Not Found
 ```json
 {
-  "message": "Price base/modifier not found"
+  "timestamp": "2025-11-18T12:34:56.789+00:00",
+  "message": "Price modifier not found with id: {id}",
+  "details": "uri=/price-modifiers/{id}"
 }
 ```
 
 ### 403 Forbidden
 ```json
 {
-  "message": "Admin access required"
+  "timestamp": "2025-11-18T12:34:56.789+00:00",
+  "message": "Access Denied: Admin access required",
+  "details": "uri=/price-modifiers"
 }
 ```
 
@@ -647,7 +649,7 @@ async function createWeekendSurcharge() {
 
 2. **Multiple Modifiers**: Multiple modifiers can be active simultaneously and stack
 
-3. **Modifier Order**: ADD modifiers applied before MULTIPLY for consistent results
+3. **Modifier Order**: FIXED_AMOUNT modifiers applied before PERCENTAGE for consistent results
 
 4. **Immutable Values**: Base price and modifier values cannot be changed after creation
 

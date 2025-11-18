@@ -183,7 +183,9 @@ public class BookingService {
         }
 
         /**
-         * Handle user pressing back button - immediately releases all locked seats
+         * Handle user pressing back button (API: POST /bookings/lock/back)
+         * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
+         * Nodes: findActiveLockByUserAndShowtime
          */
         @Transactional
         public void handleBackButton(UUID userId, UUID showtimeId) {
@@ -199,7 +201,7 @@ public class BookingService {
         }
 
         /**
-         * Confirm booking with optional promotion
+         * Confirm booking with optional promotion (API: POST /bookings/confirm)
          * Predicate nodes (d): 5 -> V(G) = d + 1 = 6
          * Nodes: findSeatLock, !equals(userId), !isActive, isAfter(expiresAt),
          * promotionCode != null
@@ -338,7 +340,9 @@ public class BookingService {
         }
 
         /**
-         * Get user's booking history
+         * Get user's booking history (API: GET /bookings/my-bookings)
+         * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
+         * Nodes: none
          */
         public List<BookingResponse> getUserBookings(UUID userId) {
                 List<Booking> bookings = bookingRepo.findByUserId(userId);
@@ -347,6 +351,11 @@ public class BookingService {
                                 .collect(Collectors.toList());
         }
 
+        /**
+         * Get specific booking for user (API: GET /bookings/{bookingId})
+         * Predicate nodes (d): 2 -> V(G) = d + 1 = 3
+         * Nodes: findById, !equals(userId)
+         */
         public BookingResponse getBookingForUser(UUID bookingId, UUID userId) {
                 Booking booking = bookingRepo.findById(bookingId)
                                 .orElseThrow(() -> new ResourceNotFoundException("Booking", "id", bookingId));
@@ -359,6 +368,11 @@ public class BookingService {
                 return bookingMapper.toBookingResponse(booking);
         }
 
+        /**
+         * Update QR code URL for booking (API: PATCH /bookings/{bookingId}/qr)
+         * Predicate nodes (d): 2 -> V(G) = d + 1 = 3
+         * Nodes: findByIdAndUserId, status != CONFIRMED
+         */
         @Transactional
         public BookingResponse updateQrCode(UUID bookingId, UUID userId, String qrCodeUrl) {
                 Booking booking = bookingRepo.findByIdAndUserId(bookingId, userId)

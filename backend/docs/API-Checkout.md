@@ -30,17 +30,17 @@ Atomically validates seat locks, creates a pending booking, and initiates paymen
 #### Request Body
 ```json
 {
-  "showtimeId": "uuid (required)",
-  "userId": "uuid (required)",
-  "promotionCode": "string (optional)",
-  "paymentMethod": "string (required, values: PAYPAL, MOMO)"
+  "lockId": "2c3d4e5f-6a7b-8c9d-0e1f-2a3b4c5d6e7f",
+  "userId": "7b2e9a1c-4567-89ab-cdef-123456789012",
+  "promotionCode": "WINTER2024",
+  "paymentMethod": "PAYPAL"
 }
 ```
 
 #### Request Fields
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `showtimeId` | UUID | Yes | ID of the showtime |
+| `lockId` | UUID | Yes | ID of the seat lock |
 | `userId` | UUID | Yes | ID of the user (guest or registered) |
 | `promotionCode` | String | No | Promotion code for discount |
 | `paymentMethod` | String | Yes | Payment method: PAYPAL or MOMO |
@@ -50,10 +50,10 @@ Atomically validates seat locks, creates a pending booking, and initiates paymen
 - **Body**:
 ```json
 {
-  "bookingId": "uuid",
-  "paymentId": "uuid",
-  "orderId": "string (gateway order ID)",
-  "paymentUrl": "string (redirect URL)",
+  "bookingId": "5e6f7a8b-9c0d-1e2f-3a4b-5c6d7e8f9a0b",
+  "paymentId": "8f9a0b1c-2d3e-4f5a-6b7c-8d9e0f1a2b3c",
+  "paymentMethod": "PAYPAL",
+  "redirectUrl": "https://www.paypal.com/checkoutnow?token=8CB56781FV123456K",
   "message": "Booking confirmed and payment initiated"
 }
 ```
@@ -63,8 +63,8 @@ Atomically validates seat locks, creates a pending booking, and initiates paymen
 |-------|------|-------------|
 | `bookingId` | UUID | ID of the created booking |
 | `paymentId` | UUID | ID of the created payment |
-| `orderId` | String | Gateway-specific order ID (PayPal order ID or Momo requestId) |
-| `paymentUrl` | String | URL to redirect user for payment completion |
+| `paymentMethod` | String | Payment method used (PAYPAL or MOMO) |
+| `redirectUrl` | String | URL to redirect user for payment completion |
 | `message` | String | Success message |
 
 #### Authentication
@@ -106,7 +106,7 @@ Atomically validates seat locks, creates a pending booking, and initiates paymen
 ### Frontend Integration
 ```javascript
 // After user selects seats and confirms details
-async function checkout(showtimeId, userId, promotionCode, paymentMethod) {
+async function checkout(lockId, userId, promotionCode, paymentMethod) {
   try {
     const response = await fetch('/checkout', {
       method: 'POST',
@@ -115,7 +115,7 @@ async function checkout(showtimeId, userId, promotionCode, paymentMethod) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        showtimeId: showtimeId,
+        lockId: lockId,
         userId: userId,
         promotionCode: promotionCode, // optional
         paymentMethod: paymentMethod // 'PAYPAL' or 'MOMO'
@@ -132,7 +132,7 @@ async function checkout(showtimeId, userId, promotionCode, paymentMethod) {
     localStorage.setItem('pendingBookingId', data.bookingId);
     
     // Redirect to payment gateway
-    window.location.href = data.paymentUrl;
+    window.location.href = data.redirectUrl;
     
   } catch (error) {
     console.error('Checkout error:', error);
@@ -147,8 +147,8 @@ async function checkout(showtimeId, userId, promotionCode, paymentMethod) {
 // User returns from payment gateway
 // See Payment API documentation for capture flow
 const urlParams = new URLSearchParams(window.location.search);
-const orderId = urlParams.get('token') || urlParams.get('orderId');
-const method = urlParams.get('token') ? 'PAYPAL' : 'MOMO';
+const transactionId = urlParams.get('token') || urlParams.get('orderId');
+const paymentMethod = urlParams.get('token') ? 'PAYPAL' : 'MOMO';
 
 // Confirm payment
 const response = await fetch('/payments/order/capture', {
@@ -157,8 +157,8 @@ const response = await fetch('/payments/order/capture', {
     'Content-Type': 'application/json'
   },
   body: JSON.stringify({
-    orderId: orderId,
-    method: method
+    transactionId: transactionId,
+    paymentMethod: paymentMethod
   })
 });
 
@@ -183,7 +183,7 @@ User Actions                  API Calls                     Backend Processing
                                                             ├─ Create payment
                                                             └─ Initiate gateway
                                                             
-                            Response: paymentUrl     <────── COMMIT or ROLLBACK
+                            Response: redirectUrl    <────── COMMIT or ROLLBACK
                                                              
 3. Redirected       ──────>  Gateway Website        ──────> User pays
                                                              
@@ -201,8 +201,9 @@ User Actions                  API Calls                     Backend Processing
 ### 400 Bad Request
 ```json
 {
-  "message": "Validation failed",
-  "details": "Seat locks expired or invalid"
+  "timestamp": "2025-11-18T12:34:56.789+00:00",
+  "message": "Seat locks expired or invalid",
+  "details": "uri=/checkout"
 }
 ```
 
@@ -215,19 +216,30 @@ User Actions                  API Calls                     Backend Processing
 ### 409 Conflict
 ```json
 {
-  "message": "Seats already booked",
-  "details": "One or more seats are no longer available"
+  "timestamp": "2025-11-18T12:34:56.789+00:00",
+  "message": "One or more seats are no longer available",
+  "details": "uri=/checkout"
 }
 ```
 
 **Cause:**
 - Race condition: seats locked by user but booked by someone else (rare)
 
+### 410 Gone
+```json
+{
+  "timestamp": "2025-11-18T12:34:56.789+00:00",
+  "message": "Seat lock has expired",
+  "details": "uri=/checkout"
+}
+```
+
 ### 500 Internal Server Error
 ```json
 {
-  "message": "Payment gateway error",
-  "details": "Failed to initiate payment with PayPal/Momo"
+  "timestamp": "2025-11-18T12:34:56.789+00:00",
+  "message": "Failed to initiate payment with PayPal/Momo",
+  "details": "uri=/checkout"
 }
 ```
 

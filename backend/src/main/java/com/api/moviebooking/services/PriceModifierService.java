@@ -35,6 +35,11 @@ public class PriceModifierService {
                 .orElseThrow(() -> new ResourceNotFoundException("PriceModifier", "id", id));
     }
 
+    /**
+     * Add a new price modifier (API: POST /price-modifiers)
+     * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
+     * Nodes: try-catch
+     */
     @Transactional
     public PriceModifierDataResponse addPriceModifier(AddPriceModifierRequest request) {
         PriceModifier priceModifier = priceModifierMapper.toEntity(request);
@@ -47,13 +52,20 @@ public class PriceModifierService {
             throw new IllegalArgumentException("Invalid condition type or modifier type: " + e.getMessage());
         }
 
-        // Negative values are allowed for discounts (e.g., -10 for 10% discount or -5000 for 5000 VND off)
-        // Validation note: Use negative values to decrease prices, positive values to increase prices
+        // Negative values are allowed for discounts (e.g., -10 for 10% discount or
+        // -5000 for 5000 VND off)
+        // Validation note: Use negative values to decrease prices, positive values to
+        // increase prices
 
         priceModifierRepo.save(priceModifier);
         return priceModifierMapper.toDataResponse(priceModifier);
     }
 
+    /**
+     * Update price modifier (API: PUT /price-modifiers/{id})
+     * Predicate nodes (d): 3 -> V(G) = d + 1 = 4
+     * Nodes: findPriceModifierById, name!=null, isActive!=null
+     */
     @Transactional
     public PriceModifierDataResponse updatePriceModifier(UUID id, UpdatePriceModifierRequest request) {
         PriceModifier priceModifier = findPriceModifierById(id);
@@ -70,10 +82,15 @@ public class PriceModifierService {
         return priceModifierMapper.toDataResponse(priceModifier);
     }
 
+    /**
+     * Delete price modifier (API: DELETE /price-modifiers/{id})
+     * Predicate nodes (d): 2 -> V(G) = d + 1 = 3
+     * Nodes: findPriceModifierById, isPriceModifierReferencedInBreakdown
+     */
     @Transactional
     public void deletePriceModifier(UUID id) {
         PriceModifier priceModifier = findPriceModifierById(id);
-        
+
         // Check if modifier is referenced in any showtime seat price breakdowns
         if (showtimeSeatRepo.isPriceModifierReferencedInBreakdown(priceModifier.getName())) {
             log.info("Soft deleting price modifier {} - referenced in showtime seat breakdowns", id);
@@ -86,23 +103,44 @@ public class PriceModifierService {
         }
     }
 
+    /**
+     * Get price modifier by ID (API: GET /price-modifiers/{id})
+     * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
+     * Nodes: findPriceModifierById
+     */
     public PriceModifierDataResponse getPriceModifier(UUID id) {
         PriceModifier priceModifier = findPriceModifierById(id);
         return priceModifierMapper.toDataResponse(priceModifier);
     }
 
+    /**
+     * Get all price modifiers (API: GET /price-modifiers)
+     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
+     * Nodes: none
+     */
     public List<PriceModifierDataResponse> getAllPriceModifiers() {
         return priceModifierRepo.findAll().stream()
                 .map(priceModifierMapper::toDataResponse)
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Get all active price modifiers (API: GET /price-modifiers/active)
+     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
+     * Nodes: none
+     */
     public List<PriceModifierDataResponse> getActivePriceModifiers() {
         return priceModifierRepo.findAllActive().stream()
                 .map(priceModifierMapper::toDataResponse)
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Get price modifiers by condition type (API: GET
+     * /price-modifiers/by-condition)
+     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
+     * Nodes: none
+     */
     public List<PriceModifierDataResponse> getPriceModifiersByConditionType(ConditionType conditionType) {
         return priceModifierRepo.findByConditionType(conditionType).stream()
                 .map(priceModifierMapper::toDataResponse)

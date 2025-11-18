@@ -36,10 +36,10 @@ public class MembershipTierService {
     @Transactional
     public void initializeDefaultTiers() {
         long tierCount = membershipTierRepo.count();
-        
+
         if (tierCount == 0) {
             log.info("No membership tiers found. Creating default tiers...");
-            
+
             // Create Bronze tier (default for new users)
             MembershipTier bronze = new MembershipTier();
             bronze.setName("Bronze");
@@ -50,7 +50,7 @@ public class MembershipTierService {
             bronze.setIsActive(true);
             membershipTierRepo.save(bronze);
             log.info("Created default Bronze tier");
-            
+
             // Create Silver tier
             MembershipTier silver = new MembershipTier();
             silver.setName("Silver");
@@ -61,7 +61,7 @@ public class MembershipTierService {
             silver.setIsActive(true);
             membershipTierRepo.save(silver);
             log.info("Created Silver tier");
-            
+
             // Create Gold tier
             MembershipTier gold = new MembershipTier();
             gold.setName("Gold");
@@ -72,7 +72,7 @@ public class MembershipTierService {
             gold.setIsActive(true);
             membershipTierRepo.save(gold);
             log.info("Created Gold tier");
-            
+
             // Create Platinum tier
             MembershipTier platinum = new MembershipTier();
             platinum.setName("Platinum");
@@ -83,7 +83,7 @@ public class MembershipTierService {
             platinum.setIsActive(true);
             membershipTierRepo.save(platinum);
             log.info("Created Platinum tier");
-            
+
             log.info("Default membership tiers initialization completed");
         } else {
             log.info("Membership tiers already exist. Skipping initialization.");
@@ -95,6 +95,12 @@ public class MembershipTierService {
                 .orElseThrow(() -> new ResourceNotFoundException("MembershipTier", "id", tierId));
     }
 
+    /**
+     * Create a new membership tier (API: POST /membership-tiers)
+     * Predicate nodes (d): 3 -> V(G) = d + 1 = 4
+     * Nodes: existsByNameIgnoreCase, discountType!=null && discountValue!=null,
+     * equals("PERCENTAGE") && compareTo(100)>0
+     */
     @Transactional
     public MembershipTierDataResponse addMembershipTier(AddMembershipTierRequest request) {
         // Validate unique name
@@ -116,6 +122,15 @@ public class MembershipTierService {
         return membershipTierMapper.toDataResponse(newTier);
     }
 
+    /**
+     * Update membership tier details (API: PUT /membership-tiers/{tierId})
+     * Predicate nodes (d): 9 -> V(G) = d + 1 = 10
+     * Nodes: name!=null, !equalsIgnoreCase && existsByNameIgnoreCase,
+     * minPoints!=null,
+     * discountType!=null, newType==PERCENTAGE && value!=null && compareTo(100)>0,
+     * discountValue!=null, type==PERCENTAGE && compareTo(100)>0, description!=null,
+     * isActive!=null
+     */
     @Transactional
     public MembershipTierDataResponse updateMembershipTier(UUID tierId, UpdateMembershipTierRequest request) {
         MembershipTier tier = findMembershipTierById(tierId);
@@ -123,7 +138,8 @@ public class MembershipTierService {
         if (request.getName() != null) {
             if (!request.getName().equalsIgnoreCase(tier.getName())
                     && membershipTierRepo.existsByNameIgnoreCase(request.getName())) {
-                throw new IllegalArgumentException("Membership tier with this name already exists: " + request.getName());
+                throw new IllegalArgumentException(
+                        "Membership tier with this name already exists: " + request.getName());
             }
             tier.setName(request.getName());
         }
@@ -164,6 +180,12 @@ public class MembershipTierService {
         return membershipTierMapper.toDataResponse(tier);
     }
 
+    /**
+     * Deactivate a membership tier (API: PATCH
+     * /membership-tiers/{tierId}/deactivate)
+     * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
+     * Nodes: findMembershipTierById
+     */
     @Transactional
     public void deactivateMembershipTier(UUID tierId) {
         MembershipTier tier = findMembershipTierById(tierId);
@@ -171,6 +193,11 @@ public class MembershipTierService {
         membershipTierRepo.save(tier);
     }
 
+    /**
+     * Delete a membership tier (API: DELETE /membership-tiers/{tierId})
+     * Predicate nodes (d): 2 -> V(G) = d + 1 = 3
+     * Nodes: findMembershipTierById, !isEmpty(users)
+     */
     @Transactional
     public void deleteMembershipTier(UUID tierId) {
         MembershipTier tier = findMembershipTierById(tierId);
@@ -183,23 +210,43 @@ public class MembershipTierService {
         membershipTierRepo.delete(tier);
     }
 
+    /**
+     * Get membership tier by ID (API: GET /membership-tiers/{tierId})
+     * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
+     * Nodes: findMembershipTierById
+     */
     public MembershipTierDataResponse getMembershipTier(UUID tierId) {
         MembershipTier tier = findMembershipTierById(tierId);
         return membershipTierMapper.toDataResponse(tier);
     }
 
+    /**
+     * Get membership tier by name (API: GET /membership-tiers/name/{name})
+     * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
+     * Nodes: findByName
+     */
     public MembershipTierDataResponse getMembershipTierByName(String name) {
         MembershipTier tier = membershipTierRepo.findByName(name)
                 .orElseThrow(() -> new ResourceNotFoundException("MembershipTier", "name", name));
         return membershipTierMapper.toDataResponse(tier);
     }
 
+    /**
+     * Get all membership tiers (API: GET /membership-tiers)
+     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
+     * Nodes: none
+     */
     public List<MembershipTierDataResponse> getAllMembershipTiers() {
         return membershipTierRepo.findAll().stream()
                 .map(membershipTierMapper::toDataResponse)
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Get all active membership tiers (API: GET /membership-tiers/active)
+     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
+     * Nodes: none
+     */
     public List<MembershipTierDataResponse> getActiveMembershipTiers() {
         return membershipTierRepo.findByIsActive(true).stream()
                 .map(membershipTierMapper::toDataResponse)
@@ -211,11 +258,11 @@ public class MembershipTierService {
      */
     public MembershipTier getApproppriateTier(Integer loyaltyPoints) {
         List<MembershipTier> eligibleTiers = membershipTierRepo.findEligibleTiers(loyaltyPoints);
-        
+
         if (!eligibleTiers.isEmpty()) {
             return eligibleTiers.get(0); // Highest eligible tier
         }
-        
+
         // Return default tier if no eligible tier found
         return membershipTierRepo.findDefaultTier()
                 .orElseThrow(() -> new IllegalStateException("No default membership tier configured"));
@@ -226,6 +273,7 @@ public class MembershipTierService {
      */
     public MembershipTier getDefaultTier() {
         return membershipTierRepo.findDefaultTier()
-                .orElseThrow(() -> new IllegalStateException("No default membership tier configured. Please create at least one tier."));
+                .orElseThrow(() -> new IllegalStateException(
+                        "No default membership tier configured. Please create at least one tier."));
     }
 }

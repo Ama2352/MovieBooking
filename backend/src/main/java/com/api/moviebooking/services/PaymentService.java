@@ -31,6 +31,11 @@ public class PaymentService {
     private final PaymentMapper paymentMapper;
     private final RefundService refundService;
 
+    /**
+     * Create payment order (API: POST /payments/order)
+     * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
+     * Nodes: switch(3 cases: paypal, momo, default)
+     */
     public InitiatePaymentResponse createOrder(InitiatePaymentRequest request) {
 
         String method = request.getPaymentMethod().toLowerCase();
@@ -44,6 +49,11 @@ public class PaymentService {
         }
     }
 
+    /**
+     * Confirm payment (API: POST /payments/order/capture)
+     * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
+     * Nodes: switch(3 cases: paypal, momo, default)
+     */
     public PaymentResponse confirmPayment(ConfirmPaymentRequest request) {
         String method = request.getPaymentMethod().toLowerCase();
         switch (method) {
@@ -59,6 +69,11 @@ public class PaymentService {
 
     }
 
+    /**
+     * Process Momo IPN callback (API: POST/GET /payments/momo/ipn)
+     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
+     * Nodes: none
+     */
     public IpnResponse processMomoIpn(HttpServletRequest request) {
         var params = extractParams(request);
         return momoService.processIpn(params);
@@ -70,9 +85,15 @@ public class PaymentService {
         return map;
     }
 
+    /**
+     * Search payments with filters (API: GET /payments/search)
+     * Predicate nodes (d): 6 -> V(G) = d + 1 = 7
+     * Nodes: bookingId==null||equals, userId==null||equals,
+     * status==null||equalsIgnoreCase, method==null||equalsIgnoreCase,
+     * startDate==null||!isBefore, endDate==null||!isAfter
+     */
     public List<PaymentResponse> searchPayments(UUID bookingId,
             UUID userId,
-            String transactionId,
             String status,
             String method,
             LocalDateTime startDate,
@@ -82,7 +103,6 @@ public class PaymentService {
         List<Payment> filteredPayments = payments.stream()
                 .filter(p -> bookingId == null || p.getBooking().getId().equals(bookingId))
                 .filter(p -> userId == null || p.getBooking().getUser().getId().equals(userId))
-                .filter(p -> transactionId == null || p.getTransactionId().equals(transactionId))
                 .filter(p -> status == null || p.getStatus().name().equalsIgnoreCase(status))
                 .filter(p -> method == null || p.getMethod().name().equalsIgnoreCase(method))
                 .filter(p -> startDate == null || !p.getCreatedAt().isBefore(startDate))
@@ -94,6 +114,11 @@ public class PaymentService {
                 .toList();
     }
 
+    /**
+     * Refund payment (API: POST /payments/{paymentId}/refund)
+     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
+     * Nodes: none
+     */
     public PaymentResponse refundPayment(UUID paymentId, String reason) {
         Payment payment = refundService.processRefund(paymentId, reason);
         return paymentMapper.toPaymentResponse(payment);

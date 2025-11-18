@@ -26,9 +26,12 @@ Locks selected seats for 10 minutes to prevent double-booking during checkout.
 #### Request Body
 ```json
 {
-  "showtimeId": "uuid (required)",
-  "userId": "uuid (required)",
-  "seatIds": ["uuid", "uuid", ...] (required, not empty)
+  "showtimeId": "3e4a8c9f-1234-5678-90ab-cdef12345678",
+  "userId": "7b2e9a1c-4567-89ab-cdef-123456789012",
+  "showtimeSeatIds": [
+    "9f1a2b3c-4d5e-6f7a-8b9c-0d1e2f3a4b5c",
+    "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d"
+  ]
 }
 ```
 
@@ -37,19 +40,26 @@ Locks selected seats for 10 minutes to prevent double-booking during checkout.
 - **Body**:
 ```json
 {
-  "lockId": "uuid",
-  "status": "string",
-  "showtimeId": "uuid",
-  "seats": [
+  "lockId": "2c3d4e5f-6a7b-8c9d-0e1f-2a3b4c5d6e7f",
+  "lockKey": "LOCK_7b2e9a1c_3e4a8c9f",
+  "showtimeId": "3e4a8c9f-1234-5678-90ab-cdef12345678",
+  "lockedSeats": [
     {
-      "seatId": "uuid",
-      "rowLabel": "string",
-      "seatNumber": 1,
-      "seatType": "NORMAL|VIP|COUPLE",
+      "seatId": "9f1a2b3c-4d5e-6f7a-8b9c-0d1e2f3a4b5c",
+      "rowLabel": "A",
+      "seatNumber": 5,
+      "seatType": "NORMAL",
       "price": 100000.00
+    },
+    {
+      "seatId": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d",
+      "rowLabel": "A",
+      "seatNumber": 6,
+      "seatType": "VIP",
+      "price": 120000.00
     }
   ],
-  "totalPrice": 200000.00,
+  "totalPrice": 220000.00,
   "expiresAt": "2024-11-17T12:30:00",
   "remainingSeconds": 600,
   "message": "Seats locked successfully"
@@ -77,10 +87,18 @@ Returns available, locked, and booked seats for a showtime. Releases any existin
 - **Body**:
 ```json
 {
-  "showtimeId": "uuid",
-  "availableSeatIds": ["uuid", "uuid", ...],
-  "lockedSeatIds": ["uuid", "uuid", ...],
-  "bookedSeatIds": ["uuid", "uuid", ...],
+  "showtimeId": "3e4a8c9f-1234-5678-90ab-cdef12345678",
+  "availableSeats": [
+    "9f1a2b3c-4d5e-6f7a-8b9c-0d1e2f3a4b5c",
+    "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d"
+  ],
+  "lockedSeats": [
+    "2b3c4d5e-6f7a-8b9c-0d1e-2f3a4b5c6d7e"
+  ],
+  "bookedSeats": [
+    "3c4d5e6f-7a8b-9c0d-1e2f-3a4b5c6d7e8f",
+    "4d5e6f7a-8b9c-0d1e-2f3a-4b5c6d7e8f9a"
+  ],
   "message": "Seat availability retrieved"
 }
 ```
@@ -126,6 +144,7 @@ Releases all locked seats immediately when user navigates back. Makes seats avai
 
 ---
 
+
 ### 5. Confirm Booking
 **POST** `/bookings/confirm`
 
@@ -134,9 +153,9 @@ Confirms the booking after seat locking, transitions seats from LOCKED to BOOKED
 #### Request Body
 ```json
 {
-  "showtimeId": "uuid (required)",
-  "userId": "uuid (required)",
-  "promotionCode": "string (optional)"
+  "lockId": "2c3d4e5f-6a7b-8c9d-0e1f-2a3b4c5d6e7f",
+  "userId": "7b2e9a1c-4567-89ab-cdef-123456789012",
+  "promotionCode": "WINTER2024"
 }
 ```
 
@@ -145,30 +164,35 @@ Confirms the booking after seat locking, transitions seats from LOCKED to BOOKED
 - **Body**:
 ```json
 {
-  "id": "uuid",
-  "userId": "uuid",
-  "userName": "string",
-  "bookingDate": "2024-11-17T12:00:00",
-  "showtimeId": "string",
-  "movieTitle": "string",
+  "bookingId": "5e6f7a8b-9c0d-1e2f-3a4b-5c6d7e8f9a0b",
+  "showtimeId": "3e4a8c9f-1234-5678-90ab-cdef12345678",
+  "movieTitle": "Inception",
+  "showtimeStartTime": "2024-11-17T19:30:00",
+  "cinemaName": "CGV Vincom Center",
+  "roomName": "IMAX 1",
   "seats": [
     {
       "rowLabel": "A",
       "seatNumber": 5,
       "seatType": "VIP",
       "price": 120000.00
+    },
+    {
+      "rowLabel": "A",
+      "seatNumber": 6,
+      "seatType": "VIP",
+      "price": 120000.00
     }
   ],
-  "totalAmount": 240000.00,
-  "promotionCode": "WINTER2024",
-  "discountAmount": 24000.00,
+  "totalPrice": 240000.00,
+  "discountReason": "Promotion WINTER2024(-10%)",
+  "discountValue": 24000.00,
   "finalPrice": 216000.00,
   "status": "PENDING_PAYMENT",
-  "createdAt": "2024-11-17T12:00:00",
-  "qrCodeUrl": null,
-  "paymentMethod": null,
-  "paidAt": null,
-  "expiresAt": "2024-11-17T12:10:00"
+  "bookedAt": "2024-11-17T19:15:00",
+  "qrCode": null,
+  "qrPayload": null,
+  "paymentExpiresAt": "2024-11-17T19:30:00"
 }
 ```
 
@@ -181,6 +205,7 @@ Confirms the booking after seat locking, transitions seats from LOCKED to BOOKED
 ### 6. Get User's Bookings
 **GET** `/bookings/my-bookings`
 
+
 Returns all bookings for the authenticated user.
 
 #### Response
@@ -189,23 +214,35 @@ Returns all bookings for the authenticated user.
 ```json
 [
   {
-    "id": "uuid",
-    "userId": "uuid",
-    "userName": "string",
-    "bookingDate": "2024-11-17T12:00:00",
-    "showtimeId": "string",
-    "movieTitle": "string",
-    "seats": [...],
-    "totalAmount": 240000.00,
-    "promotionCode": "WINTER2024",
-    "discountAmount": 24000.00,
-    "finalPrice": 216000.00,
+    "bookingId": "5e6f7a8b-9c0d-1e2f-3a4b-5c6d7e8f9a0b",
+    "showtimeId": "3e4a8c9f-1234-5678-90ab-cdef12345678",
+    "movieTitle": "Inception",
+    "showtimeStartTime": "2025-11-18T19:30:00",
+    "cinemaName": "CGV Vincom Center",
+    "roomName": "IMAX 1",
+    "seats": [
+      {
+        "rowLabel": "A",
+        "seatNumber": 5,
+        "seatType": "VIP",
+        "price": 100000.00
+      },
+      {
+        "rowLabel": "A",
+        "seatNumber": 6,
+        "seatType": "NORMAL",
+        "price": 80000.00
+      }
+    ],
+    "totalPrice": 180000.00,
+    "discountReason": "Promotion SUMMER2025(-10%)",
+    "discountValue": 18000.00,
+    "finalPrice": 162000.00,
     "status": "CONFIRMED",
-    "createdAt": "2024-11-17T12:00:00",
-    "qrCodeUrl": "https://cloudinary.com/...",
-    "paymentMethod": "PAYPAL",
-    "paidAt": "2024-11-17T12:05:00",
-    "expiresAt": null
+    "bookedAt": "2025-11-18T19:15:00",
+    "qrCode": "https://res.cloudinary.com/demo/image/upload/qr_code_123.png",
+    "qrPayload": "BOOKING_5e6f7a8b_SHOWTIME_3e4a8c9f",
+    "paymentExpiresAt": null
   }
 ]
 ```
@@ -244,7 +281,7 @@ Attaches a Cloudinary QR code URL to the booking after frontend generates it.
 #### Request Body
 ```json
 {
-  "qrCodeUrl": "string (required, not blank)"
+  "qrCodeUrl": "https://res.cloudinary.com/demo/image/upload/qr_code_123.png"
 }
 ```
 
@@ -276,29 +313,45 @@ Attaches a Cloudinary QR code URL to the booking after frontend generates it.
 ### 400 Bad Request
 ```json
 {
-  "message": "Invalid request parameters",
-  "details": "Seat lock expired or seats already booked"
+  "timestamp": "2025-11-18T12:34:56.789+00:00",
+  "message": "Seat lock expired or seats already booked",
+  "details": "uri=/bookings/confirm"
 }
 ```
 
 ### 404 Not Found
 ```json
 {
-  "message": "Booking not found"
+  "timestamp": "2025-11-18T12:34:56.789+00:00",
+  "message": "Booking not found with id: {bookingId}",
+  "details": "uri=/bookings/{bookingId}"
 }
 ```
 
 ### 409 Conflict
 ```json
 {
-  "message": "Seats already locked or booked by another user"
+  "timestamp": "2025-11-18T12:34:56.789+00:00",
+  "message": "Seats already locked or booked by another user",
+  "details": "uri=/bookings/lock"
+}
+```
+
+### 410 Gone
+```json
+{
+  "timestamp": "2025-11-18T12:34:56.789+00:00",
+  "message": "Seat lock has expired",
+  "details": "uri=/bookings/confirm"
 }
 ```
 
 ### 403 Forbidden
 ```json
 {
-  "message": "You are not authorized to access this booking"
+  "timestamp": "2025-11-18T12:34:56.789+00:00",
+  "message": "Access Denied: You are not authorized to access this booking",
+  "details": "uri=/bookings/{bookingId}"
 }
 ```
 

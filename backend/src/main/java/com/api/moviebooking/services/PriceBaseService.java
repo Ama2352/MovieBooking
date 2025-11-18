@@ -33,6 +33,11 @@ public class PriceBaseService {
                 .orElseThrow(() -> new ResourceNotFoundException("PriceBase", "id", id));
     }
 
+    /**
+     * Add a new base price (API: POST /price-base)
+     * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
+     * Nodes: existsByNameIgnoreCase
+     */
     @Transactional
     public PriceBaseDataResponse addPriceBase(AddPriceBaseRequest request) {
         if (priceBaseRepo.existsByNameIgnoreCase(request.getName())) {
@@ -44,6 +49,12 @@ public class PriceBaseService {
         return priceBaseMapper.toDataResponse(priceBase);
     }
 
+    /**
+     * Update base price (API: PUT /price-base/{id})
+     * Predicate nodes (d): 3 -> V(G) = d + 1 = 4
+     * Nodes: name!=null, !equalsIgnoreCase && existsByNameIgnoreCase,
+     * isActive!=null
+     */
     @Transactional
     public PriceBaseDataResponse updatePriceBase(UUID id, UpdatePriceBaseRequest request) {
         PriceBase priceBase = findPriceBaseById(id);
@@ -64,15 +75,21 @@ public class PriceBaseService {
         return priceBaseMapper.toDataResponse(priceBase);
     }
 
+    /**
+     * Delete base price (API: DELETE /price-base/{id})
+     * Predicate nodes (d): 2 -> V(G) = d + 1 = 3
+     * Nodes: findPriceBaseById, isPriceBaseReferencedInBreakdown
+     */
     @Transactional
     public void deletePriceBase(UUID id) {
         PriceBase priceBase = findPriceBaseById(id);
-        
-        // Check if THIS specific price base is being used in any showtime seat price breakdown
+
+        // Check if THIS specific price base is being used in any showtime seat price
+        // breakdown
         String basePriceStr = priceBase.getBasePrice().toString();
         if (showtimeSeatRepo.isPriceBaseReferencedInBreakdown(basePriceStr)) {
-            log.info("Soft deleting price base {} ({}VND) - referenced in showtime seat breakdowns", 
-                     id, basePriceStr);
+            log.info("Soft deleting price base {} ({}VND) - referenced in showtime seat breakdowns",
+                    id, basePriceStr);
             priceBase.setIsActive(false);
             priceBaseRepo.save(priceBase);
         } else {
@@ -82,17 +99,32 @@ public class PriceBaseService {
         }
     }
 
+    /**
+     * Get base price by ID (API: GET /price-base/{id})
+     * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
+     * Nodes: findPriceBaseById
+     */
     public PriceBaseDataResponse getPriceBase(UUID id) {
         PriceBase priceBase = findPriceBaseById(id);
         return priceBaseMapper.toDataResponse(priceBase);
     }
 
+    /**
+     * Get all base prices (API: GET /price-base)
+     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
+     * Nodes: none
+     */
     public List<PriceBaseDataResponse> getAllPriceBases() {
         return priceBaseRepo.findAll().stream()
                 .map(priceBaseMapper::toDataResponse)
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Get current active base price (API: GET /price-base/active)
+     * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
+     * Nodes: findActiveBasePrice
+     */
     public PriceBaseDataResponse getActiveBasePrice() {
         PriceBase priceBase = priceBaseRepo.findActiveBasePrice()
                 .orElseThrow(() -> new IllegalStateException(

@@ -56,5 +56,11 @@ public interface BookingRepo extends JpaRepository<Booking, UUID> {
                         "OR b.status = com.api.moviebooking.models.enums.BookingStatus.PENDING_PAYMENT)")
         long countActiveBookingsByUserId(@Param("userId") UUID userId);
 
+        /**
+         * Count total bookings by user ID (for dependency check)
+         */
+        @Query("SELECT COUNT(b) FROM Booking b WHERE b.user.id = :userId")
+        long countByUserId(@Param("userId") UUID userId);
+
         List<Booking> findByStatusAndPaymentExpiresAtBefore(BookingStatus status, LocalDateTime timestamp);
 }

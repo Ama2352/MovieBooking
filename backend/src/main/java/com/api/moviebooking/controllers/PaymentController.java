@@ -66,12 +66,11 @@ public class PaymentController {
     public ResponseEntity<List<PaymentResponse>> searchPayments(
             @RequestParam(required = false) UUID bookingId,
             @RequestParam(required = false) UUID userId,
-            @RequestParam(required = false) String transactionId,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String method,
             @RequestParam(required = false) LocalDateTime startDate,
             @RequestParam(required = false) LocalDateTime endDate) {
-        List<PaymentResponse> responses = paymentService.searchPayments(bookingId, userId, transactionId, status,
+        List<PaymentResponse> responses = paymentService.searchPayments(bookingId, userId, status,
                 method, startDate, endDate);
         return ResponseEntity.ok(responses);
     }

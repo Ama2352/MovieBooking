@@ -17,11 +17,11 @@ Creates a new user account.
 #### Request Body
 ```json
 {
-  "username": "string (required)",
-  "email": "string (required, valid email format)",
-  "fullName": "string (required)",
-  "phoneNumber": "string (required, valid format)",
-  "password": "string (required, min 8 chars)"
+  "phoneNumber": "0901234567",
+  "email": "john.doe@gmail.com",
+  "username": "johndoe",
+  "password": "password123",
+  "confirmPassword": "password123"
 }
 ```
 
@@ -42,8 +42,8 @@ Authenticates a user and returns access/refresh tokens via HTTP-only cookies.
 #### Request Body
 ```json
 {
-  "email": "string (required, not blank, valid email)",
-  "password": "string (required, not blank)"
+  "email": "admin@gmail.com",
+  "password": "admin123"
 }
 ```
 
@@ -120,9 +120,9 @@ Creates a temporary guest account for booking without full registration.
 #### Request Body
 ```json
 {
-  "email": "string (required, valid email)",
-  "fullName": "string (required)",
-  "phoneNumber": "string (required)"
+  "email": "guest123@gmail.com",
+  "username": "Guest User",
+  "phoneNumber": "0901234567"
 }
 ```
 
@@ -147,29 +147,36 @@ All endpoints may return the following error responses:
 ### 400 Bad Request
 ```json
 {
-  "message": "Invalid input data",
-  "errors": ["field validation error messages"]
+  "timestamp": "2025-11-18T12:34:56.789+00:00",
+  "message": "email: must be a well-formed email address, password: must not be blank",
+  "details": "uri=/auth/login"
 }
 ```
 
 ### 401 Unauthorized
 ```json
 {
-  "message": "Invalid credentials or token expired"
+  "timestamp": "2025-11-18T12:34:56.789+00:00",
+  "message": "Invalid credentials or token expired",
+  "details": "uri=/auth/login"
 }
 ```
 
 ### 409 Conflict
 ```json
 {
-  "message": "Email already exists"
+  "timestamp": "2025-11-18T12:34:56.789+00:00",
+  "message": "Email already exists",
+  "details": "uri=/auth/register"
 }
 ```
 
 ### 500 Internal Server Error
 ```json
 {
-  "message": "Internal server error"
+  "timestamp": "2025-11-18T12:34:56.789+00:00",
+  "message": "Internal server error",
+  "details": "uri=/auth/login"
 }
 ```
 

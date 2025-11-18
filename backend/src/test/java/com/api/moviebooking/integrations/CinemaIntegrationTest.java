@@ -128,9 +128,9 @@ class CinemaIntegrationTest {
                 given()
                                 .contentType(ContentType.JSON)
                                 .body(request)
-                        .when()
+                                .when()
                                 .post("/cinemas")
-                        .then()
+                                .then()
                                 .statusCode(HttpStatus.CREATED.value())
                                 .body("name", equalTo("CGV Vincom"))
                                 .body("address", equalTo("123 Nguyen Hue St, District 1"))
@@ -445,6 +445,8 @@ class CinemaIntegrationTest {
                                 .description("Large size popcorn with butter")
                                 .price(new BigDecimal("50000"))
                                 .type("FOOD")
+                                .imageUrl("https://example.com/popcorn.jpg")
+                                .imageCloudinaryId("snacks/popcorn_large")
                                 .build();
 
                 given()
@@ -471,6 +473,8 @@ class CinemaIntegrationTest {
                                 .description("Large size popcorn with butter")
                                 .price(new BigDecimal("50000"))
                                 .type("FOOD")
+                                .imageUrl("https://example.com/popcorn.jpg")
+                                .imageCloudinaryId("snacks/popcorn_large")
                                 .build();
 
                 given()
@@ -500,6 +504,8 @@ class CinemaIntegrationTest {
                                 .description("Soft drink")
                                 .price(new BigDecimal("30000"))
                                 .type("DRINK")
+                                .imageUrl("https://example.com/cola.jpg")
+                                .imageCloudinaryId("snacks/coca_cola")
                                 .build();
 
                 String snackId = given()
@@ -539,6 +545,8 @@ class CinemaIntegrationTest {
                                 .description("Old description")
                                 .price(new BigDecimal("20000"))
                                 .type("FOOD")
+                                .imageUrl("https://example.com/old.jpg")
+                                .imageCloudinaryId("snacks/old_snack")
                                 .build();
 
                 String snackId = given()
@@ -587,6 +595,8 @@ class CinemaIntegrationTest {
                                 .description("Will be deleted")
                                 .price(new BigDecimal("15000"))
                                 .type("FOOD")
+                                .imageUrl("https://example.com/delete.jpg")
+                                .imageCloudinaryId("snacks/to_delete")
                                 .build();
 
                 String snackId = given()
@@ -686,6 +696,8 @@ class CinemaIntegrationTest {
                                 .description("desc")
                                 .price(new java.math.BigDecimal("10000"))
                                 .type("FOOD")
+                                .imageUrl("https://example.com/snackA.jpg")
+                                .imageCloudinaryId("snacks/snack_a")
                                 .build();
 
                 AddSnackRequest s2 = AddSnackRequest.builder()
@@ -694,6 +706,8 @@ class CinemaIntegrationTest {
                                 .description("desc2")
                                 .price(new java.math.BigDecimal("15000"))
                                 .type("DRINK")
+                                .imageUrl("https://example.com/snackB.jpg")
+                                .imageCloudinaryId("snacks/snack_b")
                                 .build();
 
                 given().contentType(ContentType.JSON).body(s1).when().post("/cinemas/snacks").then()

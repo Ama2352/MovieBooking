@@ -3,10 +3,13 @@ package com.api.moviebooking.services;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.security.Principal;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
+import org.springframework.boot.autoconfigure.security.oauth2.resource.OAuth2ResourceServerProperties.Jwt;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -15,13 +18,22 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.api.moviebooking.helpers.exceptions.EntityDeletionForbiddenException;
+import com.api.moviebooking.helpers.mapstructs.MembershipTierMapper;
+import com.api.moviebooking.helpers.mapstructs.UserMapper;
 import com.api.moviebooking.models.dtos.auth.LoginRequest;
 import com.api.moviebooking.models.dtos.auth.RegisterRequest;
-import com.api.moviebooking.models.entities.MembershipTier;
+import com.api.moviebooking.models.dtos.membershipTier.MembershipTierDataResponse;
 import com.api.moviebooking.models.dtos.user.CreateGuestRequest;
+import com.api.moviebooking.models.dtos.user.UpdatePasswordRequest;
+import com.api.moviebooking.models.dtos.user.UpdateProfileRequest;
+import com.api.moviebooking.models.dtos.user.UserProfileResponse;
+import com.api.moviebooking.models.entities.MembershipTier;
 import com.api.moviebooking.models.entities.RefreshToken;
 import com.api.moviebooking.models.entities.User;
 import com.api.moviebooking.models.enums.UserRole;
+import com.api.moviebooking.repositories.BookingRepo;
+import com.api.moviebooking.repositories.RefreshTokenRepo;
 import com.api.moviebooking.repositories.UserRepo;
 
 import jakarta.transaction.Transactional;
@@ -37,6 +49,11 @@ public class UserService {
     private final JwtService jwtService;
     private final CustomUserDetailsService customUserDetailsService;
     private final MembershipTierService membershipTierService;
+    private final MembershipTierMapper membershipTierMapper;
+    private final RefreshTokenRepo refreshTokenRepo;
+    private final BookingRepo bookingRepo;
+    private final JwtService JwtService;
+    private final UserMapper userMapper;
 
     private static final String VN_PHONE_REGEX = "^(03|05|07|08|09)[0-9]{8}$";
 
@@ -243,6 +260,144 @@ public class UserService {
         User savedUser = userRepo.save(guestUser);
 
         return savedUser.getId().toString();
+    }
+
+    // ========== User Profile Management ==========
+
+    /**
+     * Get current user's profile
+     * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
+     * Nodes: membershipTier != null
+     */
+    public UserProfileResponse getCurrentUserProfile() {
+        User user = getCurrentUser();
+        return userMapper.toUserProfileResponse(user);
+    }
+
+    /**
+     * Update user profile
+     * Predicate nodes (d): 3 -> V(G) = d + 1 = 4
+     * Nodes: username != null, phoneNumber != null, !matches(regex)
+     */
+    @Transactional
+    public UserProfileResponse updateUserProfile(UpdateProfileRequest request) {
+        User user = getCurrentUser();
+
+        if (request.getUsername() != null && !request.getUsername().isBlank()) {
+            user.setUsername(request.getUsername());
+        }
+
+        if (request.getPhoneNumber() != null && !request.getPhoneNumber().isBlank()) {
+            if (!request.getPhoneNumber().matches(VN_PHONE_REGEX)) {
+                throw new IllegalArgumentException("Invalid Vietnamese phone number");
+            }
+            user.setPhoneNumber(request.getPhoneNumber());
+        }
+
+        if (request.getAvatarUrl() != null) {
+            user.setAvatarUrl(request.getAvatarUrl());
+        }
+
+        userRepo.save(user);
+
+        return getCurrentUserProfile();
+    }
+
+    /**
+     * Update user password
+     * Predicate nodes (d): 2 -> V(G) = d + 1 = 3
+     * Nodes: !matches(currentPassword), !equals(newPassword, confirmPassword)
+     */
+    @Transactional
+    public void updatePassword(UpdatePasswordRequest request) {
+        User user = getCurrentUser();
+
+        // Verify current password
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+            throw new IllegalArgumentException("Current password is incorrect");
+        }
+
+        // Verify new passwords match
+        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+            throw new IllegalArgumentException("New passwords do not match");
+        }
+
+        // Update password
+        String encodedPassword = passwordEncoder.encode(request.getNewPassword());
+        user.setPassword(encodedPassword);
+        userRepo.save(user);
+
+        jwtService.revokeAllUserRefreshTokens(user.getEmail());
+    }
+
+    // ========== Admin User Management ==========
+
+    /**
+     * Get user by ID (Admin)
+     * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
+     * Nodes: findUserById
+     */
+    public UserProfileResponse getUserById(UUID userId) {
+        User user = findUserById(userId);
+        return userMapper.toUserProfileResponse(user);
+    }
+
+    /**
+     * Get all users (Admin)
+     * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
+     * Nodes: for-each loop (stream)
+     */
+    public List<UserProfileResponse> getAllUsers() {
+        return userRepo.findAll().stream()
+                .map(userMapper::toUserProfileResponse)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Update user role (Admin)
+     * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
+     * Nodes: try-catch
+     */
+    @Transactional
+    public UserProfileResponse updateUserRole(UUID userId, String role) {
+        User user = findUserById(userId);
+
+        try {
+            UserRole userRole = UserRole.valueOf(role.toUpperCase());
+            user.setRole(userRole);
+            userRepo.save(user);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid role: " + role);
+        }
+
+        return getUserById(userId);
+    }
+
+    /**
+     * Delete user (Admin)
+     * Predicate nodes (d): 2 -> V(G) = d + 1 = 3
+     * Nodes: hasBookings, hasRefreshTokens
+     */
+    @Transactional
+    public void deleteUser(UUID userId) {
+        User user = findUserById(userId);
+
+        // Check for existing bookings
+        long bookingCount = bookingRepo.countByUserId(userId);
+        if (bookingCount > 0) {
+            throw new EntityDeletionForbiddenException(
+                    "Cannot delete user with existing bookings. Found " + bookingCount + " booking(s).");
+        }
+
+        // Check for refresh tokens (active sessions)
+        long tokenCount = refreshTokenRepo.countByUserId(userId);
+        if (tokenCount > 0) {
+            throw new EntityDeletionForbiddenException(
+                    "Cannot delete user with active sessions. Found " + tokenCount
+                            + " refresh token(s). Please revoke all sessions first.");
+        }
+
+        userRepo.delete(user);
     }
 
 }

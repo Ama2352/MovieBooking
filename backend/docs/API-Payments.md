@@ -34,9 +34,9 @@ Creates a payment order and returns the payment gateway URL for user redirect.
 #### Request Body
 ```json
 {
-  "bookingId": "uuid (required)",
-  "method": "string (required, values: PAYPAL, MOMO)",
-  "amount": "number (required, positive)"
+  "bookingId": "5e6f7a8b-9c0d-1e2f-3a4b-5c6d7e8f9a0b",
+  "paymentMethod": "PAYPAL",
+  "amount": 216000.00
 }
 ```
 
@@ -45,10 +45,10 @@ Creates a payment order and returns the payment gateway URL for user redirect.
 - **Body**:
 ```json
 {
-  "paymentId": "uuid",
-  "orderId": "string (gateway order ID)",
-  "requestId": "string (Momo only)",
-  "paymentUrl": "string (redirect URL for user)"
+  "paymentId": "8f9a0b1c-2d3e-4f5a-6b7c-8d9e0f1a2b3c",
+  "orderId": "8CB56781FV123456K",
+  "txnRef": "8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c",
+  "paymentUrl": "https://www.paypal.com/checkoutnow?token=8CB56781FV123456K"
 }
 ```
 
@@ -70,8 +70,8 @@ Captures/verifies payment after user completes payment on gateway and returns to
 #### Request Body
 ```json
 {
-  "orderId": "string (required, not blank - PayPal order ID or Momo requestId)",
-  "method": "string (required, values: PAYPAL, MOMO)"
+  "transactionId": "8CB56781FV123456K",
+  "paymentMethod": "PAYPAL"
 }
 ```
 
@@ -80,17 +80,17 @@ Captures/verifies payment after user completes payment on gateway and returns to
 - **Body**:
 ```json
 {
-  "id": "string (payment UUID)",
-  "bookingId": "string",
+  "paymentId": "8f9a0b1c-2d3e-4f5a-6b7c-8d9e0f1a2b3c",
+  "bookingId": "5e6f7a8b-9c0d-1e2f-3a4b-5c6d7e8f9a0b",
   "amount": 216000.00,
   "currency": "VND",
   "gatewayAmount": 8.64,
   "gatewayCurrency": "USD",
   "exchangeRate": 25000.00,
-  "method": "PAYPAL",
   "status": "COMPLETED",
-  "transactionId": "string (gateway transaction ID)",
-  "message": "Payment completed successfully"
+  "method": "PAYPAL",
+  "bookingStatus": "CONFIRMED",
+  "qrPayload": "BOOKING_5e6f7a8b_SHOWTIME_3e4a8c9f"
 }
 ```
 
@@ -141,7 +141,6 @@ Search and filter payments with various criteria.
 #### Query Parameters (all optional)
 - `bookingId`: UUID - Filter by booking
 - `userId`: UUID - Filter by user
-- `transactionId`: string - Filter by gateway transaction ID
 - `status`: string - Filter by payment status (PENDING, COMPLETED, FAILED, REFUNDED, CANCELLED)
 - `method`: string - Filter by payment method (PAYPAL, MOMO)
 - `startDate`: datetime (ISO 8601) - Filter payments after this date
@@ -153,17 +152,17 @@ Search and filter payments with various criteria.
 ```json
 [
   {
-    "id": "uuid",
-    "bookingId": "uuid",
+    "paymentId": "8f9a0b1c-2d3e-4f5a-6b7c-8d9e0f1a2b3c",
+    "bookingId": "5e6f7a8b-9c0d-1e2f-3a4b-5c6d7e8f9a0b",
     "amount": 216000.00,
     "currency": "VND",
     "gatewayAmount": 8.64,
     "gatewayCurrency": "USD",
     "exchangeRate": 25000.00,
-    "method": "PAYPAL",
     "status": "COMPLETED",
-    "transactionId": "ABC123XYZ",
-    "message": "Payment completed successfully"
+    "method": "PAYPAL",
+    "bookingStatus": "CONFIRMED",
+    "qrPayload": "BOOKING_5e6f7a8b_SHOWTIME_3e4a8c9f"
   }
 ]
 ```
@@ -184,7 +183,7 @@ Initiates a full refund for a completed payment and releases associated seats.
 #### Request Body
 ```json
 {
-  "reason": "string (required, not blank)"
+  "reason": "Customer requested refund due to scheduling conflict"
 }
 ```
 
@@ -193,8 +192,8 @@ Initiates a full refund for a completed payment and releases associated seats.
 - **Body**: PaymentResponse object with updated status
 ```json
 {
-  "id": "uuid",
-  "bookingId": "uuid",
+  "paymentId": "8f9a0b1c-2d3e-4f5a-6b7c-8d9e0f1a2b3c",
+  "bookingId": "5e6f7a8b-9c0d-1e2f-3a4b-5c6d7e8f9a0b",
   "amount": 216000.00,
   "currency": "VND",
   "gatewayAmount": 8.64,
@@ -202,8 +201,8 @@ Initiates a full refund for a completed payment and releases associated seats.
   "exchangeRate": 25000.00,
   "method": "PAYPAL",
   "status": "REFUNDED",
-  "transactionId": "REFUND_ABC123",
-  "message": "Payment refunded successfully"
+  "bookingStatus": "REFUNDED",
+  "qrPayload": null
 }
 ```
 
@@ -266,37 +265,45 @@ Initiates a full refund for a completed payment and releases associated seats.
 ### 400 Bad Request
 ```json
 {
-  "message": "Invalid payment request",
-  "details": "Booking must be in PENDING_PAYMENT status"
+  "timestamp": "2025-11-18T12:34:56.789+00:00",
+  "message": "Booking must be in PENDING_PAYMENT status",
+  "details": "uri=/payments/order"
 }
 ```
 
 ### 404 Not Found
 ```json
 {
-  "message": "Payment not found"
+  "timestamp": "2025-11-18T12:34:56.789+00:00",
+  "message": "Payment not found with id: {paymentId}",
+  "details": "uri=/payments/{paymentId}"
 }
 ```
 
 ### 409 Conflict
 ```json
 {
-  "message": "Payment already processed"
+  "timestamp": "2025-11-18T12:34:56.789+00:00",
+  "message": "Payment already processed",
+  "details": "uri=/payments/order/capture"
 }
 ```
 
 ### 403 Forbidden
 ```json
 {
-  "message": "Admin access required"
+  "timestamp": "2025-11-18T12:34:56.789+00:00",
+  "message": "Access Denied: Admin access required",
+  "details": "uri=/payments/{paymentId}/refund"
 }
 ```
 
 ### 500 Internal Server Error
 ```json
 {
-  "message": "Payment gateway error",
-  "details": "Failed to communicate with PayPal/Momo"
+  "timestamp": "2025-11-18T12:34:56.789+00:00",
+  "message": "Failed to communicate with PayPal/Momo",
+  "details": "uri=/payments/order"
 }
 ```
 
@@ -334,8 +341,8 @@ window.location.href = paymentUrl;
 // Momo: ?orderId=REQUEST_ID&resultCode=0
 
 const urlParams = new URLSearchParams(window.location.search);
-const orderId = urlParams.get('token') || urlParams.get('orderId');
-const method = urlParams.get('token') ? 'PAYPAL' : 'MOMO';
+const transactionId = urlParams.get('token') || urlParams.get('orderId');
+const paymentMethod = urlParams.get('token') ? 'PAYPAL' : 'MOMO';
 
 // Confirm payment
 const response = await fetch('/payments/order/capture', {
@@ -344,8 +351,8 @@ const response = await fetch('/payments/order/capture', {
     'Content-Type': 'application/json'
   },
   body: JSON.stringify({
-    orderId: orderId,
-    method: method
+    transactionId: transactionId,
+    paymentMethod: paymentMethod
   })
 });
 

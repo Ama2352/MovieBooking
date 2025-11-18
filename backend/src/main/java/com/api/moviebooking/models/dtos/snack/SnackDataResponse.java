@@ -12,4 +12,6 @@ public class SnackDataResponse {
     private String description;
     private BigDecimal price;
     private String type;
+    private String imageUrl;
+    private String imageCloudinaryId;
 }

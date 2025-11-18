@@ -17,12 +17,12 @@ Creates a new membership tier.
 #### Request Body
 ```json
 {
-  "name": "string (required)",
-  "pointsRequired": 1000 (integer, required, min 0),
-  "discountType": "string (required, values: PERCENTAGE, FIXED_AMOUNT)",
-  "discountValue": 10.00 (number, required, min 0.01),
-  "description": "string (optional)",
-  "isActive": true (boolean, required)
+  "name": "Gold",
+  "minPoints": 5000,
+  "discountType": "PERCENTAGE",
+  "discountValue": 15.00,
+  "description": "Premium tier with 15% discount on all bookings",
+  "isActive": true
 }
 ```
 
@@ -30,20 +30,20 @@ Creates a new membership tier.
 | Field | Type | Required | Constraints |
 |-------|------|----------|-------------|
 | name | String | Yes | Tier name (e.g., "Bronze", "Silver", "Gold") |
-| pointsRequired | Integer | Yes | Minimum points to achieve this tier (≥0) |
+| minPoints | Integer | Yes | Minimum points to achieve this tier (≥0) |
 | discountType | String | Yes | PERCENTAGE or FIXED_AMOUNT |
 | discountValue | Number | Yes | Discount amount (positive) |
 | description | String | No | Optional tier description/benefits |
-| isActive | Boolean | Yes | Active status |
+| isActive | Boolean | No | Active status |
 
 #### Response
 - **Status Code**: `201 CREATED`
 - **Body**:
 ```json
 {
-  "id": "uuid",
+  "membershipTierId": "123e4567-e89b-12d3-a456-426614174006",
   "name": "Gold",
-  "pointsRequired": 5000,
+  "minPoints": 5000,
   "discountType": "PERCENTAGE",
   "discountValue": 15.00,
   "description": "Premium tier with 15% discount on all bookings",
@@ -70,12 +70,12 @@ Updates an existing membership tier.
 #### Request Body (all fields optional)
 ```json
 {
-  "name": "string",
-  "pointsRequired": 1500 (integer, min 0),
-  "discountType": "string (values: PERCENTAGE, FIXED_AMOUNT)",
-  "discountValue": 12.00 (number, min 0.01),
-  "description": "string",
-  "isActive": false (boolean)
+  "name": "Gold Plus",
+  "minPoints": 6000,
+  "discountType": "PERCENTAGE",
+  "discountValue": 18.00,
+  "description": "Enhanced premium tier with 18% discount",
+  "isActive": true
 }
 ```
 
@@ -178,9 +178,9 @@ Retrieves all membership tiers.
 ```json
 [
   {
-    "id": "uuid",
+    "membershipTierId": "123e4567-e89b-12d3-a456-426614174007",
     "name": "Bronze",
-    "pointsRequired": 0,
+    "minPoints": 0,
     "discountType": "PERCENTAGE",
     "discountValue": 5.00,
     "description": "Starter tier with 5% discount",
@@ -189,9 +189,9 @@ Retrieves all membership tiers.
     "updatedAt": "2024-11-17T10:00:00"
   },
   {
-    "id": "uuid",
+    "membershipTierId": "123e4567-e89b-12d3-a456-426614174008",
     "name": "Silver",
-    "pointsRequired": 1000,
+    "minPoints": 1000,
     "discountType": "PERCENTAGE",
     "discountValue": 10.00,
     "description": "Mid-tier with 10% discount",
@@ -200,9 +200,9 @@ Retrieves all membership tiers.
     "updatedAt": "2024-11-17T10:00:00"
   },
   {
-    "id": "uuid",
+    "membershipTierId": "123e4567-e89b-12d3-a456-426614174006",
     "name": "Gold",
-    "pointsRequired": 5000,
+    "minPoints": 5000,
     "discountType": "PERCENTAGE",
     "discountValue": 15.00,
     "description": "Premium tier with 15% discount",
@@ -211,9 +211,9 @@ Retrieves all membership tiers.
     "updatedAt": "2024-11-17T10:00:00"
   },
   {
-    "id": "uuid",
+    "membershipTierId": "123e4567-e89b-12d3-a456-426614174009",
     "name": "Platinum",
-    "pointsRequired": 10000,
+    "minPoints": 10000,
     "discountType": "PERCENTAGE",
     "discountValue": 20.00,
     "description": "Elite tier with 20% discount",
@@ -252,9 +252,9 @@ Retrieves only active membership tiers.
 ### MembershipTierDataResponse
 ```json
 {
-  "id": "uuid",
+  "membershipTierId": "uuid",
   "name": "string",
-  "pointsRequired": "integer",
+  "minPoints": "integer",
   "discountType": "PERCENTAGE|FIXED_AMOUNT",
   "discountValue": "number",
   "description": "string",
@@ -366,19 +366,19 @@ function createTierCard(tier) {
 // Display user's tier and progress
 function displayUserTier(userPoints, tiers) {
   // Find current tier
-  const sortedTiers = tiers.sort((a, b) => b.pointsRequired - a.pointsRequired);
-  const currentTier = sortedTiers.find(t => userPoints >= t.pointsRequired);
+  const sortedTiers = tiers.sort((a, b) => b.minPoints - a.minPoints);
+  const currentTier = sortedTiers.find(t => userPoints >= t.minPoints);
   
   // Find next tier
-  const nextTier = tiers.find(t => t.pointsRequired > userPoints);
+  const nextTier = tiers.find(t => t.minPoints > userPoints);
   
   // Calculate progress
   let progress = 100;
   let pointsNeeded = 0;
   
   if (nextTier) {
-    const currentThreshold = currentTier?.pointsRequired || 0;
-    const nextThreshold = nextTier.pointsRequired;
+    const currentThreshold = currentTier?.minPoints || 0;
+    const nextThreshold = nextTier.minPoints;
     const range = nextThreshold - currentThreshold;
     const earned = userPoints - currentThreshold;
     progress = (earned / range) * 100;
@@ -435,7 +435,7 @@ async function setupStandardTiers() {
   const tiers = [
     {
       name: 'Bronze',
-      pointsRequired: 0,
+      minPoints: 0,
       discountType: 'PERCENTAGE',
       discountValue: 5.00,
       description: 'Starter tier for all new members',
@@ -443,7 +443,7 @@ async function setupStandardTiers() {
     },
     {
       name: 'Silver',
-      pointsRequired: 1000,
+      minPoints: 1000,
       discountType: 'PERCENTAGE',
       discountValue: 10.00,
       description: 'Enjoy 10% off on all bookings',
@@ -451,7 +451,7 @@ async function setupStandardTiers() {
     },
     {
       name: 'Gold',
-      pointsRequired: 5000,
+      minPoints: 5000,
       discountType: 'PERCENTAGE',
       discountValue: 15.00,
       description: 'Premium benefits with 15% discount',
@@ -459,7 +459,7 @@ async function setupStandardTiers() {
     },
     {
       name: 'Platinum',
-      pointsRequired: 10000,
+      minPoints: 10000,
       discountType: 'PERCENTAGE',
       discountValue: 20.00,
       description: 'Elite status with maximum benefits',
@@ -489,32 +489,36 @@ async function setupStandardTiers() {
 ### 400 Bad Request
 ```json
 {
-  "message": "Invalid tier data",
-  "errors": [
-    "pointsRequired must be non-negative",
-    "discountValue must be positive"
-  ]
+  "timestamp": "2025-11-18T12:34:56.789+00:00",
+  "message": "minPoints: must be non-negative, discountValue: must be positive",
+  "details": "uri=/membership-tiers"
 }
 ```
 
 ### 404 Not Found
 ```json
 {
-  "message": "Membership tier not found with name: Diamond"
+  "timestamp": "2025-11-18T12:34:56.789+00:00",
+  "message": "Membership tier not found with name: Diamond",
+  "details": "uri=/membership-tiers/name/Diamond"
 }
 ```
 
 ### 403 Forbidden
 ```json
 {
-  "message": "Admin access required"
+  "timestamp": "2025-11-18T12:34:56.789+00:00",
+  "message": "Access Denied: Admin access required",
+  "details": "uri=/membership-tiers"
 }
 ```
 
 ### 409 Conflict
 ```json
 {
-  "message": "Membership tier with name 'Gold' already exists"
+  "timestamp": "2025-11-18T12:34:56.789+00:00",
+  "message": "Membership tier with name 'Gold' already exists",
+  "details": "uri=/membership-tiers"
 }
 ```
 
@@ -522,7 +526,7 @@ async function setupStandardTiers() {
 
 ## Important Notes
 
-1. **Entry Tier**: Always create a tier with `pointsRequired: 0` as the default starting tier
+1. **Entry Tier**: Always create a tier with `minPoints: 0` as the default starting tier
 
 2. **Tier Naming**: Use consistent naming conventions (Bronze, Silver, Gold, Platinum) or (Member, VIP, Premium, Elite)
 
@@ -547,7 +551,7 @@ async function setupStandardTiers() {
    - Consider if users must maintain activity to keep tier
    - Or once achieved, tier is permanent
 
-10. **Display Order**: Always sort tiers by `pointsRequired` for consistent user experience
+10. **Display Order**: Always sort tiers by `minPoints` for consistent user experience
 
 11. **Discount Limits**: 
     - For PERCENTAGE: Cap at reasonable level (typically 5-25%)

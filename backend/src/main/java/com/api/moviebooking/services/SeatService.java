@@ -37,6 +37,11 @@ public class SeatService {
                 .orElseThrow(() -> new ResourceNotFoundException("Seat", "id", seatId));
     }
 
+    /**
+     * Add a new seat (API: POST /seats)
+     * Predicate nodes (d): 2 -> V(G) = d + 1 = 3
+     * Nodes: findById, anyMatch(rowLabel && seatNumber)
+     */
     @Transactional
     public SeatDataResponse addSeat(AddSeatRequest request) {
         // Validate room exists
@@ -60,6 +65,11 @@ public class SeatService {
         return seatMapper.toDataResponse(newSeat);
     }
 
+    /**
+     * Update an existing seat (API: PUT /seats/{seatId})
+     * Predicate nodes (d): 4 -> V(G) = d + 1 = 5
+     * Nodes: findSeatById, seatNumber!=null, rowLabel!=null, seatType!=null
+     */
     @Transactional
     public SeatDataResponse updateSeat(UUID seatId, UpdateSeatRequest request) {
         Seat seat = findSeatById(seatId);
@@ -81,6 +91,11 @@ public class SeatService {
         return seatMapper.toDataResponse(seat);
     }
 
+    /**
+     * Delete a seat (API: DELETE /seats/{seatId})
+     * Predicate nodes (d): 2 -> V(G) = d + 1 = 3
+     * Nodes: findSeatById, !isEmpty(showtimeSeats)
+     */
     @Transactional
     public void deleteSeat(UUID seatId) {
         Seat seat = findSeatById(seatId);
@@ -94,17 +109,32 @@ public class SeatService {
         seatRepo.delete(seat);
     }
 
+    /**
+     * Get seat by ID (API: GET /seats/{seatId})
+     * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
+     * Nodes: findSeatById
+     */
     public SeatDataResponse getSeat(UUID seatId) {
         Seat seat = findSeatById(seatId);
         return seatMapper.toDataResponse(seat);
     }
 
+    /**
+     * Get all seats (API: GET /seats)
+     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
+     * Nodes: none
+     */
     public List<SeatDataResponse> getAllSeats() {
         return seatRepo.findAll().stream()
                 .map(seatMapper::toDataResponse)
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Get all seats for a specific room (API: GET /seats/room/{roomId})
+     * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
+     * Nodes: findById
+     */
     public List<SeatDataResponse> getSeatsByRoom(UUID roomId) {
         Room room = roomRepo.findById(roomId)
                 .orElseThrow(() -> new ResourceNotFoundException("Room", "id", roomId));
@@ -114,6 +144,13 @@ public class SeatService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Auto-generate seats for a room (API: POST /seats/generate)
+     * Predicate nodes (d): 9 -> V(G) = d + 1 = 10
+     * Nodes: findById, !isEmpty(seats), vipRows!=null, for(vipRow),
+     * !contains(vipRow),
+     * coupleRows!=null, for(coupleRow), !contains(coupleRow), switch(3 cases)
+     */
     @Transactional
     public BulkSeatResponse generateSeats(GenerateSeatsRequest request) {
         // Validate room exists
@@ -209,7 +246,9 @@ public class SeatService {
     }
 
     /**
-     * Generate row labels preview for frontend
+     * Generate row labels preview for frontend (API: GET /seats/row-labels)
+     * Predicate nodes (d): 2 -> V(G) = d + 1 = 3
+     * Nodes: numberOfRows<1, numberOfRows>100
      */
     public RowLabelsResponse getRowLabelsPreview(int numberOfRows) {
         if (numberOfRows < 1) {

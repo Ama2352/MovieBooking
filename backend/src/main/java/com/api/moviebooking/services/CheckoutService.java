@@ -36,6 +36,11 @@ public class CheckoutService {
         @Value("${payment.timeout.minutes}")
         private int paymentTimeoutMinutes;
 
+        /**
+         * Confirm booking and initiate payment atomically (API: POST /checkout)
+         * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
+         * Nodes: findById
+         */
         @Transactional
         public CheckoutPaymentResponse confirmBookingAndInitiatePayment(CheckoutPaymentRequest request) {
                 log.info("Starting atomic checkout process for user {} with lock {}",

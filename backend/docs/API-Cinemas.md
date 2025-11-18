@@ -17,9 +17,9 @@ Creates a new cinema location.
 #### Request Body
 ```json
 {
-  "name": "string (required)",
-  "location": "string (required)",
-  "hotline": "string (required)"
+  "name": "CGV Vincom Center",
+  "address": "72 Le Thanh Ton, District 1, HCMC",
+  "hotline": "1900 6017"
 }
 ```
 
@@ -28,9 +28,9 @@ Creates a new cinema location.
 - **Body**:
 ```json
 {
-  "id": "uuid",
+  "cinemaId": "3e4a8c9f-1234-5678-90ab-cdef12345678",
   "name": "CGV Vincom Center",
-  "location": "72 Le Thanh Ton, District 1, HCMC",
+  "address": "72 Le Thanh Ton, District 1, HCMC",
   "hotline": "1900 6017"
 }
 ```
@@ -52,9 +52,9 @@ Updates cinema details.
 #### Request Body (all fields optional)
 ```json
 {
-  "name": "string",
-  "location": "string",
-  "hotline": "string"
+  "name": "CGV Vincom Center Updated",
+  "address": "72 Le Thanh Ton, District 1, HCMC",
+  "hotline": "1900 6017"
 }
 ```
 
@@ -114,15 +114,15 @@ Retrieves all cinemas.
 ```json
 [
   {
-    "id": "uuid",
+    "cinemaId": "3e4a8c9f-1234-5678-90ab-cdef12345678",
     "name": "CGV Vincom Center",
-    "location": "72 Le Thanh Ton, District 1, HCMC",
+    "address": "72 Le Thanh Ton, District 1, HCMC",
     "hotline": "1900 6017"
   },
   {
-    "id": "uuid",
+    "cinemaId": "7b2e9a1c-4567-89ab-cdef-123456789012",
     "name": "Lotte Cinema Diamond Plaza",
-    "location": "34 Le Duan, District 1, HCMC",
+    "address": "34 Le Duan, District 1, HCMC",
     "hotline": "1900 5454"
   }
 ]
@@ -143,9 +143,9 @@ Creates a new screening room within a cinema.
 #### Request Body
 ```json
 {
-  "cinemaId": "uuid (required)",
-  "name": "string (required)",
-  "totalSeats": 100 (integer, required)
+  "cinemaId": "3e4a8c9f-1234-5678-90ab-cdef12345678",
+  "roomType": "IMAX",
+  "roomNumber": 1
 }
 ```
 
@@ -154,10 +154,10 @@ Creates a new screening room within a cinema.
 - **Body**:
 ```json
 {
-  "id": "uuid",
-  "cinemaId": "uuid",
-  "name": "Room 1",
-  "totalSeats": 100
+  "roomId": "9f1a2b3c-4d5e-6f7a-8b9c-0d1e2f3a4b5c",
+  "cinemaId": "3e4a8c9f-1234-5678-90ab-cdef12345678",
+  "roomType": "IMAX",
+  "roomNumber": 1
 }
 ```
 
@@ -178,8 +178,8 @@ Updates room details.
 #### Request Body (all fields optional)
 ```json
 {
-  "name": "string",
-  "totalSeats": 100 (integer)
+  "roomType": "VIP",
+  "roomNumber": 2
 }
 ```
 
@@ -224,10 +224,10 @@ Retrieves room details.
 - **Body**:
 ```json
 {
-  "id": "uuid",
-  "cinemaId": "uuid",
-  "name": "Room 1 - IMAX",
-  "totalSeats": 150
+  "roomId": "9f1a2b3c-4d5e-6f7a-8b9c-0d1e2f3a4b5c",
+  "cinemaId": "3e4a8c9f-1234-5678-90ab-cdef12345678",
+  "roomType": "IMAX",
+  "roomNumber": 1
 }
 ```
 
@@ -260,13 +260,13 @@ Creates a new snack/concession item.
 #### Request Body
 ```json
 {
-  "cinemaId": "uuid (required)",
-  "name": "string (required)",
-  "description": "string (required)",
-  "price": 50000.00 (number, required, positive),
-  "category": "string (required)",
-  "imageUrl": "string (required)",
-  "availability": "string (required)"
+  "cinemaId": "3e4a8c9f-1234-5678-90ab-cdef12345678",
+  "name": "Popcorn Combo",
+  "description": "Large popcorn + 2 drinks",
+  "price": 120000.00,
+  "type": "COMBO",
+  "imageUrl": "https://cdn.example.com/popcorn-combo.jpg",
+  "imageCloudinaryId": "snacks/popcorn_combo_abc123"
 }
 ```
 
@@ -275,12 +275,14 @@ Creates a new snack/concession item.
 - **Body**:
 ```json
 {
-  "id": "uuid",
-  "cinemaId": "uuid",
+  "snackId": "2c3d4e5f-6a7b-8c9d-0e1f-2a3b4c5d6e7f",
+  "cinemaId": "3e4a8c9f-1234-5678-90ab-cdef12345678",
   "name": "Popcorn Combo",
   "description": "Large popcorn + 2 drinks",
   "price": 120000.00,
-  "category": "COMBO"
+  "type": "COMBO",
+  "imageUrl": "https://cdn.example.com/popcorn-combo.jpg",
+  "imageCloudinaryId": "snacks/popcorn_combo_abc123"
 }
 ```
 
@@ -301,12 +303,12 @@ Updates snack details.
 #### Request Body (all fields optional)
 ```json
 {
-  "name": "string",
-  "description": "string",
-  "price": 50000.00 (number, positive),
-  "category": "string",
-  "imageUrl": "string",
-  "availability": "string"
+  "name": "Mega Popcorn Combo",
+  "description": "Extra large popcorn + 3 drinks",
+  "price": 150000.00,
+  "type": "COMBO",
+  "imageUrl": "https://cdn.example.com/mega-popcorn-combo.jpg",
+  "imageCloudinaryId": "snacks/mega_popcorn_combo_def456"
 }
 ```
 
@@ -351,12 +353,14 @@ Retrieves snack details.
 - **Body**:
 ```json
 {
-  "id": "uuid",
-  "cinemaId": "uuid",
+  "snackId": "2c3d4e5f-6a7b-8c9d-0e1f-2a3b4c5d6e7f",
+  "cinemaId": "3e4a8c9f-1234-5678-90ab-cdef12345678",
   "name": "Popcorn Combo",
   "description": "Large popcorn + 2 drinks",
   "price": 120000.00,
-  "category": "COMBO"
+  "type": "COMBO",
+  "imageUrl": "https://cdn.example.com/popcorn-combo.jpg",
+  "imageCloudinaryId": "snacks/popcorn_combo_abc123"
 }
 ```
 
@@ -376,20 +380,24 @@ Retrieves all snacks across all cinemas.
 ```json
 [
   {
-    "id": "uuid",
-    "cinemaId": "uuid",
+    "snackId": "2c3d4e5f-6a7b-8c9d-0e1f-2a3b4c5d6e7f",
+    "cinemaId": "3e4a8c9f-1234-5678-90ab-cdef12345678",
     "name": "Popcorn Combo",
     "description": "Large popcorn + 2 drinks",
     "price": 120000.00,
-    "category": "COMBO"
+    "type": "COMBO",
+    "imageUrl": "https://cdn.example.com/popcorn-combo.jpg",
+    "imageCloudinaryId": "snacks/popcorn_combo_abc123"
   },
   {
-    "id": "uuid",
-    "cinemaId": "uuid",
+    "snackId": "5e6f7a8b-9c0d-1e2f-3a4b-5c6d7e8f9a0b",
+    "cinemaId": "3e4a8c9f-1234-5678-90ab-cdef12345678",
     "name": "Nachos",
     "description": "Crispy nachos with cheese",
     "price": 60000.00,
-    "category": "SNACK"
+    "type": "SNACK",
+    "imageUrl": "https://cdn.example.com/nachos.jpg",
+    "imageCloudinaryId": "snacks/nachos_xyz789"
   }
 ]
 ```
@@ -404,32 +412,34 @@ Retrieves all snacks across all cinemas.
 ### CinemaDataResponse
 ```json
 {
-  "id": "uuid",
-  "name": "string",
-  "location": "string",
-  "hotline": "string"
+  "cinemaId": "3e4a8c9f-1234-5678-90ab-cdef12345678",
+  "name": "CGV Vincom Center",
+  "address": "72 Le Thanh Ton, District 1, HCMC",
+  "hotline": "1900 6017"
 }
 ```
 
 ### RoomDataResponse
 ```json
 {
-  "id": "uuid",
-  "cinemaId": "uuid",
-  "name": "string",
-  "totalSeats": "integer"
+  "roomId": "9f1a2b3c-4d5e-6f7a-8b9c-0d1e2f3a4b5c",
+  "cinemaId": "3e4a8c9f-1234-5678-90ab-cdef12345678",
+  "roomType": "IMAX",
+  "roomNumber": 1
 }
 ```
 
 ### SnackDataResponse
 ```json
 {
-  "id": "uuid",
-  "cinemaId": "uuid",
-  "name": "string",
-  "description": "string",
-  "price": "number",
-  "category": "string"
+  "snackId": "2c3d4e5f-6a7b-8c9d-0e1f-2a3b4c5d6e7f",
+  "cinemaId": "3e4a8c9f-1234-5678-90ab-cdef12345678",
+  "name": "Popcorn Combo",
+  "description": "Large popcorn + 2 drinks",
+  "price": 120000.00,
+  "type": "COMBO",
+  "imageUrl": "https://cdn.example.com/popcorn-combo.jpg",
+  "imageCloudinaryId": "snacks/popcorn_combo_abc123"
 }
 ```
 
@@ -450,29 +460,36 @@ Retrieves all snacks across all cinemas.
 ### 400 Bad Request
 ```json
 {
-  "message": "Invalid input",
-  "errors": ["price must be positive"]
+  "timestamp": "2025-11-18T12:34:56.789+00:00",
+  "message": "price: must be positive",
+  "details": "uri=/cinemas/snacks"
 }
 ```
 
 ### 404 Not Found
 ```json
 {
-  "message": "Cinema/Room/Snack not found with id: {id}"
+  "timestamp": "2025-11-18T12:34:56.789+00:00",
+  "message": "Cinema not found with id: {id}",
+  "details": "uri=/cinemas/{id}"
 }
 ```
 
 ### 403 Forbidden
 ```json
 {
-  "message": "Admin access required"
+  "timestamp": "2025-11-18T12:34:56.789+00:00",
+  "message": "Access Denied: Admin access required",
+  "details": "uri=/cinemas"
 }
 ```
 
 ### 409 Conflict
 ```json
 {
-  "message": "Cannot delete cinema with existing rooms or showtimes"
+  "timestamp": "2025-11-18T12:34:56.789+00:00",
+  "message": "Cannot delete cinema with existing rooms or showtimes",
+  "details": "uri=/cinemas/{id}"
 }
 ```
 
@@ -488,8 +505,8 @@ const cinemas = await response.json();
 
 cinemas.forEach(cinema => {
   const option = document.createElement('option');
-  option.value = cinema.id;
-  option.textContent = `${cinema.name} - ${cinema.location}`;
+  option.value = cinema.cinemaId;
+  option.textContent = `${cinema.name} - ${cinema.address}`;
   cinemaSelect.appendChild(option);
 });
 ```

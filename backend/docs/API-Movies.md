@@ -17,18 +17,18 @@ Creates a new movie in the system.
 #### Request Body
 ```json
 {
-  "title": "string (required)",
-  "description": "string (required)",
-  "genre": "string (required)",
-  "duration": 120 (integer, required, positive),
-  "releaseYear": 2024 (integer, required, positive),
-  "director": "string (required)",
-  "cast": "string (required)",
-  "language": "string (optional)",
-  "subtitles": "string (optional)",
-  "posterUrl": "string (required)",
-  "trailerUrl": "string (required, valid URL format)",
-  "status": "string (required, values: SHOWING, UPCOMING)"
+  "title": "Oppenheimer",
+  "genre": "Biography, Drama, History",
+  "description": "The story of J. Robert Oppenheimer and his role in developing the atomic bomb",
+  "duration": 180,
+  "minimumAge": 13,
+  "director": "Christopher Nolan",
+  "actors": "Cillian Murphy, Emily Blunt, Matt Damon, Robert Downey Jr.",
+  "posterUrl": "https://cdn.example.com/posters/oppenheimer.jpg",
+  "posterCloudinaryId": "movies/oppenheimer_poster",
+  "trailerUrl": "https://youtube.com/watch?v=xyz123",
+  "status": "SHOWING",
+  "language": "English"
 }
 ```
 
@@ -37,19 +37,19 @@ Creates a new movie in the system.
 - **Body**:
 ```json
 {
-  "id": "uuid",
+  "movieId": "123e4567-e89b-12d3-a456-426614174000",
   "title": "Oppenheimer",
-  "description": "The story of J. Robert Oppenheimer...",
   "genre": "Biography, Drama, History",
+  "description": "The story of J. Robert Oppenheimer and his role in developing the atomic bomb",
   "duration": 180,
-  "releaseYear": 2023,
+  "minimumAge": 13,
   "director": "Christopher Nolan",
-  "cast": "Cillian Murphy, Emily Blunt, Matt Damon",
-  "language": "English",
-  "subtitles": "Vietnamese, English",
-  "posterUrl": "https://example.com/poster.jpg",
-  "trailerUrl": "https://youtube.com/watch?v=xyz",
-  "status": "SHOWING"
+  "actors": "Cillian Murphy, Emily Blunt, Matt Damon, Robert Downey Jr.",
+  "posterUrl": "https://cdn.example.com/posters/oppenheimer.jpg",
+  "posterCloudinaryId": "movies/oppenheimer_poster",
+  "trailerUrl": "https://youtube.com/watch?v=xyz123",
+  "status": "SHOWING",
+  "language": "English"
 }
 ```
 
@@ -70,18 +70,18 @@ Updates an existing movie's details.
 #### Request Body
 ```json
 {
-  "title": "string (optional)",
-  "description": "string (optional)",
-  "genre": "string (optional)",
-  "duration": 120 (integer, optional, positive),
-  "releaseYear": 2024 (integer, optional, positive),
-  "director": "string (optional)",
-  "cast": "string (optional)",
-  "language": "string (optional)",
-  "subtitles": "string (optional)",
-  "posterUrl": "string (optional)",
-  "trailerUrl": "string (optional, valid URL)",
-  "status": "string (optional, values: SHOWING, UPCOMING)"
+  "title": "Oppenheimer (Director's Cut)",
+  "genre": "Biography, Drama, History",
+  "description": "Extended version with additional scenes",
+  "duration": 195,
+  "minimumAge": 13,
+  "director": "Christopher Nolan",
+  "actors": "Cillian Murphy, Emily Blunt, Matt Damon, Robert Downey Jr.",
+  "posterUrl": "https://cdn.example.com/posters/oppenheimer_dc.jpg",
+  "posterCloudinaryId": "movies/oppenheimer_dc_poster",
+  "trailerUrl": "https://youtube.com/watch?v=abc456",
+  "status": "SHOWING",
+  "language": "English"
 }
 ```
 
@@ -150,19 +150,19 @@ Retrieves all movies or searches movies with filters.
 ```json
 [
   {
-    "id": "uuid",
+    "movieId": "123e4567-e89b-12d3-a456-426614174000",
     "title": "Oppenheimer",
-    "description": "...",
     "genre": "Biography, Drama, History",
+    "description": "The story of J. Robert Oppenheimer and his role in developing the atomic bomb",
     "duration": 180,
-    "releaseYear": 2023,
+    "minimumAge": 13,
     "director": "Christopher Nolan",
-    "cast": "Cillian Murphy, Emily Blunt",
-    "language": "English",
-    "subtitles": "Vietnamese, English",
-    "posterUrl": "https://...",
-    "trailerUrl": "https://...",
-    "status": "SHOWING"
+    "actors": "Cillian Murphy, Emily Blunt, Matt Damon, Robert Downey Jr.",
+    "posterUrl": "https://cdn.example.com/posters/oppenheimer.jpg",
+    "posterCloudinaryId": "movies/oppenheimer_poster",
+    "trailerUrl": "https://youtube.com/watch?v=xyz123",
+    "status": "SHOWING",
+    "language": "English"
   }
 ]
 ```
@@ -257,17 +257,17 @@ Filters movies by genre (partial match).
 | Field | Type | Required | Constraints |
 |-------|------|----------|-------------|
 | title | String | Yes | Not blank |
-| description | String | Yes | Not blank |
 | genre | String | Yes | Not blank |
-| duration | Integer | Yes | Positive value (minutes) |
-| releaseYear | Integer | Yes | Positive value (e.g., 2024) |
+| description | String | Yes | Not blank |
+| duration | Integer | Yes | Min 1 (minutes) |
+| minimumAge | Integer | Yes | Min 0 |
 | director | String | Yes | Not blank |
-| cast | String | Yes | Not blank |
-| language | String | No | - |
-| subtitles | String | No | - |
-| posterUrl | String | Yes | Not blank |
-| trailerUrl | String | Yes | Not blank, valid URL |
+| actors | String | Yes | Not blank |
+| posterUrl | String | No | - |
+| posterCloudinaryId | String | No | - |
+| trailerUrl | String | Yes | Not blank |
 | status | String | Yes | SHOWING or UPCOMING |
+| language | String | Yes | Not blank |
 
 ---
 
@@ -276,29 +276,36 @@ Filters movies by genre (partial match).
 ### 400 Bad Request
 ```json
 {
-  "message": "Invalid input",
-  "errors": ["duration must be positive", "trailerUrl must be a valid URL"]
+  "timestamp": "2025-11-18T12:34:56.789+00:00",
+  "message": "duration: must be positive, trailerUrl: must be a valid URL",
+  "details": "uri=/movies"
 }
 ```
 
 ### 404 Not Found
 ```json
 {
-  "message": "Movie not found with id: {movieId}"
+  "timestamp": "2025-11-18T12:34:56.789+00:00",
+  "message": "Movie not found with id: {movieId}",
+  "details": "uri=/movies/{movieId}"
 }
 ```
 
 ### 403 Forbidden
 ```json
 {
-  "message": "Admin access required"
+  "timestamp": "2025-11-18T12:34:56.789+00:00",
+  "message": "Access Denied: Admin access required",
+  "details": "uri=/movies"
 }
 ```
 
 ### 409 Conflict
 ```json
 {
-  "message": "Cannot delete movie with active showtimes"
+  "timestamp": "2025-11-18T12:34:56.789+00:00",
+  "message": "Cannot delete movie with active showtimes",
+  "details": "uri=/movies/{movieId}"
 }
 ```
 

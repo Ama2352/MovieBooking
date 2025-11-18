@@ -88,7 +88,7 @@ public class ShowtimeService {
     }
 
     /**
-     * addShowtime:
+     * Add a new showtime (API: POST /showtimes)
      * Predicate nodes (d): 0 -> V(G)=d+1=1
      * Nodes: none (just validation through helper methods)
      * Minimum test cases: 1
@@ -111,7 +111,7 @@ public class ShowtimeService {
     }
 
     /**
-     * updateShowtime:
+     * Update showtime details (API: PUT /showtimes/{showtimeId})
      * Predicate nodes (d): 9 -> V(G)=d+1=10
      * Nodes:
      * - request.getRoomId() != null (ternary)
@@ -161,6 +161,12 @@ public class ShowtimeService {
         return showtimeMapper.toDataResponse(showtime);
     }
 
+    /**
+     * Delete a showtime (API: DELETE /showtimes/{showtimeId})
+     * Predicate nodes (d): 4 -> V(G) = d + 1 = 5
+     * Nodes: findShowtimeById, !isEmpty(seatLocks), !isEmpty(showtimeSeats),
+     * !isEmpty(bookings)
+     */
     @Transactional
     public void deleteShowtime(UUID showtimeId) {
         Showtime showtime = findShowtimeById(showtimeId);
@@ -180,18 +186,32 @@ public class ShowtimeService {
         showtimeRepo.delete(showtime);
     }
 
+    /**
+     * Get showtime details by ID (API: GET /showtimes/{showtimeId})
+     * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
+     * Nodes: findShowtimeById
+     */
     public ShowtimeDataResponse getShowtime(UUID showtimeId) {
         Showtime showtime = findShowtimeById(showtimeId);
         return showtimeMapper.toDataResponse(showtime);
     }
 
+    /**
+     * Get all showtimes (API: GET /showtimes)
+     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
+     * Nodes: none
+     */
     public List<ShowtimeDataResponse> getAllShowtimes() {
         return showtimeRepo.findAll().stream()
                 .map(showtimeMapper::toDataResponse)
                 .collect(Collectors.toList());
     }
 
-    // Get showtimes by movie
+    /**
+     * Get all showtimes for a specific movie (API: GET /showtimes/movie/{movieId})
+     * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
+     * Nodes: findMovieById
+     */
     public List<ShowtimeDataResponse> getShowtimesByMovie(UUID movieId) {
         // Verify movie exists
         findMovieById(movieId);
@@ -201,7 +221,12 @@ public class ShowtimeService {
                 .collect(Collectors.toList());
     }
 
-    // Get upcoming showtimes for a movie
+    /**
+     * Get upcoming showtimes for a specific movie (API: GET
+     * /showtimes/movie/{movieId}/upcoming)
+     * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
+     * Nodes: findMovieById
+     */
     public List<ShowtimeDataResponse> getUpcomingShowtimesByMovie(UUID movieId) {
         // Verify movie exists
         findMovieById(movieId);
@@ -211,7 +236,11 @@ public class ShowtimeService {
                 .collect(Collectors.toList());
     }
 
-    // Get showtimes by room
+    /**
+     * Get all showtimes for a specific room (API: GET /showtimes/room/{roomId})
+     * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
+     * Nodes: findRoomById
+     */
     public List<ShowtimeDataResponse> getShowtimesByRoom(UUID roomId) {
         // Verify room exists
         findRoomById(roomId);
@@ -221,7 +250,12 @@ public class ShowtimeService {
                 .collect(Collectors.toList());
     }
 
-    // Get showtimes by movie and date range
+    /**
+     * Get showtimes for a movie within date range (API: GET
+     * /showtimes/movie/{movieId}/date-range)
+     * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
+     * Nodes: findMovieById
+     */
     public List<ShowtimeDataResponse> getShowtimesByMovieAndDateRange(UUID movieId, LocalDateTime startDate,
             LocalDateTime endDate) {
         // Verify movie exists

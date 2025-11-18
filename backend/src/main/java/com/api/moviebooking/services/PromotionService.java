@@ -40,9 +40,11 @@ public class PromotionService {
     }
 
     /**
+     * Create a new promotion (API: POST /promotions)
      * Predicate nodes (d): 5 -> V(G)=d+1=6
-     * Nodes: existsByCodeIgnoreCase, endDate.isBefore(startDate), discountType.equals("PERCENTAGE"), 
-     *        discountValue.compareTo(100) > 0, perUserLimit > usageLimit
+     * Nodes: existsByCodeIgnoreCase, endDate.isBefore(startDate),
+     * discountType.equals("PERCENTAGE"),
+     * discountValue.compareTo(100) > 0, perUserLimit > usageLimit
      * Minimum test cases: 6
      */
     @Transactional
@@ -65,7 +67,7 @@ public class PromotionService {
         }
 
         // Validate per user limit doesn't exceed usage limit (if both are provided)
-        if (request.getPerUserLimit() != null && request.getUsageLimit() != null 
+        if (request.getPerUserLimit() != null && request.getUsageLimit() != null
                 && request.getPerUserLimit() > request.getUsageLimit()) {
             throw new IllegalArgumentException("Per user limit cannot exceed total usage limit");
         }
@@ -76,21 +78,22 @@ public class PromotionService {
     }
 
     /**
+     * Update promotion details (API: PUT /promotions/{promotionId})
      * Predicate nodes (d): 14 -> V(G)=d+1=15
-     * Nodes:  * - request.getCode() != null
-    * - !code.equalsIgnoreCase && existsByCode
-    * - request.getDescription() != null
-    * - request.getDiscountType() != null
-    * - newType == PERCENTAGE && value > 100
-    * - request.getDiscountValue() != null
-    * - type == PERCENTAGE && value > 100
-    * - request.getStartDate() != null
-    * - request.getEndDate() != null
-    * - endDate.isBefore(startDate)
-    * - request.getUsageLimit() != null
-    * - request.getPerUserLimit() != null
-    * - perUserLimit > usageLimit
-    * - request.getIsActive() != null
+     * Nodes: * - request.getCode() != null
+     * - !code.equalsIgnoreCase && existsByCode
+     * - request.getDescription() != null
+     * - request.getDiscountType() != null
+     * - newType == PERCENTAGE && value > 100
+     * - request.getDiscountValue() != null
+     * - type == PERCENTAGE && value > 100
+     * - request.getStartDate() != null
+     * - request.getEndDate() != null
+     * - endDate.isBefore(startDate)
+     * - request.getUsageLimit() != null
+     * - request.getPerUserLimit() != null
+     * - perUserLimit > usageLimit
+     * - request.getIsActive() != null
      * Minimum test cases: 15
      */
     @Transactional
@@ -155,7 +158,7 @@ public class PromotionService {
         }
 
         // Validate per user limit doesn't exceed usage limit (if both are not null)
-        if (promotion.getPerUserLimit() != null && promotion.getUsageLimit() != null 
+        if (promotion.getPerUserLimit() != null && promotion.getUsageLimit() != null
                 && promotion.getPerUserLimit() > promotion.getUsageLimit()) {
             throw new IllegalArgumentException("Per user limit cannot exceed total usage limit");
         }
@@ -169,6 +172,7 @@ public class PromotionService {
     }
 
     /**
+     * Deactivate a promotion (API: PATCH /promotions/{promotionId}/deactivate)
      * Predicate nodes (d): 1 -> V(G)=d+1=2
      * Nodes: isPresent (from findPromotionById)
      * Minimum test cases: 2
@@ -183,6 +187,7 @@ public class PromotionService {
     }
 
     /**
+     * Delete a promotion (API: DELETE /promotions/{promotionId})
      * Predicate nodes (d): 2 -> V(G)=d+1=3
      * Nodes: isPresent (from findPromotionById), !isEmpty(bookings)
      * Minimum test cases: 3
@@ -193,16 +198,17 @@ public class PromotionService {
     @Transactional
     public void deletePromotion(UUID promotionId) {
         Promotion promotion = findPromotionById(promotionId);
-        
+
         // Check if promotion is used in any bookings
         if (!promotion.getBookingPromotions().isEmpty()) {
             throw new IllegalStateException("Cannot delete promotion that has been used in bookings");
         }
-        
+
         promotionRepo.delete(promotion);
     }
 
     /**
+     * Get promotion by ID (API: GET /promotions/{promotionId})
      * Predicate nodes (d): 1 -> V(G)=d+1=2
      * Nodes: isPresent (from findPromotionById)
      * Minimum test cases: 2
@@ -215,6 +221,7 @@ public class PromotionService {
     }
 
     /**
+     * Get promotion by code (API: GET /promotions/code/{code})
      * Predicate nodes (d): 1 -> V(G)=d+1=2
      * Nodes: isPresent
      * Minimum test cases: 2
@@ -228,6 +235,7 @@ public class PromotionService {
     }
 
     /**
+     * Get all promotions (API: GET /promotions)
      * Predicate nodes (d): 0 -> V(G)=d+1=1
      * Nodes: None (linear execution)
      * Minimum test cases: 1
@@ -240,12 +248,13 @@ public class PromotionService {
     }
 
     /**
+     * Get all active promotions (API: GET /promotions/active)
      * Predicate nodes (d): 0 -> V(G)=d+1=1
      * Nodes: None (linear execution)
      * Minimum test cases: 1
      * 1. Return all active promotions (success path)
      */
-    //Promotions is active but not useable atm
+    // Promotions is active but not useable atm
     public List<PromotionDataResponse> getActivePromotions() {
         return promotionRepo.findByIsActive(true).stream()
                 .map(promotionMapper::toDataResponse)
@@ -253,12 +262,13 @@ public class PromotionService {
     }
 
     /**
+     * Get all valid promotions (API: GET /promotions/valid)
      * Predicate nodes (d): 0 -> V(G)=d+1=1
      * Nodes: None (linear execution)
      * Minimum test cases: 1
      * 1. Return all valid promotions (active and within date range) (success path)
      */
-    //Promotions is active and within date range
+    // Promotions is active and within date range
     public List<PromotionDataResponse> getValidPromotions() {
         LocalDateTime now = LocalDateTime.now();
         return promotionRepo.findByIsActiveAndStartDateBeforeAndEndDateAfter(true, now, now).stream()
@@ -269,9 +279,9 @@ public class PromotionService {
     /**
      * Validate if promotion can be used by a user
      * Predicate nodes (d): 5 -> V(G)=d+1=6
-     * Nodes: !isActive, now.isBefore(startDate), now.isAfter(endDate), 
-     *        usageLimit != null && usedCount >= usageLimit,
-     *        perUserLimit != null && userUsageCount >= perUserLimit
+     * Nodes: !isActive, now.isBefore(startDate), now.isAfter(endDate),
+     * usageLimit != null && usedCount >= usageLimit,
+     * perUserLimit != null && userUsageCount >= perUserLimit
      * Minimum test cases: 6
      */
     public Promotion validateAndGetPromotion(String code, UUID userId) {

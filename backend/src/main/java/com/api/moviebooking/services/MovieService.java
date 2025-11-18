@@ -36,6 +36,7 @@ public class MovieService {
     }
 
     /**
+     * Add a new movie (API: POST /movies)
      * Predicate nodes (d): 1 -> V(G)=d+1=2
      * Nodes: existsByTitleIgnoreCase
      * Minimum test cases: 2
@@ -53,6 +54,7 @@ public class MovieService {
     }
 
     /**
+     * Update movie details (API: PUT /movies/{movieId})
      * Predicate nodes (d): 13 -> V(G)=d+1=14
      * Nodes: existsByTitleIgnoreCase, multiple null checks for each field
      * Minimum test cases: 14
@@ -63,8 +65,8 @@ public class MovieService {
 
         if (request.getTitle() != null) {
             // Check if new title conflicts with another movie
-            if (!request.getTitle().equalsIgnoreCase(movie.getTitle()) && 
-                movieRepo.existsByTitleIgnoreCase(request.getTitle())) {
+            if (!request.getTitle().equalsIgnoreCase(movie.getTitle()) &&
+                    movieRepo.existsByTitleIgnoreCase(request.getTitle())) {
                 throw new IllegalArgumentException("Another movie with this title already exists");
             }
             movie.setTitle(request.getTitle());
@@ -108,6 +110,7 @@ public class MovieService {
     }
 
     /**
+     * Delete a movie (API: DELETE /movies/{movieId})
      * Predicate nodes (d): 1 -> V(G)=d+1=2
      * Nodes: check for associated showtimes
      * Minimum test cases: 2
@@ -115,7 +118,7 @@ public class MovieService {
     @Transactional
     public void deleteMovie(UUID movieId) {
         Movie movie = findMovieById(movieId);
-        
+
         // Check if movie has associated showtimes
         if (!movie.getShowtimes().isEmpty()) {
             throw new IllegalStateException("Cannot delete movie with existing showtimes");
@@ -124,26 +127,43 @@ public class MovieService {
         movieRepo.delete(movie);
     }
 
-
+    /**
+     * Get movie details by ID (API: GET /movies/{movieId})
+     * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
+     * Nodes: findMovieById
+     */
     public MovieDataResponse getMovie(UUID movieId) {
         Movie movie = findMovieById(movieId);
         return movieMapper.toDataResponse(movie);
     }
 
+    /**
+     * Get all movies (API: GET /movies)
+     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
+     * Nodes: none
+     */
     public List<MovieDataResponse> getAllMovies() {
         return movieRepo.findAll().stream()
                 .map(movieMapper::toDataResponse)
                 .collect(Collectors.toList());
     }
 
-    // Search movies by title
+    /**
+     * Search movies by title (API: GET /movies/search/title)
+     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
+     * Nodes: none
+     */
     public List<MovieDataResponse> searchMoviesByTitle(String title) {
         return movieRepo.findByTitleContainingIgnoreCase(title).stream()
                 .map(movieMapper::toDataResponse)
                 .collect(Collectors.toList());
     }
 
-    // Filter movies by status
+    /**
+     * Filter movies by status (API: GET /movies/filter/status)
+     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
+     * Nodes: none
+     */
     public List<MovieDataResponse> getMoviesByStatus(String status) {
         MovieStatus movieStatus = MovieStatus.valueOf(status);
         return movieRepo.findByStatus(movieStatus).stream()
@@ -151,7 +171,11 @@ public class MovieService {
                 .collect(Collectors.toList());
     }
 
-    // Filter movies by genre
+    /**
+     * Filter movies by genre (API: GET /movies/filter/genre)
+     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
+     * Nodes: none
+     */
     public List<MovieDataResponse> getMoviesByGenre(String genre) {
         return movieRepo.findByGenreContainingIgnoreCase(genre).stream()
                 .map(movieMapper::toDataResponse)
@@ -159,12 +183,11 @@ public class MovieService {
     }
 
     /**
-     * searchMovies:
+     * Advanced search with multiple filters (API: GET /movies with query params)
      * Predicate nodes (d): 1 -> V(G)=d+1=2
      * Nodes:
      * - status != null && !status.isEmpty()
      */
-    // Advanced search with multiple filters
     public List<MovieDataResponse> searchMovies(String title, String genre, String status) {
         MovieStatus movieStatus = (status != null && !status.isEmpty()) ? MovieStatus.valueOf(status) : null;
         return movieRepo.searchMovies(title, genre, movieStatus).stream()

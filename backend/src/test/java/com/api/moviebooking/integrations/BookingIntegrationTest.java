@@ -113,7 +113,7 @@ class BookingIntegrationTest {
         private User testUser1, testUser2;
         private Showtime testShowtime;
         private ShowtimeSeat seat1, seat2, seat3;
-        private com.api.moviebooking.models.entities.MembershipTier defaultTier, goldTier;
+        private MembershipTier defaultTier, goldTier;
 
         @BeforeEach
         void setUp() {
@@ -250,6 +250,7 @@ class BookingIntegrationTest {
         // ==================== Basic Booking Flow Tests ====================
 
         @Test
+        @WithMockUser(username = "user1@test.com", roles = "USER")
         @DisplayName("Should successfully lock seats when authenticated")
         void testLockSeats_Success() {
                 LockSeatsRequest request = new LockSeatsRequest(
@@ -273,7 +274,7 @@ class BookingIntegrationTest {
         }
 
         @Test
-        @DisplayName("Should fail to lock seats when not authenticated")
+        @DisplayName("Should allow locking seats when not authenticated (public endpoint)")
         void testLockSeats_Unauthorized() {
                 LockSeatsRequest request = new LockSeatsRequest(
                                 testShowtime.getId(), testUser1.getId(), Arrays.asList(seat1.getId()));
@@ -284,10 +285,13 @@ class BookingIntegrationTest {
                                 .when()
                                 .post("/bookings/lock")
                                 .then()
-                                .statusCode(HttpStatus.FORBIDDEN.value());
+                                .statusCode(HttpStatus.CREATED.value())
+                                .body("lockId", notNullValue())
+                                .body("totalPrice", notNullValue());
         }
 
         @Test
+        @WithMockUser(username = "user1@test.com", roles = "USER")
         @DisplayName("Should confirm booking successfully")
         void testConfirmBooking_Success() {
                 // First lock seats
@@ -325,11 +329,13 @@ class BookingIntegrationTest {
         }
 
         @Test
+        @WithMockUser(username = "user1@test.com", roles = "USER")
         @DisplayName("Should check seat availability successfully")
         void testCheckAvailability_Success() {
                 given()
+                                .queryParam("userId", testUser1.getId())
                                 .when()
-                                .get("/bookings/availability/" + testShowtime.getId())
+                                .get("/bookings/lock/availability/" + testShowtime.getId())
                                 .then()
                                 .statusCode(HttpStatus.OK.value())
                                 .body("availableSeats", hasSize(3))
@@ -338,6 +344,7 @@ class BookingIntegrationTest {
         }
 
         @Test
+        @WithMockUser(username = "user1@test.com", roles = "USER")
         @DisplayName("Should release seats successfully")
         void testReleaseSeats_Success() {
                 // First lock seats
@@ -359,8 +366,9 @@ class BookingIntegrationTest {
                 // Release seats
                 given()
                                 .queryParam("showtimeId", testShowtime.getId())
+                                .queryParam("userId", testUser1.getId())
                                 .when()
-                                .delete("/bookings/release")
+                                .delete("/bookings/lock/release")
                                 .then()
                                 .statusCode(HttpStatus.OK.value());
 
@@ -370,6 +378,7 @@ class BookingIntegrationTest {
         }
 
         @Test
+        @WithMockUser(username = "user1@test.com", roles = "USER")
         @DisplayName("Should handle back button and release seats immediately")
         void testHandleBackButton_Success() {
                 // Lock seats
@@ -387,8 +396,9 @@ class BookingIntegrationTest {
                 // Press back button
                 given()
                                 .queryParam("showtimeId", testShowtime.getId())
+                                .queryParam("userId", testUser1.getId())
                                 .when()
-                                .post("/bookings/back")
+                                .post("/bookings/lock/back")
                                 .then()
                                 .statusCode(HttpStatus.OK.value());
 
@@ -398,6 +408,7 @@ class BookingIntegrationTest {
         }
 
         @Test
+        @WithMockUser(username = "user1@test.com", roles = "USER")
         @DisplayName("Should get user's booking history")
         void testGetMyBookings_Success() {
                 given()
@@ -411,6 +422,7 @@ class BookingIntegrationTest {
         // ==================== Concurrent Booking Tests ====================
 
         @Test
+        @WithMockUser(username = "user1@test.com", roles = "USER")
         @DisplayName("Should prevent concurrent seat locking by different users")
         void testConcurrentLocking_DifferentUsers() throws InterruptedException {
                 // Test at service layer to properly simulate different users
@@ -453,6 +465,7 @@ class BookingIntegrationTest {
         }
 
         @Test
+        @WithMockUser(username = "user1@test.com", roles = "USER")
         @DisplayName("Should handle partial seat overlap correctly")
         void testPartialSeatOverlap() {
                 // User1 locks seat1 and seat2
@@ -488,6 +501,7 @@ class BookingIntegrationTest {
         }
 
         @Test
+        @WithMockUser(username = "user1@test.com", roles = "USER")
         @DisplayName("Should prevent same user from booking same showtime in multiple tabs")
         void testMultiTabPrevention() {
                 // Lock seats in "Tab 1"
@@ -521,6 +535,7 @@ class BookingIntegrationTest {
         // ==================== Lock Expiration Tests ====================
 
         @Test
+        @WithMockUser(username = "user1@test.com", roles = "USER")
         @DisplayName("Should cleanup expired locks")
         void testLockExpiration() {
                 // Lock seats
@@ -555,6 +570,7 @@ class BookingIntegrationTest {
         // ==================== Edge Cases ====================
 
         @Test
+        @WithMockUser(username = "user1@test.com", roles = "USER")
         @DisplayName("Should handle invalid showtime ID")
         void testLockSeats_InvalidShowtimeId() {
                 LockSeatsRequest request = new LockSeatsRequest(
@@ -573,6 +589,7 @@ class BookingIntegrationTest {
         }
 
         @Test
+        @WithMockUser(username = "user1@test.com", roles = "USER")
         @DisplayName("Should handle invalid seat IDs")
         void testLockSeats_InvalidSeatIds() {
                 LockSeatsRequest request = new LockSeatsRequest(
@@ -592,6 +609,7 @@ class BookingIntegrationTest {
         }
 
         @Test
+        @WithMockUser(username = "user1@test.com", roles = "USER")
         @DisplayName("Should handle empty seat list")
         void testLockSeats_EmptySeatList() {
                 LockSeatsRequest request = new LockSeatsRequest(
@@ -609,6 +627,7 @@ class BookingIntegrationTest {
         }
 
         @Test
+        @WithMockUser(username = "user1@test.com", roles = "USER")
         @DisplayName("Should handle confirm booking with invalid lock ID")
         void testConfirmBooking_InvalidLockId() {
                 ConfirmBookingRequest request = new ConfirmBookingRequest();
@@ -629,29 +648,30 @@ class BookingIntegrationTest {
         // ==================== Authorization Tests ====================
 
         @Test
-        @DisplayName("Should deny access to booking operations for unauthenticated users")
+        @DisplayName("Should allow public access to lock operations but deny access to user bookings")
         void testBookingOperations_Unauthenticated() {
                 LockSeatsRequest lockRequest = new LockSeatsRequest(
                                 testShowtime.getId(), testUser1.getId(), Arrays.asList(seat1.getId()));
 
-                // Lock seats
+                // Lock seats - public endpoint, should succeed
                 given()
                                 .contentType(ContentType.JSON)
                                 .body(lockRequest)
                                 .when()
                                 .post("/bookings/lock")
                                 .then()
-                                .statusCode(HttpStatus.FORBIDDEN.value());
+                                .statusCode(HttpStatus.CREATED.value());
 
-                // Release seats
+                // Release seats - public endpoint, should succeed
                 given()
                                 .queryParam("showtimeId", testShowtime.getId())
+                                .queryParam("userId", testUser1.getId())
                                 .when()
-                                .delete("/bookings/release")
+                                .delete("/bookings/lock/release")
                                 .then()
-                                .statusCode(HttpStatus.FORBIDDEN.value());
+                                .statusCode(HttpStatus.OK.value());
 
-                // My bookings
+                // My bookings - requires authentication, should fail
                 given()
                                 .when()
                                 .get("/bookings/my-bookings")
@@ -673,8 +693,9 @@ class BookingIntegrationTest {
                 // Admin should be able to release seats for a showtime
                 given()
                                 .queryParam("showtimeId", testShowtime.getId())
+                                .queryParam("userId", testUser1.getId())
                                 .when()
-                                .delete("/bookings/release")
+                                .delete("/bookings/lock/release")
                                 .then()
                                 .statusCode(HttpStatus.OK.value());
         }

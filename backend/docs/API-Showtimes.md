@@ -17,10 +17,10 @@ Creates a new showtime for a movie in a specific room.
 #### Request Body
 ```json
 {
-  "movieId": "uuid (required)",
-  "roomId": "uuid (required)",
-  "format": "string (required)",
-  "startTime": "2024-11-17T19:30:00 (datetime, required)"
+  "roomId": "123e4567-e89b-12d3-a456-426614174001",
+  "movieId": "123e4567-e89b-12d3-a456-426614174000",
+  "format": "IMAX",
+  "startTime": "2024-11-17T19:30:00"
 }
 ```
 
@@ -37,27 +37,27 @@ Creates a new showtime for a movie in a specific room.
 - **Body**:
 ```json
 {
-  "id": "uuid",
+  "showtimeId": "123e4567-e89b-12d3-a456-426614174002",
   "room": {
-    "id": "uuid",
-    "cinemaId": "uuid",
-    "name": "Room 1 - IMAX",
-    "totalSeats": 150
+    "roomId": "123e4567-e89b-12d3-a456-426614174001",
+    "cinemaId": "123e4567-e89b-12d3-a456-426614174003",
+    "roomType": "IMAX",
+    "roomNumber": 1
   },
   "movie": {
-    "id": "uuid",
+    "movieId": "123e4567-e89b-12d3-a456-426614174000",
     "title": "Oppenheimer",
-    "description": "...",
-    "genre": "Biography, Drama",
+    "genre": "Biography, Drama, History",
+    "description": "The story of J. Robert Oppenheimer and his role in developing the atomic bomb",
     "duration": 180,
-    "releaseYear": 2023,
+    "minimumAge": 13,
     "director": "Christopher Nolan",
-    "cast": "Cillian Murphy, Emily Blunt",
-    "language": "English",
-    "subtitles": "Vietnamese",
-    "posterUrl": "https://...",
-    "trailerUrl": "https://...",
-    "status": "SHOWING"
+    "actors": "Cillian Murphy, Emily Blunt, Matt Damon, Robert Downey Jr.",
+    "posterUrl": "https://cdn.example.com/posters/oppenheimer.jpg",
+    "posterCloudinaryId": "movies/oppenheimer_poster",
+    "trailerUrl": "https://youtube.com/watch?v=xyz123",
+    "status": "SHOWING",
+    "language": "English"
   },
   "format": "IMAX",
   "startTime": "2024-11-17T19:30:00"
@@ -81,10 +81,10 @@ Updates showtime details.
 #### Request Body (all fields optional)
 ```json
 {
-  "movieId": "uuid",
-  "roomId": "uuid",
-  "format": "string",
-  "startTime": "2024-11-17T19:30:00"
+  "roomId": "123e4567-e89b-12d3-a456-426614174001",
+  "movieId": "123e4567-e89b-12d3-a456-426614174000",
+  "format": "IMAX 3D",
+  "startTime": "2024-11-17T20:00:00"
 }
 ```
 
@@ -255,27 +255,27 @@ GET /showtimes/movie/123e4567-e89b-12d3-a456-426614174000/date-range?startDate=2
 ### ShowtimeDataResponse
 ```json
 {
-  "id": "uuid",
+  "showtimeId": "uuid",
   "room": {
-    "id": "uuid",
+    "roomId": "uuid",
     "cinemaId": "uuid",
-    "name": "string",
-    "totalSeats": "integer"
+    "roomType": "string",
+    "roomNumber": "integer"
   },
   "movie": {
-    "id": "uuid",
+    "movieId": "uuid",
     "title": "string",
-    "description": "string",
     "genre": "string",
+    "description": "string",
     "duration": "integer",
-    "releaseYear": "integer",
+    "minimumAge": "integer",
     "director": "string",
-    "cast": "string",
-    "language": "string",
-    "subtitles": "string",
+    "actors": "string",
     "posterUrl": "string",
+    "posterCloudinaryId": "string",
     "trailerUrl": "string",
-    "status": "string"
+    "status": "string",
+    "language": "string"
   },
   "format": "string",
   "startTime": "datetime"
@@ -374,29 +374,36 @@ async function checkRoomConflicts(roomId, proposedStartTime, movieDuration) {
 ### 400 Bad Request
 ```json
 {
-  "message": "Invalid showtime data",
-  "errors": ["startTime must be in the future", "room conflict detected"]
+  "timestamp": "2025-11-18T12:34:56.789+00:00",
+  "message": "startTime: must be in the future, format: must not be blank",
+  "details": "uri=/showtimes"
 }
 ```
 
 ### 404 Not Found
 ```json
 {
-  "message": "Showtime not found with id: {showtimeId}"
+  "timestamp": "2025-11-18T12:34:56.789+00:00",
+  "message": "Showtime not found with id: {showtimeId}",
+  "details": "uri=/showtimes/{showtimeId}"
 }
 ```
 
 ### 403 Forbidden
 ```json
 {
-  "message": "Admin access required"
+  "timestamp": "2025-11-18T12:34:56.789+00:00",
+  "message": "Access Denied: Admin access required",
+  "details": "uri=/showtimes"
 }
 ```
 
 ### 409 Conflict
 ```json
 {
-  "message": "Room already booked for this time slot"
+  "timestamp": "2025-11-18T12:34:56.789+00:00",
+  "message": "Room already booked for this time slot",
+  "details": "uri=/showtimes"
 }
 ```
 

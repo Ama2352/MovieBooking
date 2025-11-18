@@ -26,6 +26,7 @@ import com.api.moviebooking.helpers.exceptions.LockExpiredException;
 import com.api.moviebooking.helpers.exceptions.MaxSeatsExceededException;
 import com.api.moviebooking.helpers.exceptions.ResourceNotFoundException;
 import com.api.moviebooking.helpers.exceptions.SeatLockedException;
+import com.api.moviebooking.helpers.mapstructs.BookingMapper;
 import com.api.moviebooking.models.dtos.booking.LockSeatsRequest;
 import com.api.moviebooking.models.dtos.booking.LockSeatsResponse;
 import com.api.moviebooking.models.dtos.booking.BookingResponse;
@@ -61,6 +62,15 @@ class BookingServiceTest {
 
     @Mock
     private BookingRepo bookingRepo;
+
+    @Mock
+    private PromotionService promotionService;
+
+    @Mock
+    private CheckoutLifecycleService checkoutLifecycleService;
+
+    @Mock
+    private BookingMapper bookingMapper;
 
     @InjectMocks
     private BookingService bookingService;
@@ -466,6 +476,14 @@ class BookingServiceTest {
                         return booking;
                     });
 
+            // Mock bookingMapper response
+            BookingResponse mockResponse = BookingResponse.builder()
+                    .showtimeId(showtimeId)
+                    .movieTitle("Test Movie")
+                    .totalPrice(new BigDecimal("20.00"))
+                    .build();
+            when(bookingMapper.toBookingResponse(any(Booking.class))).thenReturn(mockResponse);
+
             // Act
             com.api.moviebooking.models.dtos.booking.ConfirmBookingRequest confirmRequest = new com.api.moviebooking.models.dtos.booking.ConfirmBookingRequest();
             confirmRequest.setLockId(lockId);
@@ -859,6 +877,12 @@ class BookingServiceTest {
 
             when(bookingRepo.findByUserId(userId))
                     .thenReturn(Arrays.asList(booking1));
+
+            // Mock bookingMapper response
+            BookingResponse mockResponse = BookingResponse.builder()
+                    .bookingId(booking1.getId())
+                    .build();
+            when(bookingMapper.toBookingResponse(booking1)).thenReturn(mockResponse);
 
             // Act
             List<BookingResponse> responses = bookingService.getUserBookings(userId);

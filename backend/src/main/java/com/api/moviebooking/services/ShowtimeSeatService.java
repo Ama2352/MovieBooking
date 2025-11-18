@@ -74,7 +74,7 @@ public class ShowtimeSeatService {
         }
 
         List<ShowtimeSeat> savedSeats = showtimeSeatRepo.saveAll(showtimeSeats);
-        
+
         log.info("Generated {} showtime seats for showtime {}", savedSeats.size(), showtimeId);
 
         return savedSeats.stream()
@@ -82,6 +82,11 @@ public class ShowtimeSeatService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Update showtime seat (API: PUT /showtime-seats/{id})
+     * Predicate nodes (d): 3 -> V(G) = d + 1 = 4
+     * Nodes: findShowtimeSeatById, status!=null (with try-catch), price!=null
+     */
     @Transactional
     public ShowtimeSeatDataResponse updateShowtimeSeat(UUID id, UpdateShowtimeSeatRequest request) {
         ShowtimeSeat showtimeSeat = findShowtimeSeatById(id);
@@ -104,26 +109,37 @@ public class ShowtimeSeatService {
     }
 
     /**
-     * Reset showtime seat status to AVAILABLE
-     * This is preferred over deleting seats as it maintains data integrity
+     * Reset showtime seat status to AVAILABLE (API: PUT /showtime-seats/{id}/reset)
+     * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
+     * Nodes: findShowtimeSeatById
      */
     @Transactional
     public ShowtimeSeatDataResponse resetShowtimeSeatStatus(UUID id) {
         ShowtimeSeat showtimeSeat = findShowtimeSeatById(id);
-        
+
         showtimeSeat.setStatus(SeatStatus.AVAILABLE);
         showtimeSeatRepo.save(showtimeSeat);
-        
+
         log.info("Reset showtime seat {} to AVAILABLE", id);
-        
+
         return showtimeSeatMapper.toDataResponse(showtimeSeat);
     }
 
+    /**
+     * Get showtime seat by ID (API: GET /showtime-seats/{id})
+     * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
+     * Nodes: findShowtimeSeatById
+     */
     public ShowtimeSeatDataResponse getShowtimeSeat(UUID id) {
         ShowtimeSeat showtimeSeat = findShowtimeSeatById(id);
         return showtimeSeatMapper.toDataResponse(showtimeSeat);
     }
 
+    /**
+     * Get all seats for a showtime (API: GET /showtime-seats/showtime/{showtimeId})
+     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
+     * Nodes: none
+     */
     public List<ShowtimeSeatDataResponse> getShowtimeSeatsByShowtime(UUID showtimeId) {
         List<ShowtimeSeat> seats = showtimeSeatRepo.findByShowtimeId(showtimeId);
         return seats.stream()
@@ -131,6 +147,12 @@ public class ShowtimeSeatService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Get available seats for a showtime (API: GET
+     * /showtime-seats/showtime/{showtimeId}/available)
+     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
+     * Nodes: none
+     */
     public List<ShowtimeSeatDataResponse> getAvailableShowtimeSeats(UUID showtimeId) {
         List<ShowtimeSeat> seats = showtimeSeatRepo.findByShowtimeIdAndStatus(showtimeId, SeatStatus.AVAILABLE);
         return seats.stream()
@@ -139,8 +161,10 @@ public class ShowtimeSeatService {
     }
 
     /**
-     * Recalculate prices for all seats in a showtime
-     * Useful when price modifiers are updated
+     * Recalculate prices for all seats in a showtime (API: POST
+     * /showtime-seats/showtime/{showtimeId}/recalculate-prices)
+     * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
+     * Nodes: findById (for showtime)
      */
     @Transactional
     public List<ShowtimeSeatDataResponse> recalculatePrices(UUID showtimeId) {
@@ -153,13 +177,13 @@ public class ShowtimeSeatService {
             Object[] priceData = priceCalculationService.calculatePriceWithBreakdown(showtime, showtimeSeat.getSeat());
             BigDecimal newPrice = (BigDecimal) priceData[0];
             String priceBreakdown = (String) priceData[1];
-            
+
             showtimeSeat.setPrice(newPrice);
             showtimeSeat.setPriceBreakdown(priceBreakdown);
         }
 
         List<ShowtimeSeat> updatedSeats = showtimeSeatRepo.saveAll(showtimeSeats);
-        
+
         log.info("Recalculated prices for {} seats in showtime {}", updatedSeats.size(), showtimeId);
 
         return updatedSeats.stream()

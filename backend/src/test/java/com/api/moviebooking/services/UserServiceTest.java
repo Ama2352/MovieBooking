@@ -101,17 +101,17 @@ class UserServiceTest {
                     .username("newuser")
                     .password("password123")
                     .confirmPassword("password123")
-                    .phoneNumber("1234567890")
+                    .phoneNumber("0912345678")
                     .build();
 
-            when(userRepo.existsByEmail(request.getEmail())).thenReturn(false);
+            when(userRepo.findByEmail(request.getEmail())).thenReturn(Optional.empty());
             when(passwordEncoder.encode(request.getPassword())).thenReturn("encodedPassword123");
             when(membershipTierService.getDefaultTier()).thenReturn(mockTier);
             when(userRepo.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
             userService.register(request);
 
-            verify(userRepo).existsByEmail(request.getEmail());
+            verify(userRepo).findByEmail(request.getEmail());
             verify(passwordEncoder).encode(request.getPassword());
             verify(membershipTierService).getDefaultTier();
             verify(userRepo).save(argThat(user -> user.getEmail().equals(request.getEmail()) &&
@@ -131,16 +131,20 @@ class UserServiceTest {
                     .username("testuser")
                     .password("password123")
                     .confirmPassword("password123")
-                    .phoneNumber("1234567890")
+                    .phoneNumber("0912345678")
                     .build();
 
-            when(userRepo.existsByEmail(testEmail)).thenReturn(true);
+            // Create a registered user (not GUEST)
+            User existingUser = new User();
+            existingUser.setEmail(testEmail);
+            existingUser.setRole(UserRole.USER);
+            when(userRepo.findByEmail(testEmail)).thenReturn(Optional.of(existingUser));
 
             IllegalArgumentException exception = assertThrows(
                     IllegalArgumentException.class,
                     () -> userService.register(request));
             assertEquals("Email already in use", exception.getMessage());
-            verify(userRepo).existsByEmail(testEmail);
+            verify(userRepo).findByEmail(testEmail);
             verify(passwordEncoder, never()).encode(any());
             verify(userRepo, never()).save(any());
         }
@@ -153,16 +157,16 @@ class UserServiceTest {
                     .username("newuser")
                     .password("password123")
                     .confirmPassword("differentPassword")
-                    .phoneNumber("1234567890")
+                    .phoneNumber("0912345678")
                     .build();
 
-            when(userRepo.existsByEmail(request.getEmail())).thenReturn(false);
+            when(userRepo.findByEmail(request.getEmail())).thenReturn(Optional.empty());
 
             IllegalArgumentException exception = assertThrows(
                     IllegalArgumentException.class,
                     () -> userService.register(request));
             assertEquals("Confirm passwords do not match", exception.getMessage());
-            verify(userRepo).existsByEmail(request.getEmail());
+            verify(userRepo).findByEmail(request.getEmail());
             verify(passwordEncoder, never()).encode(any());
             verify(userRepo, never()).save(any());
         }

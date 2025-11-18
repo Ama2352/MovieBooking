@@ -21,10 +21,10 @@ Creates a single seat in a room.
 #### Request Body
 ```json
 {
-  "roomId": "uuid (required)",
-  "seatNumber": 5 (integer, required, positive),
-  "rowLabel": "string (required)",
-  "seatType": "string (required, values: NORMAL, VIP, COUPLE)"
+  "roomId": "123e4567-e89b-12d3-a456-426614174001",
+  "seatNumber": 5,
+  "rowLabel": "A",
+  "seatType": "NORMAL"
 }
 ```
 
@@ -33,13 +33,13 @@ Creates a single seat in a room.
 - **Body**:
 ```json
 {
-  "id": "uuid",
-  "roomId": "uuid",
-  "rowLabel": "A",
-  "seatLabel": "A5",
+  "seatId": "123e4567-e89b-12d3-a456-426614174004",
+  "roomId": "123e4567-e89b-12d3-a456-426614174001",
+  "roomNumber": "1",
+  "cinemaName": "CGV Vincom Center",
   "seatNumber": 5,
-  "seatType": "NORMAL",
-  "type": "NORMAL"
+  "rowLabel": "A",
+  "seatType": "NORMAL"
 }
 ```
 
@@ -57,11 +57,11 @@ Auto-generates seats in a grid pattern for a room.
 #### Request Body
 ```json
 {
-  "roomId": "uuid (required)",
-  "rows": 10 (integer, required, min 1, max 26),
-  "seatsPerRow": 15 (integer, required, min 1, max 50),
-  "vipRows": ["A", "B"] (array of strings, optional),
-  "coupleRows": ["J"] (array of strings, optional)
+  "roomId": "123e4567-e89b-12d3-a456-426614174001",
+  "rows": 10,
+  "seatsPerRow": 15,
+  "vipRows": ["A", "B"],
+  "coupleRows": ["J"]
 }
 ```
 
@@ -71,20 +71,19 @@ Auto-generates seats in a grid pattern for a room.
 ```json
 {
   "totalSeatsCreated": 150,
-  "normalSeats": 135,
+  "normalSeats": 105,
   "vipSeats": 30,
   "coupleSeats": 15,
   "seats": [
     {
-      "id": "uuid",
-      "roomId": "uuid",
-      "rowLabel": "A",
-      "seatLabel": "A1",
+      "seatId": "123e4567-e89b-12d3-a456-426614174004",
+      "roomId": "123e4567-e89b-12d3-a456-426614174001",
+      "roomNumber": "1",
+      "cinemaName": "CGV Vincom Center",
       "seatNumber": 1,
-      "seatType": "VIP",
-      "type": "VIP"
+      "rowLabel": "A",
+      "seatType": "VIP"
     }
-    // ... more seats
   ]
 }
 ```
@@ -139,9 +138,9 @@ Updates a seat's properties.
 #### Request Body (all fields optional)
 ```json
 {
-  "seatNumber": 6 (integer),
-  "rowLabel": "string",
-  "seatType": "string (values: NORMAL, VIP, COUPLE)"
+  "seatNumber": 6,
+  "rowLabel": "A",
+  "seatType": "VIP"
 }
 ```
 
@@ -218,22 +217,22 @@ Retrieves all seats for a specific room.
 ```json
 [
   {
-    "id": "uuid",
-    "roomId": "uuid",
-    "rowLabel": "A",
-    "seatLabel": "A1",
+    "seatId": "123e4567-e89b-12d3-a456-426614174004",
+    "roomId": "123e4567-e89b-12d3-a456-426614174001",
+    "roomNumber": "1",
+    "cinemaName": "CGV Vincom Center",
     "seatNumber": 1,
-    "seatType": "VIP",
-    "type": "VIP"
+    "rowLabel": "A",
+    "seatType": "VIP"
   },
   {
-    "id": "uuid",
-    "roomId": "uuid",
-    "rowLabel": "A",
-    "seatLabel": "A2",
+    "seatId": "123e4567-e89b-12d3-a456-426614174005",
+    "roomId": "123e4567-e89b-12d3-a456-426614174001",
+    "roomNumber": "1",
+    "cinemaName": "CGV Vincom Center",
     "seatNumber": 2,
-    "seatType": "VIP",
-    "type": "VIP"
+    "rowLabel": "A",
+    "seatType": "VIP"
   }
 ]
 ```
@@ -262,15 +261,15 @@ Retrieves a specific showtime seat instance.
 - **Body**:
 ```json
 {
-  "id": "uuid",
-  "showtimeId": "uuid",
-  "seatId": "uuid",
+  "showtimeSeatId": "8f9a0b1c-2d3e-4f5a-6b7c-8d9e0f1a2b3c",
+  "showtimeId": "3e4a8c9f-1234-5678-90ab-cdef12345678",
+  "seatId": "9f1a2b3c-4d5e-6f7a-8b9c-0d1e2f3a4b5c",
   "rowLabel": "A",
   "seatNumber": 5,
   "seatType": "VIP",
   "status": "AVAILABLE",
   "price": 120000.00,
-  "priceBreakdown": "{\"basePrice\":100000,\"modifiers\":[{\"name\":\"VIP Seat\",\"type\":\"ADD\",\"value\":20000}],\"finalPrice\":120000}"
+  "priceBreakdown": "{\"basePrice\":100000,\"modifiers\":[{\"name\":\"VIP Seat\",\"type\":\"FIXED_AMOUNT\",\"value\":20000}],\"finalPrice\":120000}"
 }
 ```
 
@@ -331,8 +330,8 @@ Manually updates a showtime seat's status or price.
 #### Request Body (all fields optional)
 ```json
 {
-  "status": "string (values: AVAILABLE, LOCKED, BOOKED)",
-  "price": 150000.00 (number)
+  "status": "AVAILABLE",
+  "price": 150000.00
 }
 ```
 
@@ -421,28 +420,28 @@ Recalculates prices for all seats in a showtime based on current price modifiers
 ### SeatDataResponse (Template)
 ```json
 {
-  "id": "uuid",
+  "seatId": "uuid",
   "roomId": "uuid",
-  "rowLabel": "string",
-  "seatLabel": "string",
+  "roomNumber": "string",
+  "cinemaName": "string",
   "seatNumber": "integer",
-  "seatType": "NORMAL|VIP|COUPLE",
-  "type": "NORMAL|VIP|COUPLE"
+  "rowLabel": "string",
+  "seatType": "NORMAL|VIP|COUPLE"
 }
 ```
 
 ### ShowtimeSeatDataResponse (Instance)
 ```json
 {
-  "id": "uuid",
-  "showtimeId": "uuid",
-  "seatId": "uuid",
-  "rowLabel": "string",
-  "seatNumber": "integer",
-  "seatType": "NORMAL|VIP|COUPLE",
-  "status": "AVAILABLE|LOCKED|BOOKED",
-  "price": "number",
-  "priceBreakdown": "string (JSON)"
+  "showtimeSeatId": "8f9a0b1c-2d3e-4f5a-6b7c-8d9e0f1a2b3c",
+  "showtimeId": "3e4a8c9f-1234-5678-90ab-cdef12345678",
+  "seatId": "9f1a2b3c-4d5e-6f7a-8b9c-0d1e2f3a4b5c",
+  "rowLabel": "A",
+  "seatNumber": 5,
+  "seatType": "VIP",
+  "status": "AVAILABLE",
+  "price": 120000.00,
+  "priceBreakdown": "{\"basePrice\":100000,\"modifiers\":[{\"name\":\"VIP Seat\",\"type\":\"FIXED_AMOUNT\",\"value\":20000}],\"finalPrice\":120000}"
 }
 ```
 
@@ -453,12 +452,12 @@ Recalculates prices for all seats in a showtime based on current price modifiers
   "modifiers": [
     {
       "name": "VIP Seat",
-      "type": "ADD",
+      "type": "FIXED_AMOUNT",
       "value": 20000.00
     },
     {
       "name": "Weekend",
-      "type": "MULTIPLY",
+      "type": "PERCENTAGE",
       "value": 1.2
     }
   ],
@@ -511,7 +510,7 @@ function renderSeatMap(seatsByRow) {
       seatBtn.className = `seat seat-${seat.status.toLowerCase()} seat-${seat.seatType.toLowerCase()}`;
       seatBtn.textContent = seat.seatNumber;
       seatBtn.disabled = seat.status !== 'AVAILABLE';
-      seatBtn.dataset.seatId = seat.id;
+      seatBtn.dataset.seatId = seat.showtimeSeatId;
       seatBtn.dataset.price = seat.price;
       
       if (seat.status === 'AVAILABLE') {
@@ -551,6 +550,37 @@ async function generateSeats(roomId, rows, seatsPerRow) {
     vip: result.vipSeats,
     couple: result.coupleSeats
   });
+}
+```
+
+---
+
+## Error Responses
+
+### 400 Bad Request
+```json
+{
+  "timestamp": "2025-11-18T12:34:56.789+00:00",
+  "message": "seatNumber: must be positive, rowLabel: must not be blank",
+  "details": "uri=/seats"
+}
+```
+
+### 404 Not Found
+```json
+{
+  "timestamp": "2025-11-18T12:34:56.789+00:00",
+  "message": "Seat not found with id: {seatId}",
+  "details": "uri=/seats/{seatId}"
+}
+```
+
+### 403 Forbidden
+```json
+{
+  "timestamp": "2025-11-18T12:34:56.789+00:00",
+  "message": "Access Denied: Admin access required",
+  "details": "uri=/seats"
 }
 ```
 

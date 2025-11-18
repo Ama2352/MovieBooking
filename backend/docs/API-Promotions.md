@@ -17,16 +17,16 @@ Creates a new promotional code.
 #### Request Body
 ```json
 {
-  "code": "string (required, min 3 chars, max 20 chars)",
-  "name": "string (required)",
-  "description": "string (optional)",
-  "discountType": "string (required, values: PERCENTAGE, FIXED_AMOUNT)",
-  "discountValue": 10.00 (number, required, min 0.01, max depends on type),
-  "startDate": "2024-11-17T00:00:00 (datetime, required)",
-  "endDate": "2024-12-31T23:59:59 (datetime, required)",
-  "maxUsage": 100 (integer, min 1, optional),
-  "maxUsagePerUser": 1 (integer, min 1, optional),
-  "isActive": true (boolean, required)
+  "code": "WINTER2024",
+  "name": "Winter Sale 2024",
+  "description": "Special discount for winter season",
+  "discountType": "PERCENTAGE",
+  "discountValue": 15.00,
+  "startDate": "2024-11-17T00:00:00",
+  "endDate": "2024-12-31T23:59:59",
+  "usageLimit": 1000,
+  "perUserLimit": 2,
+  "isActive": true
 }
 ```
 
@@ -40,16 +40,16 @@ Creates a new promotional code.
 | discountValue | Number | Yes | For PERCENTAGE: 0.01-100, For FIXED_AMOUNT: positive |
 | startDate | DateTime | Yes | Promotion start date |
 | endDate | DateTime | Yes | Promotion end date, must be after startDate |
-| maxUsage | Integer | No | Total usage limit across all users |
-| maxUsagePerUser | Integer | No | Per-user usage limit |
-| isActive | Boolean | Yes | Active/inactive status |
+| usageLimit | Integer | No | Total usage limit across all users |
+| perUserLimit | Integer | No | Per-user usage limit |
+| isActive | Boolean | No | Active/inactive status |
 
 #### Response
 - **Status Code**: `201 CREATED`
 - **Body**:
 ```json
 {
-  "id": "uuid",
+  "promotionId": "123e4567-e89b-12d3-a456-426614174010",
   "code": "WINTER2024",
   "name": "Winter Sale 2024",
   "description": "Special discount for winter season",
@@ -57,8 +57,8 @@ Creates a new promotional code.
   "discountValue": 15.00,
   "startDate": "2024-11-17T00:00:00",
   "endDate": "2024-12-31T23:59:59",
-  "maxUsage": 1000,
-  "maxUsagePerUser": 2,
+  "usageLimit": 1000,
+  "perUserLimit": 2,
   "isActive": true,
   "createdAt": "2024-11-17T10:00:00",
   "updatedAt": "2024-11-17T10:00:00"
@@ -82,15 +82,15 @@ Updates an existing promotion.
 #### Request Body (all fields optional)
 ```json
 {
-  "name": "string",
-  "description": "string",
-  "discountType": "string (values: PERCENTAGE, FIXED_AMOUNT)",
-  "discountValue": 20.00 (number, min 0.01),
-  "startDate": "datetime",
-  "endDate": "datetime",
-  "maxUsage": 500 (integer, min 1),
-  "maxUsagePerUser": 1 (integer, min 1),
-  "isActive": false (boolean)
+  "name": "Winter Sale 2024 Extended",
+  "description": "Special discount for winter season - extended period",
+  "discountType": "PERCENTAGE",
+  "discountValue": 20.00,
+  "startDate": "2024-11-17T00:00:00",
+  "endDate": "2025-01-15T23:59:59",
+  "usageLimit": 1500,
+  "perUserLimit": 3,
+  "isActive": true
 }
 ```
 
@@ -266,10 +266,10 @@ Retrieves promotions that are:
 - Active status
 - Current date >= startDate
 - Current date <= endDate
-- Total usage < maxUsage (if set)
+- Total usage < usageLimit (if set)
 
 ### Per-User Validation
-- User's usage count < maxUsagePerUser (if set)
+- User's usage count < perUserLimit (if set)
 
 ---
 
@@ -278,7 +278,7 @@ Retrieves promotions that are:
 ### PromotionDataResponse
 ```json
 {
-  "id": "uuid",
+  "promotionId": "uuid",
   "code": "string",
   "name": "string",
   "description": "string",
@@ -286,8 +286,8 @@ Retrieves promotions that are:
   "discountValue": "number",
   "startDate": "datetime",
   "endDate": "datetime",
-  "maxUsage": "integer",
-  "maxUsagePerUser": "integer",
+  "usageLimit": "integer",
+  "perUserLimit": "integer",
   "isActive": "boolean",
   "createdAt": "datetime",
   "updatedAt": "datetime"
@@ -425,32 +425,36 @@ async function createPromotion(formData) {
 ### 400 Bad Request
 ```json
 {
-  "message": "Invalid promotion data",
-  "errors": [
-    "discountValue must be between 0.01 and 100 for percentage discounts",
-    "endDate must be after startDate"
-  ]
+  "timestamp": "2025-11-18T12:34:56.789+00:00",
+  "message": "discountValue: must be between 0.01 and 100 for percentage discounts, endDate: must be after startDate",
+  "details": "uri=/promotions"
 }
 ```
 
 ### 404 Not Found
 ```json
 {
-  "message": "Promotion not found with code: INVALID2024"
+  "timestamp": "2025-11-18T12:34:56.789+00:00",
+  "message": "Promotion not found with code: INVALID2024",
+  "details": "uri=/promotions/code/INVALID2024"
 }
 ```
 
 ### 403 Forbidden
 ```json
 {
-  "message": "Admin access required"
+  "timestamp": "2025-11-18T12:34:56.789+00:00",
+  "message": "Access Denied: Admin access required",
+  "details": "uri=/promotions"
 }
 ```
 
 ### 409 Conflict
 ```json
 {
-  "message": "Promotion code already exists: WINTER2024"
+  "timestamp": "2025-11-18T12:34:56.789+00:00",
+  "message": "Promotion code already exists: WINTER2024",
+  "details": "uri=/promotions"
 }
 ```
 

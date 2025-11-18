@@ -27,7 +27,6 @@ public interface BookingMapper {
     @Mapping(target = "qrCode", source = "qrCode")
     @Mapping(target = "qrPayload", source = "qrPayload")
     @Mapping(target = "paymentExpiresAt", source = "paymentExpiresAt")
-    @Mapping(target = "message", constant = "Booking created successfully")
     BookingResponse toBookingResponse(Booking booking);
 
     @Mapping(target = "rowLabel", source = "seat.rowLabel")
