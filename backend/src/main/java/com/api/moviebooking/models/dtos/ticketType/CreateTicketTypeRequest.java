@@ -1,7 +1,8 @@
 package com.api.moviebooking.models.dtos.ticketType;
 
-import java.util.UUID;
+import java.math.BigDecimal;
 
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -24,8 +25,9 @@ public class CreateTicketTypeRequest {
     @NotBlank(message = "Label is required")
     private String label;
 
-    @NotNull(message = "Price base ID is required")
-    private UUID priceBaseId;
+    @NotNull(message = "Price is required")
+    @DecimalMin(value = "0.0", inclusive = false, message = "Price must be greater than 0")
+    private BigDecimal price;
 
     @NotNull(message = "Active status is required")
     private Boolean active;

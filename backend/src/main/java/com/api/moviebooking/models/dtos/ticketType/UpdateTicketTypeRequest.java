@@ -1,7 +1,8 @@
 package com.api.moviebooking.models.dtos.ticketType;
 
-import java.util.UUID;
+import java.math.BigDecimal;
 
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -16,7 +17,8 @@ public class UpdateTicketTypeRequest {
 
     private String label;
 
-    private UUID priceBaseId;
+    @DecimalMin(value = "0.0", inclusive = false, message = "Price must be greater than 0")
+    private BigDecimal price;
 
     private Boolean active;
 

@@ -1,5 +1,6 @@
 package com.api.moviebooking.models.entities;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -9,10 +10,7 @@ import org.hibernate.annotations.UuidGenerator;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -37,9 +35,8 @@ public class TicketType {
     @Column(nullable = false, length = 100)
     private String label; // Display label: NGƯỜI LỚN, HSSV/U22-GV, etc.
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "price_base_id", nullable = false)
-    private PriceBase priceBase;
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal basePrice; // Base price for this ticket type
 
     @Column(nullable = false)
     private Boolean active = true;

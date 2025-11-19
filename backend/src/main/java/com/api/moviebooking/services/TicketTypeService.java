@@ -12,11 +12,9 @@ import com.api.moviebooking.helpers.exceptions.ResourceNotFoundException;
 import com.api.moviebooking.models.dtos.ticketType.CreateTicketTypeRequest;
 import com.api.moviebooking.models.dtos.ticketType.TicketTypeResponse;
 import com.api.moviebooking.models.dtos.ticketType.UpdateTicketTypeRequest;
-import com.api.moviebooking.models.entities.PriceBase;
 import com.api.moviebooking.models.entities.Seat;
 import com.api.moviebooking.models.entities.Showtime;
 import com.api.moviebooking.models.entities.TicketType;
-import com.api.moviebooking.repositories.PriceBaseRepo;
 import com.api.moviebooking.repositories.ShowtimeRepo;
 import com.api.moviebooking.repositories.ShowtimeSeatRepo;
 import com.api.moviebooking.repositories.TicketTypeRepo;
@@ -30,7 +28,6 @@ import lombok.extern.slf4j.Slf4j;
 public class TicketTypeService {
 
     private final TicketTypeRepo ticketTypeRepo;
-    private final PriceBaseRepo priceBaseRepo;
     private final ShowtimeRepo showtimeRepo;
     private final ShowtimeSeatRepo showtimeSeatRepo;
     private final PriceCalculationService priceCalculationService;
@@ -57,13 +54,13 @@ public class TicketTypeService {
 
         List<TicketType> ticketTypes = ticketTypeRepo.findAllByActiveTrue();
 
-        // For each ticket type, calculate price for a sample NORMAL seat
-        // (price may vary by seat type, but this gives a base reference)
+        // For each ticket type, calculate price based on its seat type mapping
+        // "double" ticket type maps to COUPLE seat, others map to NORMAL seat
         return ticketTypes.stream()
                 .map(ticketType -> {
-                    // Use a dummy normal seat for price calculation
+                    // Determine seat type from ticket type ID
                     Seat dummySeat = new Seat();
-                    dummySeat.setSeatType(com.api.moviebooking.models.enums.SeatType.NORMAL);
+                    dummySeat.setSeatType(getSeatTypeFromTicketType(ticketType.getTicketTypeId()));
 
                     BigDecimal calculatedPrice = priceCalculationService.calculatePrice(showtime, dummySeat, ticketType);
 
@@ -96,14 +93,10 @@ public class TicketTypeService {
             throw new IllegalArgumentException("Ticket type ID already exists: " + request.getTicketTypeId());
         }
 
-        // Validate price base exists
-        PriceBase priceBase = priceBaseRepo.findById(request.getPriceBaseId())
-                .orElseThrow(() -> new ResourceNotFoundException("PriceBase", "id", request.getPriceBaseId()));
-
         TicketType ticketType = new TicketType();
         ticketType.setTicketTypeId(request.getTicketTypeId());
         ticketType.setLabel(request.getLabel());
-        ticketType.setPriceBase(priceBase);
+        ticketType.setBasePrice(request.getPrice());
         ticketType.setActive(request.getActive());
         ticketType.setSortOrder(request.getSortOrder());
 
@@ -126,10 +119,8 @@ public class TicketTypeService {
             ticketType.setLabel(request.getLabel());
         }
 
-        if (request.getPriceBaseId() != null) {
-            PriceBase priceBase = priceBaseRepo.findById(request.getPriceBaseId())
-                    .orElseThrow(() -> new ResourceNotFoundException("PriceBase", "id", request.getPriceBaseId()));
-            ticketType.setPriceBase(priceBase);
+        if (request.getPrice() != null) {
+            ticketType.setBasePrice(request.getPrice());
         }
 
         if (request.getActive() != null) {
@@ -176,9 +167,10 @@ public class TicketTypeService {
      */
     private TicketTypeResponse toResponse(TicketType ticketType) {
         return TicketTypeResponse.builder()
+                .id(ticketType.getId())
                 .ticketTypeId(ticketType.getTicketTypeId())
                 .label(ticketType.getLabel())
-                .price(ticketType.getPriceBase().getBasePrice())
+                .price(ticketType.getBasePrice())
                 .build();
     }
 
@@ -187,11 +179,25 @@ public class TicketTypeService {
      */
     private TicketTypeResponse toResponseWithAdminFields(TicketType ticketType) {
         return TicketTypeResponse.builder()
+                .id(ticketType.getId())
                 .ticketTypeId(ticketType.getTicketTypeId())
                 .label(ticketType.getLabel())
-                .price(ticketType.getPriceBase().getBasePrice())
+                .price(ticketType.getBasePrice())
                 .active(ticketType.getActive())
                 .sortOrder(ticketType.getSortOrder())
                 .build();
+    }
+
+    /**
+     * Map ticket type ID to seat type for pricing calculation
+     * "double" ticket type represents COUPLE seats
+     * All other ticket types represent NORMAL seats (adult, student, senior, member, etc.)
+     */
+    private com.api.moviebooking.models.enums.SeatType getSeatTypeFromTicketType(String ticketTypeId) {
+        if ("double".equalsIgnoreCase(ticketTypeId)) {
+            return com.api.moviebooking.models.enums.SeatType.COUPLE;
+        }
+        // Default to NORMAL for all other ticket types (adult, student, senior, member, etc.)
+        return com.api.moviebooking.models.enums.SeatType.NORMAL;
     }
 }

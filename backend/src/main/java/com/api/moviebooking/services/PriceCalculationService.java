@@ -40,17 +40,24 @@ public class PriceCalculationService {
      * For internal use
      */
     public Object[] calculatePriceWithBreakdown(Showtime showtime, Seat seat, TicketType ticketType) {
-        // Get base price from ticket type
-        PriceBase basePrice = ticketType != null ? ticketType.getPriceBase() 
-                : priceBaseRepo.findActiveBasePrice()
-                        .orElseThrow(() -> new IllegalStateException("No active base price configured"));
+        // Get base price from ticket type or fallback to PriceBase table for backward compatibility
+        BigDecimal basePriceValue;
+        if (ticketType != null && ticketType.getBasePrice() != null) {
+            // New way: get base price directly from ticket type
+            basePriceValue = ticketType.getBasePrice();
+        } else {
+            // Old way: fallback to PriceBase table for backward compatibility
+            PriceBase priceBase = priceBaseRepo.findActiveBasePrice()
+                    .orElseThrow(() -> new IllegalStateException("No active base price configured"));
+            basePriceValue = priceBase.getBasePrice();
+        }
 
-        BigDecimal finalPrice = basePrice.getBasePrice();
+        BigDecimal finalPrice = basePriceValue;
         log.debug("Starting price calculation. Base price: {}", finalPrice);
 
         // Create price breakdown
         PriceBreakdown breakdown = new PriceBreakdown();
-        breakdown.setBasePrice(basePrice.getBasePrice());
+        breakdown.setBasePrice(basePriceValue);
 
         // Get all active modifiers
         List<PriceModifier> modifiers = priceModifierRepo.findAllActive();
