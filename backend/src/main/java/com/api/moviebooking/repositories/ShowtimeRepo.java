@@ -43,4 +43,10 @@ public interface ShowtimeRepo extends JpaRepository<Showtime, UUID> {
     // Find upcoming showtimes for a movie
     @Query("SELECT s FROM Showtime s WHERE s.movie.id = :movieId AND s.startTime >= :now ORDER BY s.startTime")
     List<Showtime> findUpcomingShowtimesByMovie(@Param("movieId") UUID movieId, @Param("now") LocalDateTime now);
+
+    // Find showtimes by movie and start time between two dates
+    @Query("SELECT s FROM Showtime s WHERE s.movie = :movie AND s.startTime BETWEEN :startTime AND :endTime ORDER BY s.startTime")
+    List<Showtime> findByMovieAndStartTimeBetween(@Param("movie") com.api.moviebooking.models.entities.Movie movie,
+            @Param("startTime") LocalDateTime startTime,
+            @Param("endTime") LocalDateTime endTime);
 }

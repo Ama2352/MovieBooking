@@ -15,12 +15,16 @@ import com.api.moviebooking.models.dtos.seat.BulkSeatResponse;
 import com.api.moviebooking.models.dtos.seat.GenerateSeatsRequest;
 import com.api.moviebooking.models.dtos.seat.RowLabelsResponse;
 import com.api.moviebooking.models.dtos.seat.SeatDataResponse;
+import com.api.moviebooking.models.dtos.seat.SeatLayoutResponse;
 import com.api.moviebooking.models.dtos.seat.UpdateSeatRequest;
 import com.api.moviebooking.models.entities.Room;
 import com.api.moviebooking.models.entities.Seat;
+import com.api.moviebooking.models.entities.ShowtimeSeat;
 import com.api.moviebooking.models.enums.SeatType;
 import com.api.moviebooking.repositories.RoomRepo;
 import com.api.moviebooking.repositories.SeatRepo;
+import com.api.moviebooking.repositories.ShowtimeSeatRepo;
+import com.api.moviebooking.repositories.ShowtimeRepo;
 
 import lombok.RequiredArgsConstructor;
 
@@ -30,6 +34,8 @@ public class SeatService {
 
     private final SeatRepo seatRepo;
     private final RoomRepo roomRepo;
+    private final ShowtimeRepo showtimeRepo;
+    private final ShowtimeSeatRepo showtimeSeatRepo;
     private final SeatMapper seatMapper;
 
     private Seat findSeatById(UUID seatId) {
@@ -315,5 +321,32 @@ public class SeatService {
         }
 
         return SeatType.NORMAL;
+    }
+
+    /**
+     * Get seat layout for a specific showtime (API: GET /seats/layout?showtime_id=UUID)
+     * Combines data from Seats and ShowtimeSeats to show seat map with statuses
+     */
+    public List<SeatLayoutResponse> getSeatLayout(UUID showtimeId) {
+        // Validate showtime exists
+        showtimeRepo.findById(showtimeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Showtime", "id", showtimeId));
+
+        // Get all showtime seats for this showtime
+        List<ShowtimeSeat> showtimeSeats = showtimeSeatRepo.findByShowtimeId(showtimeId);
+
+        // Build response by mapping ShowtimeSeat data
+        return showtimeSeats.stream()
+                .map(showtimeSeat -> {
+                    Seat seat = showtimeSeat.getSeat();
+                    return SeatLayoutResponse.builder()
+                            .seatId(showtimeSeat.getId())
+                            .row(seat.getRowLabel())
+                            .number(seat.getSeatNumber())
+                            .type(seat.getSeatType())
+                            .status(showtimeSeat.getStatus())
+                            .build();
+                })
+                .collect(Collectors.toList());
     }
 }

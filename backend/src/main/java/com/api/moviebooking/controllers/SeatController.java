@@ -106,4 +106,13 @@ public class SeatController {
         BulkSeatResponse response = seatService.generateSeats(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
+
+    @GetMapping("/layout")
+    @Operation(summary = "Get seat layout for a showtime",
+               description = "Returns the complete seat layout for a specific showtime, including seat details and current status (AVAILABLE, LOCKED, or BOOKED)")
+    public ResponseEntity<List<com.api.moviebooking.models.dtos.seat.SeatLayoutResponse>> getSeatLayout(
+            @RequestParam(name = "showtime_id") UUID showtimeId) {
+        List<com.api.moviebooking.models.dtos.seat.SeatLayoutResponse> response = seatService.getSeatLayout(showtimeId);
+        return ResponseEntity.ok(response);
+    }
 }

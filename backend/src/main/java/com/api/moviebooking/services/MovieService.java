@@ -1,6 +1,12 @@
 package com.api.moviebooking.services;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -10,11 +16,14 @@ import org.springframework.transaction.annotation.Transactional;
 import com.api.moviebooking.helpers.exceptions.ResourceNotFoundException;
 import com.api.moviebooking.helpers.mapstructs.MovieMapper;
 import com.api.moviebooking.models.dtos.movie.AddMovieRequest;
+import com.api.moviebooking.models.dtos.movie.CinemaShowtimesResponse;
 import com.api.moviebooking.models.dtos.movie.MovieDataResponse;
 import com.api.moviebooking.models.dtos.movie.UpdateMovieRequest;
 import com.api.moviebooking.models.entities.Movie;
+import com.api.moviebooking.models.entities.Showtime;
 import com.api.moviebooking.models.enums.MovieStatus;
 import com.api.moviebooking.repositories.MovieRepo;
+import com.api.moviebooking.repositories.ShowtimeRepo;
 
 import lombok.RequiredArgsConstructor;
 
@@ -23,6 +32,7 @@ import lombok.RequiredArgsConstructor;
 public class MovieService {
 
     private final MovieRepo movieRepo;
+    private final ShowtimeRepo showtimeRepo;
     private final MovieMapper movieMapper;
 
     /**
@@ -193,5 +203,60 @@ public class MovieService {
         return movieRepo.searchMovies(title, genre, movieStatus).stream()
                 .map(movieMapper::toDataResponse)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Get showtimes for a movie grouped by cinema on a specific date
+     * API: GET /movies/{id}/showtimes?date=YYYY-MM-DD
+     * If date is today, only return showtimes from current time onwards
+     */
+    public List<CinemaShowtimesResponse> getMovieShowtimesByDate(UUID movieId, LocalDate date) {
+        Movie movie = findMovieById(movieId);
+        
+        // Check if querying for today
+        LocalDate today = LocalDate.now();
+        boolean isToday = date.isEqual(today);
+        
+        // Define start and end time
+        LocalDateTime startOfDay;
+        if (isToday) {
+            // If today, start from current time
+            startOfDay = LocalDateTime.now();
+        } else {
+            // If other date, start from beginning of day
+            startOfDay = date.atStartOfDay();
+        }
+        LocalDateTime endOfDay = date.atTime(LocalTime.MAX);
+        
+        // Get all showtimes for this movie on the specified date
+        List<Showtime> showtimes = showtimeRepo.findByMovieAndStartTimeBetween(movie, startOfDay, endOfDay);
+        
+        // Group showtimes by cinema
+        Map<UUID, CinemaShowtimesResponse> cinemaMap = new LinkedHashMap<>();
+        
+        for (Showtime showtime : showtimes) {
+            UUID cinemaId = showtime.getRoom().getCinema().getId();
+            
+            // Create cinema entry if not exists
+            if (!cinemaMap.containsKey(cinemaId)) {
+                CinemaShowtimesResponse cinemaResponse = new CinemaShowtimesResponse();
+                cinemaResponse.setCinemaId(cinemaId);
+                cinemaResponse.setCinemaName(showtime.getRoom().getCinema().getName());
+                cinemaResponse.setAddress(showtime.getRoom().getCinema().getAddress());
+                cinemaResponse.setShowtimes(new ArrayList<>());
+                cinemaMap.put(cinemaId, cinemaResponse);
+            }
+            
+            // Add showtime info to cinema
+            CinemaShowtimesResponse.ShowtimeInfo showtimeInfo = new CinemaShowtimesResponse.ShowtimeInfo();
+            showtimeInfo.setShowtimeId(showtime.getId());
+            showtimeInfo.setStartTime(showtime.getStartTime().toString());
+            showtimeInfo.setFormat(showtime.getFormat());
+            showtimeInfo.setRoomName("Phòng " + showtime.getRoom().getRoomNumber());
+            
+            cinemaMap.get(cinemaId).getShowtimes().add(showtimeInfo);
+        }
+        
+        return new ArrayList<>(cinemaMap.values());
     }
 }
