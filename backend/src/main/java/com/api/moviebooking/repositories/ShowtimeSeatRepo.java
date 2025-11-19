@@ -79,4 +79,10 @@ public interface ShowtimeSeatRepo extends JpaRepository<ShowtimeSeat, UUID> {
     @Query(value = "SELECT COUNT(*) > 0 FROM showtime_seats " +
             "WHERE price_breakdown::text LIKE CONCAT('%', :modifierName, '%')", nativeQuery = true)
     boolean isPriceModifierReferencedInBreakdown(@Param("modifierName") String modifierName);
+
+    /**
+     * Check if a ticket type is being used in any showtime seats
+     */
+    @Query("SELECT COUNT(ss) > 0 FROM ShowtimeSeat ss WHERE ss.ticketType.id = :ticketTypeId")
+    boolean isTicketTypeUsed(@Param("ticketTypeId") UUID ticketTypeId);
 }

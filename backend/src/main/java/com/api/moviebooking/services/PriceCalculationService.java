@@ -15,6 +15,7 @@ import com.api.moviebooking.models.entities.PriceBase;
 import com.api.moviebooking.models.entities.PriceModifier;
 import com.api.moviebooking.models.entities.Seat;
 import com.api.moviebooking.models.entities.Showtime;
+import com.api.moviebooking.models.entities.TicketType;
 import com.api.moviebooking.models.enums.ModifierType;
 import com.api.moviebooking.repositories.PriceBaseRepo;
 import com.api.moviebooking.repositories.PriceModifierRepo;
@@ -34,20 +35,29 @@ public class PriceCalculationService {
     private final ObjectMapper objectMapper;
 
     /**
-     * Calculate final price and generate price breakdown for a showtime seat
+     * Calculate final price and generate price breakdown for a showtime seat with ticket type
      * Returns an array: [0] = final price, [1] = price breakdown JSON string
+     * For internal use
      */
-    public Object[] calculatePriceWithBreakdown(Showtime showtime, Seat seat) {
-        // Get base price
-        PriceBase basePrice = priceBaseRepo.findActiveBasePrice()
-                .orElseThrow(() -> new IllegalStateException("No active base price configured"));
+    public Object[] calculatePriceWithBreakdown(Showtime showtime, Seat seat, TicketType ticketType) {
+        // Get base price from ticket type or fallback to PriceBase table for backward compatibility
+        BigDecimal basePriceValue;
+        if (ticketType != null && ticketType.getBasePrice() != null) {
+            // New way: get base price directly from ticket type
+            basePriceValue = ticketType.getBasePrice();
+        } else {
+            // Old way: fallback to PriceBase table for backward compatibility
+            PriceBase priceBase = priceBaseRepo.findActiveBasePrice()
+                    .orElseThrow(() -> new IllegalStateException("No active base price configured"));
+            basePriceValue = priceBase.getBasePrice();
+        }
 
-        BigDecimal finalPrice = basePrice.getBasePrice();
+        BigDecimal finalPrice = basePriceValue;
         log.debug("Starting price calculation. Base price: {}", finalPrice);
 
         // Create price breakdown
         PriceBreakdown breakdown = new PriceBreakdown();
-        breakdown.setBasePrice(basePrice.getBasePrice());
+        breakdown.setBasePrice(basePriceValue);
 
         // Get all active modifiers
         List<PriceModifier> modifiers = priceModifierRepo.findAllActive();
@@ -56,7 +66,7 @@ public class PriceCalculationService {
         List<PriceModifier> applicableModifiers = new ArrayList<>();
 
         for (PriceModifier modifier : modifiers) {
-            if (isModifierApplicable(modifier, showtime, seat)) {
+            if (isModifierApplicable(modifier, showtime, seat, ticketType)) {
                 applicableModifiers.add(modifier);
                 log.debug("Applicable modifier: {} - {} = {}",
                         modifier.getName(), modifier.getConditionType(), modifier.getConditionValue());
@@ -99,19 +109,34 @@ public class PriceCalculationService {
     }
 
     /**
-     * Calculate final price only (backward compatibility)
+     * Calculate final price and generate price breakdown for a showtime seat (backward compatibility)
+     * Returns an array: [0] = final price, [1] = price breakdown JSON string
+     * For calculate showtime seat without ticket type
      */
-    public BigDecimal calculatePrice(Showtime showtime, Seat seat) {
-        Object[] result = calculatePriceWithBreakdown(showtime, seat);
+    public Object[] calculatePriceWithBreakdown(Showtime showtime, Seat seat) {
+        return calculatePriceWithBreakdown(showtime, seat, null);
+    }
+
+    /**
+     * Calculate final price only with ticket type
+     */
+    public BigDecimal calculatePrice(Showtime showtime, Seat seat, TicketType ticketType) {
+        Object[] result = calculatePriceWithBreakdown(showtime, seat, ticketType);
         return (BigDecimal) result[0];
     }
 
     /**
-     * Check if a modifier should be applied based on conditions
-     * Check if the conditions of the modifier match the showtime and seat
-     * attributes
+     * Calculate final price only (backward compatibility)
      */
-    private boolean isModifierApplicable(PriceModifier modifier, Showtime showtime, Seat seat) {
+    public BigDecimal calculatePrice(Showtime showtime, Seat seat) {
+        return calculatePrice(showtime, seat, null);
+    }
+
+    /**
+     * Check if a modifier should be applied based on conditions
+     * Check if the conditions of the modifier match the showtime, seat, and ticket type attributes
+     */
+    private boolean isModifierApplicable(PriceModifier modifier, Showtime showtime, Seat seat, TicketType ticketType) {
         switch (modifier.getConditionType()) {
             case DAY_TYPE:
                 return checkDayType(modifier.getConditionValue(), showtime.getStartTime());
@@ -127,6 +152,9 @@ public class PriceCalculationService {
 
             case SEAT_TYPE:
                 return checkSeatType(modifier.getConditionValue(), seat.getSeatType().toString());
+
+            case TICKET_TYPE:
+                return checkTicketType(modifier.getConditionValue(), ticketType);
 
             default:
                 return false;
@@ -206,5 +234,15 @@ public class PriceCalculationService {
      */
     private boolean checkSeatType(String conditionValue, String seatType) {
         return seatType.equalsIgnoreCase(conditionValue);
+    }
+
+    /**
+     * Check ticket type
+     */
+    private boolean checkTicketType(String conditionValue, TicketType ticketType) {
+        if (ticketType == null) {
+            return false;
+        }
+        return ticketType.getTicketTypeId().equalsIgnoreCase(conditionValue);
     }
 }

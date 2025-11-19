@@ -110,4 +110,19 @@ public class MovieController {
         List<MovieDataResponse> movies = movieService.getMoviesByGenre(genre);
         return ResponseEntity.ok(movies);
     }
+
+    @GetMapping("/{movieId}/showtimes")
+    @Operation(summary = "Get showtimes for a movie on a specific date, grouped by cinema", 
+               description = "Returns all showtimes for a specific movie on the given date, organized by cinema. Format: YYYY-MM-DD")
+    public ResponseEntity<List<com.api.moviebooking.models.dtos.movie.CinemaShowtimesResponse>> getMovieShowtimesByDate(
+            @PathVariable UUID movieId,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate date) {
+        
+        // If date not provided, use today
+        java.time.LocalDate queryDate = date != null ? date : java.time.LocalDate.now();
+        
+        List<com.api.moviebooking.models.dtos.movie.CinemaShowtimesResponse> response = 
+                movieService.getMovieShowtimesByDate(movieId, queryDate);
+        return ResponseEntity.ok(response);
+    }
 }
