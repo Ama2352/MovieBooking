@@ -42,6 +42,10 @@ public class ShowtimeSeat {
     @JoinColumn(nullable = false)
     private Seat seat;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "ticket_type_id")
+    private TicketType ticketType;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private SeatStatus status;
