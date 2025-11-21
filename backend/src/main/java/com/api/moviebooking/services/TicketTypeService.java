@@ -46,7 +46,7 @@ public class TicketTypeService {
     /**
      * Get ticket types with calculated prices for a specific showtime
      * Used for guest endpoint: GET /ticket-types?showtimeId={showtimeId}&userId={userId}
-     * Prices are calculated based on showtime, room type, format, time, etc.
+     * Prices are calculated by applying ticket type modifiers to showtime seat base prices
      */
     public List<TicketTypeResponse> getTicketTypesForShowtime(UUID showtimeId, UUID userId) {
         Showtime showtime = showtimeRepo.findById(showtimeId)
@@ -54,7 +54,7 @@ public class TicketTypeService {
 
         List<TicketType> ticketTypes = ticketTypeRepo.findAllByActiveTrue();
 
-        // For each ticket type, calculate price based on its seat type mapping
+        // For each ticket type, calculate price based on seat type mapping
         // "double" ticket type maps to COUPLE seat, others map to NORMAL seat
         return ticketTypes.stream()
                 .map(ticketType -> {
@@ -62,13 +62,38 @@ public class TicketTypeService {
                     Seat dummySeat = new Seat();
                     dummySeat.setSeatType(getSeatTypeFromTicketType(ticketType.getTicketTypeId()));
 
-                    BigDecimal calculatedPrice = priceCalculationService.calculatePrice(showtime, dummySeat, ticketType);
+                    // Get base showtime seat price (without ticket type modifier)
+                    BigDecimal baseSeatPrice = priceCalculationService.calculatePrice(showtime, dummySeat, null);
+
+                    // Apply ticket type modifier to base price
+                    BigDecimal finalPrice = applyTicketTypeModifier(baseSeatPrice, ticketType);
 
                     TicketTypeResponse response = toResponse(ticketType);
-                    response.setPrice(calculatedPrice);
+                    response.setPrice(finalPrice);
                     return response;
                 })
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Apply ticket type modifier to a base price
+     * PERCENTAGE: finalPrice = basePrice * (1 + modifierValue / 100)
+     * FIXED_AMOUNT: finalPrice = basePrice + modifierValue
+     */
+    private BigDecimal applyTicketTypeModifier(BigDecimal basePrice, TicketType ticketType) {
+        switch (ticketType.getModifierType()) {
+            case PERCENTAGE:
+                // e.g., basePrice = 100000, modifierValue = -20 -> finalPrice = 100000 * (1 - 0.20) = 80000
+                BigDecimal multiplier = BigDecimal.ONE.add(ticketType.getModifierValue().divide(new BigDecimal("100")));
+                return basePrice.multiply(multiplier).setScale(0, java.math.RoundingMode.HALF_UP);
+
+            case FIXED_AMOUNT:
+                // e.g., basePrice = 100000, modifierValue = -15000 -> finalPrice = 100000 - 15000 = 85000
+                return basePrice.add(ticketType.getModifierValue()).setScale(0, java.math.RoundingMode.HALF_UP);
+
+            default:
+                return basePrice;
+        }
     }
 
     /**
@@ -96,7 +121,9 @@ public class TicketTypeService {
         TicketType ticketType = new TicketType();
         ticketType.setTicketTypeId(request.getTicketTypeId());
         ticketType.setLabel(request.getLabel());
-        ticketType.setBasePrice(request.getPrice());
+        ticketType.setDescription(request.getDescription());
+        ticketType.setModifierType(request.getModifierType());
+        ticketType.setModifierValue(request.getModifierValue());
         ticketType.setActive(request.getActive());
         ticketType.setSortOrder(request.getSortOrder());
 
@@ -119,8 +146,16 @@ public class TicketTypeService {
             ticketType.setLabel(request.getLabel());
         }
 
-        if (request.getPrice() != null) {
-            ticketType.setBasePrice(request.getPrice());
+        if (request.getDescription() != null) {
+            ticketType.setDescription(request.getDescription());
+        }
+
+        if (request.getModifierType() != null) {
+            ticketType.setModifierType(request.getModifierType());
+        }
+
+        if (request.getModifierValue() != null) {
+            ticketType.setModifierValue(request.getModifierValue());
         }
 
         if (request.getActive() != null) {
@@ -164,25 +199,30 @@ public class TicketTypeService {
 
     /**
      * Convert entity to response DTO (basic fields only)
+     * Price field is null - should be set by caller based on context
      */
     private TicketTypeResponse toResponse(TicketType ticketType) {
         return TicketTypeResponse.builder()
                 .id(ticketType.getId())
                 .ticketTypeId(ticketType.getTicketTypeId())
                 .label(ticketType.getLabel())
-                .price(ticketType.getBasePrice())
+                .price(null) // Price will be calculated and set by caller
                 .build();
     }
 
     /**
      * Convert entity to response DTO (with admin fields)
+     * Includes modifier information for admins to see configuration
      */
     private TicketTypeResponse toResponseWithAdminFields(TicketType ticketType) {
         return TicketTypeResponse.builder()
                 .id(ticketType.getId())
                 .ticketTypeId(ticketType.getTicketTypeId())
                 .label(ticketType.getLabel())
-                .price(ticketType.getBasePrice())
+                .description(ticketType.getDescription())
+                .modifierType(ticketType.getModifierType())
+                .modifierValue(ticketType.getModifierValue())
+                .price(null) // No base price in new architecture
                 .active(ticketType.getActive())
                 .sortOrder(ticketType.getSortOrder())
                 .build();
