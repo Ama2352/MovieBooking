@@ -872,7 +872,21 @@ class BookingServiceTest {
             booking1.setId(UUID.randomUUID());
             booking1.setUser(mockUser);
             booking1.setShowtime(mockShowtime);
-            booking1.setBookedSeats(Arrays.asList(mockSeat1, mockSeat2));
+            
+            // Create BookingSeat entities with the new structure
+            com.api.moviebooking.models.entities.BookingSeat bookingSeat1 = 
+                    new com.api.moviebooking.models.entities.BookingSeat();
+            bookingSeat1.setBooking(booking1);
+            bookingSeat1.setShowtimeSeat(mockSeat1);
+            bookingSeat1.setPriceFinal(new BigDecimal("10.00"));
+            
+            com.api.moviebooking.models.entities.BookingSeat bookingSeat2 = 
+                    new com.api.moviebooking.models.entities.BookingSeat();
+            bookingSeat2.setBooking(booking1);
+            bookingSeat2.setShowtimeSeat(mockSeat2);
+            bookingSeat2.setPriceFinal(new BigDecimal("10.00"));
+            
+            booking1.setBookingSeats(Arrays.asList(bookingSeat1, bookingSeat2));
             booking1.setTotalPrice(new BigDecimal("20.00"));
 
             when(bookingRepo.findByUserId(userId))

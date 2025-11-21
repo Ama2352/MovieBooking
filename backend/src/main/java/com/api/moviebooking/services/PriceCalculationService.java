@@ -35,22 +35,17 @@ public class PriceCalculationService {
     private final ObjectMapper objectMapper;
 
     /**
-     * Calculate final price and generate price breakdown for a showtime seat with ticket type
+     * Calculate final price and generate price breakdown for a showtime seat
+     * Ticket type modifier should be applied separately after this calculation
      * Returns an array: [0] = final price, [1] = price breakdown JSON string
      * For internal use
      */
     public Object[] calculatePriceWithBreakdown(Showtime showtime, Seat seat, TicketType ticketType) {
-        // Get base price from ticket type or fallback to PriceBase table for backward compatibility
-        BigDecimal basePriceValue;
-        if (ticketType != null && ticketType.getBasePrice() != null) {
-            // New way: get base price directly from ticket type
-            basePriceValue = ticketType.getBasePrice();
-        } else {
-            // Old way: fallback to PriceBase table for backward compatibility
-            PriceBase priceBase = priceBaseRepo.findActiveBasePrice()
-                    .orElseThrow(() -> new IllegalStateException("No active base price configured"));
-            basePriceValue = priceBase.getBasePrice();
-        }
+        // Get base price from PriceBase table
+        // Ticket type modifiers are applied separately by TicketTypeService
+        PriceBase priceBase = priceBaseRepo.findActiveBasePrice()
+                .orElseThrow(() -> new IllegalStateException("No active base price configured"));
+        BigDecimal basePriceValue = priceBase.getBasePrice();
 
         BigDecimal finalPrice = basePriceValue;
         log.debug("Starting price calculation. Base price: {}", finalPrice);

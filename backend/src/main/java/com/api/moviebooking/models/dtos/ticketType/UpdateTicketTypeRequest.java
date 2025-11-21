@@ -2,6 +2,8 @@ package com.api.moviebooking.models.dtos.ticketType;
 
 import java.math.BigDecimal;
 
+import com.api.moviebooking.models.enums.ModifierType;
+
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import lombok.AllArgsConstructor;
@@ -17,8 +19,12 @@ public class UpdateTicketTypeRequest {
 
     private String label;
 
-    @DecimalMin(value = "0.0", inclusive = false, message = "Price must be greater than 0")
-    private BigDecimal price;
+    private String description;
+
+    private ModifierType modifierType;
+
+    @DecimalMin(value = "-100.0", message = "Modifier value must be greater than or equal to -100")
+    private BigDecimal modifierValue;
 
     private Boolean active;
 

@@ -8,8 +8,12 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.annotations.UuidGenerator;
 
+import com.api.moviebooking.models.enums.ModifierType;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
@@ -35,8 +39,15 @@ public class TicketType {
     @Column(nullable = false, length = 100)
     private String label; // Display label: NGƯỜI LỚN, HSSV/U22-GV, etc.
 
+    @Column(length = 500)
+    private String description; // Description of ticket type
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private ModifierType modifierType; // PERCENTAGE or FIXED_AMOUNT
+
     @Column(nullable = false, precision = 10, scale = 2)
-    private BigDecimal basePrice; // Base price for this ticket type
+    private BigDecimal modifierValue; // Modifier value (percentage or fixed amount)
 
     @Column(nullable = false)
     private Boolean active = true;

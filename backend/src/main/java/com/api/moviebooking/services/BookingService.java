@@ -27,10 +27,12 @@ import com.api.moviebooking.models.dtos.booking.LockSeatsResponse;
 import com.api.moviebooking.models.dtos.booking.SeatAvailabilityResponse;
 import com.api.moviebooking.models.entities.Booking;
 import com.api.moviebooking.models.entities.BookingPromotion;
+import com.api.moviebooking.models.entities.BookingSeat;
 import com.api.moviebooking.models.entities.Promotion;
 import com.api.moviebooking.models.entities.SeatLock;
 import com.api.moviebooking.models.entities.Showtime;
 import com.api.moviebooking.models.entities.ShowtimeSeat;
+import com.api.moviebooking.models.entities.TicketType;
 import com.api.moviebooking.models.entities.User;
 import com.api.moviebooking.models.enums.BookingStatus;
 import com.api.moviebooking.models.enums.SeatStatus;
@@ -38,6 +40,7 @@ import com.api.moviebooking.repositories.BookingRepo;
 import com.api.moviebooking.repositories.SeatLockRepo;
 import com.api.moviebooking.repositories.ShowtimeSeatRepo;
 import com.api.moviebooking.repositories.ShowtimeRepo;
+import com.api.moviebooking.repositories.TicketTypeRepo;
 import com.api.moviebooking.repositories.UserRepo;
 
 import lombok.RequiredArgsConstructor;
@@ -58,6 +61,7 @@ public class BookingService {
         private final ShowtimeRepo showtimeRepo;
         private final UserRepo userRepo;
         private final BookingRepo bookingRepo;
+        private final TicketTypeRepo ticketTypeRepo;
         private final PromotionService promotionService;
         private final CheckoutLifecycleService checkoutLifecycleService;
         private final BookingMapper bookingMapper;
@@ -233,21 +237,11 @@ public class BookingService {
                                 .collect(Collectors.toList());
                 showtimeSeatRepo.updateMultipleSeatsStatus(seatIds, SeatStatus.BOOKED);
 
-                // Calculate total price
-                BigDecimal totalPrice = seatLock.getLockedSeats().stream()
-                                .map(ShowtimeSeat::getPrice)
-                                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-                // Create booking record
+                // Create booking record first (before BookingSeats)
                 Booking booking = new Booking();
                 booking.setUser(seatLock.getUser());
                 booking.setShowtime(seatLock.getShowtime());
-                // Create a new list to avoid shared collection references
-                booking.setBookedSeats(new ArrayList<>(seatLock.getLockedSeats()));
-                booking.setTotalPrice(totalPrice);
-                booking.setFinalPrice(totalPrice); // Default to total price
                 booking.setStatus(BookingStatus.PENDING_PAYMENT);
-                // Payment expiry will be set by CheckoutService (17 minutes from checkout)
                 booking.setPaymentExpiresAt(LocalDateTime.now().plusMinutes(paymentTimeoutMinutes));
                 booking.setQrPayload(null);
                 booking.setQrCode(null);
@@ -255,6 +249,32 @@ public class BookingService {
                 booking.setRefunded(false);
                 booking.setRefundReason(null);
                 booking.setRefundedAt(null);
+
+                // TODO: Get default ticket type - for now use "adult" as fallback
+                // In future, FE should send ticket type per seat in lock request
+                TicketType defaultTicketType = 
+                                ticketTypeRepo.findByTicketTypeId("adult")
+                                .orElseThrow(() -> new IllegalStateException("Default ticket type 'adult' not found"));
+
+                // Create BookingSeat entries with ticket type and calculated prices
+                BigDecimal totalPrice = BigDecimal.ZERO;
+                for (ShowtimeSeat showtimeSeat : seatLock.getLockedSeats()) {
+                        BookingSeat bookingSeat = new BookingSeat();
+                        bookingSeat.setBooking(booking);
+                        bookingSeat.setShowtimeSeat(showtimeSeat);
+                        bookingSeat.setTicketTypeApplied(defaultTicketType);
+                        
+                        // Price already has ticket type applied in showtime seat price
+                        // For now, use the showtime seat price as-is
+                        // TODO: Apply ticket type modifier here when FE supports ticket type selection
+                        bookingSeat.setPriceFinal(showtimeSeat.getPrice());
+                        
+                        booking.getBookingSeats().add(bookingSeat);
+                        totalPrice = totalPrice.add(showtimeSeat.getPrice());
+                }
+
+                booking.setTotalPrice(totalPrice);
+                booking.setFinalPrice(totalPrice); // Default to total price
 
                 // Apply membership tier discount first
                 applyMembershipTierDiscount(booking);

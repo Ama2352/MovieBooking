@@ -162,8 +162,8 @@ public class CheckoutLifecycleService {
         }
 
         // Check if seats are still available
-        List<UUID> seatIds = booking.getBookedSeats().stream()
-                .map(ShowtimeSeat::getId)
+        List<UUID> seatIds = booking.getBookingSeats().stream()
+                .map(bookingSeat -> bookingSeat.getShowtimeSeat().getId())
                 .collect(Collectors.toList());
 
         List<ShowtimeSeat> seats = showtimeSeatRepo.findAllById(seatIds);
@@ -220,8 +220,8 @@ public class CheckoutLifecycleService {
     }
 
     private void releaseSeats(Booking booking) {
-        List<UUID> seatIds = booking.getBookedSeats().stream()
-                .map(ShowtimeSeat::getId)
+        List<UUID> seatIds = booking.getBookingSeats().stream()
+                .map(bookingSeat -> bookingSeat.getShowtimeSeat().getId())
                 .collect(Collectors.toList());
 
         if (seatIds.isEmpty()) {
