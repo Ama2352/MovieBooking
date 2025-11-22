@@ -20,14 +20,12 @@ import lombok.Setter;
 @AllArgsConstructor
 public class CreateTicketTypeRequest {
 
-    @NotBlank(message = "Ticket type ID is required")
-    @Pattern(regexp = "^[a-z_]+$", message = "Ticket type ID must be lowercase with underscores only")
-    private String ticketTypeId;
+    @NotBlank(message = "Ticket type code is required")
+    @Pattern(regexp = "^[a-z_]+$", message = "Ticket type code must be lowercase with underscores only")
+    private String code;
 
     @NotBlank(message = "Label is required")
     private String label;
-
-    private String description;
 
     @NotNull(message = "Modifier type is required")
     private ModifierType modifierType;

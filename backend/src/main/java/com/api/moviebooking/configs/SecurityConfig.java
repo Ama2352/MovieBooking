@@ -62,6 +62,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, PublicEndpointConfig.PRICE_MODIFIERS).permitAll()
                         .requestMatchers(HttpMethod.GET, PublicEndpointConfig.CINEMAS).permitAll()
                         .requestMatchers(HttpMethod.GET, PublicEndpointConfig.PAYMENTS).permitAll()
+                        .requestMatchers(HttpMethod.GET, PublicEndpointConfig.TICKET_TYPES).permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(filter, UsernamePasswordAuthenticationFilter.class)
                 .build();

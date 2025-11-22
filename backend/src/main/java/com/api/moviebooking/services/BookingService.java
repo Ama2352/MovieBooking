@@ -5,6 +5,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -30,6 +31,7 @@ import com.api.moviebooking.models.entities.BookingPromotion;
 import com.api.moviebooking.models.entities.BookingSeat;
 import com.api.moviebooking.models.entities.Promotion;
 import com.api.moviebooking.models.entities.SeatLock;
+import com.api.moviebooking.models.entities.SeatLockSeat;
 import com.api.moviebooking.models.entities.Showtime;
 import com.api.moviebooking.models.entities.ShowtimeSeat;
 import com.api.moviebooking.models.entities.TicketType;
@@ -38,6 +40,7 @@ import com.api.moviebooking.models.enums.BookingStatus;
 import com.api.moviebooking.models.enums.SeatStatus;
 import com.api.moviebooking.repositories.BookingRepo;
 import com.api.moviebooking.repositories.SeatLockRepo;
+import com.api.moviebooking.repositories.SeatLockSeatRepo;
 import com.api.moviebooking.repositories.ShowtimeSeatRepo;
 import com.api.moviebooking.repositories.ShowtimeRepo;
 import com.api.moviebooking.repositories.TicketTypeRepo;
@@ -57,6 +60,7 @@ public class BookingService {
 
         private final RedisLockService redisLockService;
         private final SeatLockRepo seatLockRepo;
+        private final SeatLockSeatRepo seatLockSeatRepo;
         private final ShowtimeSeatRepo showtimeSeatRepo;
         private final ShowtimeRepo showtimeRepo;
         private final UserRepo userRepo;
@@ -64,6 +68,8 @@ public class BookingService {
         private final TicketTypeRepo ticketTypeRepo;
         private final PromotionService promotionService;
         private final CheckoutLifecycleService checkoutLifecycleService;
+        private final PriceCalculationService priceCalculationService;
+        private final TicketTypeService ticketTypeService;
         private final BookingMapper bookingMapper;
 
         @Value("${seat.lock.duration.minutes}")
@@ -80,21 +86,25 @@ public class BookingService {
          * Nodes: size>max, !isEmpty(existingLocks), isPresent(sameShowtimeLock),
          * find user, find showtime,
          * size!=expected(seats), !isEmpty(unavailableSeats), !redisLocked,
-         * try-catch
+         * try-catch, validate ticket types
          */
         @Transactional
         public LockSeatsResponse lockSeats(LockSeatsRequest request) {
                 log.info("User {} attempting to lock {} seats for showtime {}",
-                                request.getUserId(), request.getShowtimeSeatIds().size(), request.getShowtimeId());
+                                request.getUserId(), request.getSeats().size(), request.getShowtimeId());
 
                 // Validate request
-                if (request.getShowtimeSeatIds().size() > maxSeatsPerBooking) {
-                        throw new MaxSeatsExceededException(maxSeatsPerBooking, request.getShowtimeSeatIds().size());
+                if (request.getSeats().size() > maxSeatsPerBooking) {
+                        throw new MaxSeatsExceededException(maxSeatsPerBooking, request.getSeats().size());
                 }
+
+                // Extract seat IDs for processing
+                List<UUID> showtimeSeatIds = request.getSeats().stream()
+                                .map(LockSeatsRequest.SeatWithTicketType::getShowtimeSeatId)
+                                .collect(Collectors.toList());
 
                 // Safety check: Handle existing locks
                 List<SeatLock> existingLocks = seatLockRepo.findAllActiveLocksForUser(request.getUserId());
-
                 if (!existingLocks.isEmpty()) {
                         // Check if user has lock for THIS showtime (multi-tab scenario)
                         Optional<SeatLock> sameShowtimeLock = existingLocks.stream()
@@ -123,11 +133,21 @@ public class BookingService {
                                 .orElseThrow(() -> new ResourceNotFoundException("Showtime", "id",
                                                 request.getShowtimeId()));
                 List<ShowtimeSeat> seats = showtimeSeatRepo.findByIdsAndShowtime(
-                                request.getShowtimeSeatIds(), request.getShowtimeId());
+                                showtimeSeatIds, request.getShowtimeId());
 
                 // Validate seats exist
-                if (seats.size() != request.getShowtimeSeatIds().size()) {
+                if (seats.size() != showtimeSeatIds.size()) {
                         throw new ResourceNotFoundException("One or more seats not found");
+                }
+
+                // Validate that all ticket types belong to this showtime
+                List<UUID> ticketTypeIds = request.getSeats().stream()
+                                .map(LockSeatsRequest.SeatWithTicketType::getTicketTypeId)
+                                .distinct()
+                                .collect(Collectors.toList());
+
+                for (UUID ticketTypeId : ticketTypeIds) {
+                        ticketTypeService.validateTicketTypeForShowtime(request.getShowtimeId(), ticketTypeId);
                 }
 
                 // Check for already locked/booked seats
@@ -147,9 +167,8 @@ public class BookingService {
                 long ttlSeconds = lockDurationMinutes * 60L;
 
                 // Attempt distributed lock with Redis
-                List<UUID> seatIds = request.getShowtimeSeatIds();
                 boolean redisLocked = redisLockService.acquireMultipleSeatsLock(
-                                request.getShowtimeId(), seatIds, lockToken, ttlSeconds);
+                                request.getShowtimeId(), showtimeSeatIds, lockToken, ttlSeconds);
 
                 if (!redisLocked) {
                         throw new ConcurrentBookingException(
@@ -158,16 +177,56 @@ public class BookingService {
 
                 try {
                         // Update database seat status to LOCKED
-                        showtimeSeatRepo.updateMultipleSeatsStatus(seatIds, SeatStatus.LOCKED);
+                        showtimeSeatRepo.updateMultipleSeatsStatus(showtimeSeatIds, SeatStatus.LOCKED);
 
                         // Create SeatLock record
                         SeatLock seatLock = new SeatLock();
                         seatLock.setLockKey(lockToken); // Store the actual Redis lock token
                         seatLock.setUser(user);
                         seatLock.setShowtime(showtime);
-                        seatLock.setLockedSeats(seats);
                         seatLock.setExpiresAt(LocalDateTime.now().plusMinutes(lockDurationMinutes));
                         seatLock.setActive(true);
+
+                        seatLockRepo.save(seatLock);
+
+                        // Create SeatLockSeat entries with ticket type and calculated price
+                        BigDecimal totalPrice = BigDecimal.ZERO;
+
+                        // Create a map for quick lookup of ticket types
+                        Map<UUID, UUID> seatToTicketTypeMap = request.getSeats().stream()
+                                        .collect(Collectors.toMap(
+                                                        LockSeatsRequest.SeatWithTicketType::getShowtimeSeatId,
+                                                        LockSeatsRequest.SeatWithTicketType::getTicketTypeId));
+
+                        for (ShowtimeSeat showtimeSeat : seats) {
+                                UUID ticketTypeId = seatToTicketTypeMap.get(showtimeSeat.getId());
+                                if (ticketTypeId == null) {
+                                        throw new IllegalArgumentException(
+                                                        "Ticket type not specified for seat: " + showtimeSeat.getId());
+                                }
+
+                                TicketType ticketType = ticketTypeRepo.findById(ticketTypeId)
+                                                .orElseThrow(() -> new ResourceNotFoundException("TicketType", "id",
+                                                                ticketTypeId));
+
+                                // Calculate base price (seat + showtime modifiers only)
+                                BigDecimal basePrice = priceCalculationService.calculatePrice(showtime,
+                                                showtimeSeat.getSeat());
+
+                                // Apply ticket type modifier
+                                BigDecimal finalPrice = ticketTypeService.applyTicketTypeModifier(basePrice,
+                                                ticketType);
+
+                                // Create SeatLockSeat entry
+                                SeatLockSeat seatLockSeat = new SeatLockSeat();
+                                seatLockSeat.setSeatLock(seatLock);
+                                seatLockSeat.setShowtimeSeat(showtimeSeat);
+                                seatLockSeat.setTicketType(ticketType);
+                                seatLockSeat.setPrice(finalPrice);
+
+                                seatLock.getSeatLockSeats().add(seatLockSeat);
+                                totalPrice = totalPrice.add(finalPrice);
+                        }
 
                         seatLockRepo.save(seatLock);
 
@@ -175,13 +234,13 @@ public class BookingService {
                                         seats.size(), request.getUserId(), seatLock.getId());
 
                         // Build response
-                        return buildLockResponse(seatLock, seats, lockDurationMinutes);
+                        return buildLockResponse(seatLock, totalPrice, lockDurationMinutes);
 
                 } catch (Exception e) {
                         // Rollback: release Redis locks
                         log.error("Error creating seat lock, rolling back", e);
                         redisLockService.releaseMultipleSeatsLock(
-                                        request.getShowtimeId(), seatIds, lockToken);
+                                        request.getShowtimeId(), showtimeSeatIds, lockToken);
                         throw e;
                 }
         }
@@ -231,10 +290,12 @@ public class BookingService {
                         throw new LockExpiredException("Lock has expired. Please lock seats again.");
                 }
 
-                // Update seats to BOOKED to prevent concurrent purchases
-                List<UUID> seatIds = seatLock.getLockedSeats().stream()
-                                .map(ShowtimeSeat::getId)
+                // Get seat IDs from SeatLockSeat entries
+                List<UUID> seatIds = seatLock.getSeatLockSeats().stream()
+                                .map(sls -> sls.getShowtimeSeat().getId())
                                 .collect(Collectors.toList());
+
+                // Update seats to BOOKED to prevent concurrent purchases
                 showtimeSeatRepo.updateMultipleSeatsStatus(seatIds, SeatStatus.BOOKED);
 
                 // Create booking record first (before BookingSeats)
@@ -250,27 +311,17 @@ public class BookingService {
                 booking.setRefundReason(null);
                 booking.setRefundedAt(null);
 
-                // TODO: Get default ticket type - for now use "adult" as fallback
-                // In future, FE should send ticket type per seat in lock request
-                TicketType defaultTicketType = 
-                                ticketTypeRepo.findByTicketTypeId("adult")
-                                .orElseThrow(() -> new IllegalStateException("Default ticket type 'adult' not found"));
-
-                // Create BookingSeat entries with ticket type and calculated prices
+                // Create BookingSeat entries from SeatLockSeat - copy ticket type and price
                 BigDecimal totalPrice = BigDecimal.ZERO;
-                for (ShowtimeSeat showtimeSeat : seatLock.getLockedSeats()) {
+                for (SeatLockSeat seatLockSeat : seatLock.getSeatLockSeats()) {
                         BookingSeat bookingSeat = new BookingSeat();
                         bookingSeat.setBooking(booking);
-                        bookingSeat.setShowtimeSeat(showtimeSeat);
-                        bookingSeat.setTicketTypeApplied(defaultTicketType);
-                        
-                        // Price already has ticket type applied in showtime seat price
-                        // For now, use the showtime seat price as-is
-                        // TODO: Apply ticket type modifier here when FE supports ticket type selection
-                        bookingSeat.setPriceFinal(showtimeSeat.getPrice());
-                        
+                        bookingSeat.setShowtimeSeat(seatLockSeat.getShowtimeSeat());
+                        bookingSeat.setTicketTypeApplied(seatLockSeat.getTicketType());
+                        bookingSeat.setPrice(seatLockSeat.getPrice()); // Copy final price from lock
+
                         booking.getBookingSeats().add(bookingSeat);
-                        totalPrice = totalPrice.add(showtimeSeat.getPrice());
+                        totalPrice = totalPrice.add(seatLockSeat.getPrice());
                 }
 
                 booking.setTotalPrice(totalPrice);
@@ -525,22 +576,18 @@ public class BookingService {
                                 promotionCode, currentPrice, promotionDiscount, newFinalPrice);
         }
 
-        private LockSeatsResponse buildLockResponse(SeatLock seatLock, List<ShowtimeSeat> seats,
+        private LockSeatsResponse buildLockResponse(SeatLock seatLock, BigDecimal totalPrice,
                         int lockDurationMinutes) {
 
-                List<LockSeatsResponse.SeatInfo> seatInfos = seats.stream()
-                                .map(s -> LockSeatsResponse.SeatInfo.builder()
-                                                .seatId(s.getId())
-                                                .rowLabel(s.getSeat().getRowLabel())
-                                                .seatNumber(s.getSeat().getSeatNumber())
-                                                .seatType(s.getSeat().getSeatType().toString())
-                                                .price(s.getPrice())
+                List<LockSeatsResponse.SeatInfo> seatInfos = seatLock.getSeatLockSeats().stream()
+                                .map(sls -> LockSeatsResponse.SeatInfo.builder()
+                                                .seatId(sls.getShowtimeSeat().getId())
+                                                .rowLabel(sls.getShowtimeSeat().getSeat().getRowLabel())
+                                                .seatNumber(sls.getShowtimeSeat().getSeat().getSeatNumber())
+                                                .seatType(sls.getShowtimeSeat().getSeat().getSeatType().toString())
+                                                .price(sls.getPrice()) // Price with ticket type modifier applied
                                                 .build())
                                 .collect(Collectors.toList());
-
-                BigDecimal totalPrice = seats.stream()
-                                .map(ShowtimeSeat::getPrice)
-                                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
                 long remainingSeconds = Duration.between(
                                 LocalDateTime.now(), seatLock.getExpiresAt()).getSeconds();
@@ -562,8 +609,8 @@ public class BookingService {
         private void releaseSeatsInternal(SeatLock seatLock, boolean expiredCleanup) {
                 try {
                         // Update seat status to AVAILABLE
-                        List<UUID> seatIds = seatLock.getLockedSeats().stream()
-                                        .map(ShowtimeSeat::getId)
+                        List<UUID> seatIds = seatLock.getSeatLockSeats().stream()
+                                        .map(sls -> sls.getShowtimeSeat().getId())
                                         .collect(Collectors.toList());
 
                         showtimeSeatRepo.updateMultipleSeatsStatus(seatIds, SeatStatus.AVAILABLE);

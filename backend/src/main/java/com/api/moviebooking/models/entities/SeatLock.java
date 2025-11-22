@@ -14,9 +14,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.JoinTable;
-import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -60,11 +59,11 @@ public class SeatLock {
     private Showtime showtime;
 
     /**
-     * List of seats locked in this session
+     * List of seat lock entries with ticket type and price information
+     * Each entry represents a locked seat with user-selected ticket type
      */
-    @ManyToMany(cascade = { CascadeType.PERSIST, CascadeType.MERGE })
-    @JoinTable(name = "seat_lock_seats", joinColumns = @JoinColumn(name = "seat_lock_id"), inverseJoinColumns = @JoinColumn(name = "showtime_seat_id"))
-    private List<ShowtimeSeat> lockedSeats = new ArrayList<>();
+    @OneToMany(mappedBy = "seatLock", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<SeatLockSeat> seatLockSeats = new ArrayList<>();
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)

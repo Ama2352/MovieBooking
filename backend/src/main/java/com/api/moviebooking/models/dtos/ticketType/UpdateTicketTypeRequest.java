@@ -19,8 +19,6 @@ public class UpdateTicketTypeRequest {
 
     private String label;
 
-    private String description;
-
     private ModifierType modifierType;
 
     @DecimalMin(value = "-100.0", message = "Modifier value must be greater than or equal to -100")

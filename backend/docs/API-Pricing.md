@@ -2,8 +2,16 @@
 
 ## Overview
 The pricing system consists of:
-- **Base Prices** (`/price-base`): Foundation ticket prices
-- **Price Modifiers** (`/price-modifiers`): Dynamic adjustments based on conditions
+- **Base Prices** (`/price-base`): Foundation ticket prices (only one active at a time)
+- **Price Modifiers** (`/price-modifiers`): Dynamic adjustments based on conditions (seat/showtime specific)
+- **Ticket Types** (`/ticket-types`): User-selected pricing categories (adult, student, senior) - See [API-TicketTypes.md](API-TicketTypes.md)
+
+**CRITICAL:** 
+- Only ONE base price can be active at a time
+- Price modifiers are applied to ShowtimeSeat prices (before user selection)
+- Ticket types are applied during seat locking (user choice)
+
+**Pricing Flow:** Base Price → Seat/Showtime Modifiers → **Ticket Type** → Membership → Promotions
 
 ---
 
@@ -72,7 +80,9 @@ Updates base price configuration.
 
 #### Notes
 - `basePrice` value cannot be modified after creation (create new one instead)
-- Only one base price can be active at a time
+- **Only one base price can be active at a time** - activating a new base price automatically deactivates all others
+- When creating a new base price, set `isActive: true` to use it immediately
+- Deactivated base prices are kept for historical records
 
 ---
 
@@ -149,7 +159,13 @@ Retrieves the currently active base price.
 
 #### Use Case
 - Display current ticket prices to users
-- Calculate showtime seat prices
+- Calculate showtime seat prices (base price before modifiers)
+- Frontend should cache this value and use it for price estimation
+
+#### Important
+- This returns the **only active** base price in the system
+- All showtime seat prices start from this base price
+- If no active base price exists, price calculation will fail
 
 ---
 
@@ -504,7 +520,7 @@ Multiplies the current price by a factor.
 
 ## Price Calculation Flow
 
-### Step-by-Step Calculation
+### Step-by-Step Calculation (Seat Base Price)
 ```
 1. Start with Base Price: 80,000 VND
 
@@ -520,12 +536,20 @@ Multiplies the current price by a factor.
 5. Apply DAY_TYPE modifier (PERCENTAGE):
    125,000 × 1.2 = 150,000 VND
 
-Final Ticket Price: 150,000 VND
+Seat Base Price: 150,000 VND (shown in seat map)
+
+6. User selects ticket type (e.g., Student -20%):
+   150,000 × 0.8 = 120,000 VND
+
+Final Lock Price: 120,000 VND (shown in lock response)
 ```
 
 ### Calculation Order
 1. All **FIXED_AMOUNT** modifiers applied first (in any order)
 2. All **PERCENTAGE** modifiers applied second (in sequence)
+3. **Ticket Type modifier** applied after base seat price calculated (see API-TicketTypes.md)
+
+**Important:** Price modifiers calculate the base seat price. Ticket types are applied separately during seat locking.
 
 ---
 
@@ -645,22 +669,33 @@ async function createWeekendSurcharge() {
 
 ## Important Notes
 
-1. **Single Active Base Price**: Only one base price can be active at a time
+1. **Single Active Base Price**: Only one base price can be active at a time. Activating a new one automatically deactivates all others.
 
-2. **Multiple Modifiers**: Multiple modifiers can be active simultaneously and stack
+2. **Ticket Types NOT Included**: Price modifiers only handle seat/showtime conditions. Ticket types (adult, student, senior) are separate - see [API-TicketTypes.md](API-TicketTypes.md).
 
-3. **Modifier Order**: FIXED_AMOUNT modifiers applied before PERCENTAGE for consistent results
+3. **Multiple Modifiers**: Multiple modifiers can be active simultaneously and stack (e.g., VIP seat + 3D + weekend).
 
-4. **Immutable Values**: Base price and modifier values cannot be changed after creation
+4. **Modifier Order**: FIXED_AMOUNT modifiers applied before PERCENTAGE for consistent results.
 
-5. **Historical Data**: Keep inactive prices/modifiers for historical booking records
+5. **Immutable Values**: Base price and modifier values cannot be changed after creation. Create new entries for price changes.
 
-6. **Recalculation**: After updating modifiers, use recalculate endpoint for existing showtimes
+6. **Historical Data**: Keep inactive prices/modifiers for historical booking records and audit trails.
 
-7. **Testing**: Test price calculations thoroughly with various combinations
+7. **Recalculation**: After updating modifiers, existing ShowtimeSeats will recalculate prices on next access.
 
-8. **Display**: Always show price breakdown to users for transparency
+8. **Testing**: Test price calculations thoroughly with various condition combinations.
 
-9. **Rounding**: Final prices should be rounded appropriately (nearest 1,000 VND)
+9. **Display**: Always show price breakdown to users for transparency:
+   - Base price
+   - Applied modifiers (with amounts)
+   - Seat base price (before ticket type)
+   - Selected ticket type (if locked)
+   - Final price
 
-10. **Performance**: Cache active modifiers on frontend, refresh periodically
+10. **Rounding**: Final prices should be rounded appropriately (nearest 1,000 VND for display).
+
+11. **Performance**: Cache active base price and modifiers on frontend, refresh on page load or every 5 minutes.
+
+12. **Admin Safety**: Warn admins when deactivating the only active base price - system won't be able to calculate prices.
+
+13. **Price Consistency**: ShowtimeSeat prices (base + modifiers) are stored. Ticket type prices are calculated dynamically during seat locking.

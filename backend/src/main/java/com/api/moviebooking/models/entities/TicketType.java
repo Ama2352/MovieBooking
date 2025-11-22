@@ -34,13 +34,10 @@ public class TicketType {
     private UUID id;
 
     @Column(nullable = false, unique = true, length = 50)
-    private String ticketTypeId; // Logic ID: adult, student, senior, member, double
+    private String code; // adult, student, senior, member, double
 
     @Column(nullable = false, length = 100)
     private String label; // Display label: NGƯỜI LỚN, HSSV/U22-GV, etc.
-
-    @Column(length = 500)
-    private String description; // Description of ticket type
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)

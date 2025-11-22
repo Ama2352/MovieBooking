@@ -40,4 +40,5 @@ public final class PublicEndpointConfig {
         public static final String[] BOOKINGS = { "/bookings/**" };
         public static final String[] BOOKING_LOCKS = { "/bookings/lock/**" };
         public static final String[] TESTS = { "/test/**" };
+        public static final String[] TICKET_TYPES = { "/ticket-types/**" };
 }

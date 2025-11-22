@@ -5,14 +5,21 @@ Base Path: `/bookings`
 ## Overview
 Endpoints for managing movie ticket bookings, including seat locking, booking confirmation, and booking history.
 
+**Ticket Type Integration:**
+- **Mandatory**: Each seat MUST have a ticket type selected during the lock phase
+- Use `GET /ticket-types?showtimeId={id}` to get available ticket types with calculated prices
+- Ticket types (adult, student, senior, etc.) affect the final seat price
+- See [API-TicketTypes.md](API-TicketTypes.md) for detailed ticket type documentation
+
 ---
 
 ## Booking Flow
-1. **Lock Seats** → `/bookings/lock` (POST)
-2. **Check Availability** → `/bookings/lock/availability/{showtimeId}` (GET)
-3. **Confirm Booking** → `/bookings/confirm` (POST)
-4. **Initiate Payment** → See Payment API
-5. **View Bookings** → `/bookings/my-bookings` (GET)
+1. **Get Ticket Types** → `/ticket-types?showtimeId={id}` (GET) - See available ticket types with prices
+2. **Lock Seats** → `/bookings/lock` (POST) - Lock seats with selected ticket types
+3. **Check Availability** → `/bookings/lock/availability/{showtimeId}` (GET) - View seat status
+4. **Confirm Booking** → `/bookings/confirm` (POST) - Finalize booking
+5. **Initiate Payment** → See Payment API
+6. **View Bookings** → `/bookings/my-bookings` (GET) - View booking history
 
 ---
 
@@ -28,12 +35,36 @@ Locks selected seats for 10 minutes to prevent double-booking during checkout.
 {
   "showtimeId": "3e4a8c9f-1234-5678-90ab-cdef12345678",
   "userId": "7b2e9a1c-4567-89ab-cdef-123456789012",
-  "showtimeSeatIds": [
-    "9f1a2b3c-4d5e-6f7a-8b9c-0d1e2f3a4b5c",
-    "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d"
+  "seats": [
+    {
+      "showtimeSeatId": "9f1a2b3c-4d5e-6f7a-8b9c-0d1e2f3a4b5c",
+      "ticketTypeId": "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d"
+    },
+    {
+      "showtimeSeatId": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d",
+      "ticketTypeId": "b2c3d4e5-f6a7-8b9c-0d1e-2f3a4b5c6d7e"
+    }
   ]
 }
 ```
+
+**Note**: Each seat must have a ticket type selected (e.g., adult, student, senior). Use `GET /ticket-types?showtimeId={id}` to get available ticket types with calculated prices for the showtime.
+
+#### Validation Rules
+- Maximum seats per booking: 10 (configurable)
+- Each seat must have a ticket type assigned
+- **Ticket types must be active for the showtime** (validated via `showtime_ticket_types` table)
+- Seats must be AVAILABLE (not LOCKED or BOOKED)
+- User can only have one active lock per showtime at a time
+
+#### Error Responses
+- `400 Bad Request`: 
+  - Exceeds maximum seats per booking
+  - Missing ticket type for one or more seats
+  - **Ticket type not available for this showtime**
+- `404 Not Found`: Showtime, user, seat, or ticket type not found
+- `409 Conflict`: Seats already locked or booked by another user
+- `423 Locked`: Unable to acquire lock (concurrent booking attempt)
 
 #### Response
 - **Status Code**: `201 CREATED`
@@ -49,6 +80,8 @@ Locks selected seats for 10 minutes to prevent double-booking during checkout.
       "rowLabel": "A",
       "seatNumber": 5,
       "seatType": "NORMAL",
+      "ticketTypeId": "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
+      "ticketTypeLabel": "NGƯỜI LỚN",
       "price": 100000.00
     },
     {
@@ -56,14 +89,22 @@ Locks selected seats for 10 minutes to prevent double-booking during checkout.
       "rowLabel": "A",
       "seatNumber": 6,
       "seatType": "VIP",
-      "price": 120000.00
+      "ticketTypeId": "b2c3d4e5-f6a7-8b9c-0d1e-2f3a4b5c6d7e",
+      "ticketTypeLabel": "HSSV/U22-GV",
+      "price": 96000.00
     }
   ],
-  "totalPrice": 220000.00,
+  "totalPrice": 196000.00,
   "expiresAt": "2024-11-17T12:30:00",
   "remainingSeconds": 600,
   "message": "Seats locked successfully"
 }
+```
+
+**Response Fields:**
+- `price`: Final seat price **with ticket type applied** (base + seat/showtime modifiers + ticket type modifier)
+- `ticketTypeId` / `ticketTypeLabel`: The selected ticket type for each seat
+- `totalPrice`: Sum of all seat prices (with ticket types)
 ```
 
 #### Authentication
@@ -175,16 +216,18 @@ Confirms the booking after seat locking, transitions seats from LOCKED to BOOKED
       "rowLabel": "A",
       "seatNumber": 5,
       "seatType": "VIP",
+      "ticketTypeLabel": "NGƯỜI LỚN",
       "price": 120000.00
     },
     {
       "rowLabel": "A",
       "seatNumber": 6,
       "seatType": "VIP",
-      "price": 120000.00
+      "ticketTypeLabel": "HSSV/U22-GV",
+      "price": 96000.00
     }
   ],
-  "totalPrice": 240000.00,
+  "totalPrice": 216000.00,
   "discountReason": "Promotion WINTER2024(-10%)",
   "discountValue": 24000.00,
   "finalPrice": 216000.00,

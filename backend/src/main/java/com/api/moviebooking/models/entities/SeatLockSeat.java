@@ -1,15 +1,22 @@
 package com.api.moviebooking.models.entities;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
+import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UuidGenerator;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
@@ -17,19 +24,13 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-/**
- * Junction entity that links bookings to showtime seats with ticket type and
- * final price
- * Replaces the simple @ManyToMany relationship to store additional booking seat
- * data
- */
 @Entity
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
 @Setter
-@Table(name = "booking_seats")
-public class BookingSeat {
+@Table(name = "seat_lock_seats")
+public class SeatLockSeat {
 
     @Id
     @UuidGenerator
@@ -37,24 +38,16 @@ public class BookingSeat {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(nullable = false)
-    private Booking booking;
+    private SeatLock seatLock;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(nullable = false)
     private ShowtimeSeat showtimeSeat;
 
-    /**
-     * The ticket type applied to this specific seat at booking time
-     * e.g., "adult", "student", "senior"
-     */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(nullable = false)
-    private TicketType ticketTypeApplied;
+    private TicketType ticketType;
 
-    /**
-     * The final calculated price for this seat after ticket type modifier
-     * = showtime seat base price * ticket type modifier
-     */
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal price;
 }

@@ -20,8 +20,10 @@ Complete API documentation for the Movie Booking System backend.
 
 ### Pricing & Promotions
 9. [Pricing API](./API-Pricing.md) - Base prices and dynamic modifiers
-10. [Promotions API](./API-Promotions.md) - Discount codes and campaigns
-11. [Membership Tiers API](./API-MembershipTiers.md) - Loyalty program tiers
+10. [Ticket Types API](./API-TicketTypes.md) - Ticket categories (adult, student, senior, etc.)
+11. [Showtime Ticket Types API](./API-ShowtimeTicketTypes.md) - Admin configuration of ticket types per showtime
+12. [Promotions API](./API-Promotions.md) - Discount codes and campaigns
+13. [Membership Tiers API](./API-MembershipTiers.md) - Loyalty program tiers
 
 ---
 
@@ -90,25 +92,47 @@ GET /showtimes/{showtimeId}
 
 #### 4. View Available Seats
 ```javascript
-// Get all seats for the showtime with availability
+// Get all seats for the showtime with availability and base prices
 GET /showtime-seats/showtime/{showtimeId}
 
 // Or check availability with user cleanup
 GET /bookings/lock/availability/{showtimeId}?userId={userId}
 ```
 
-#### 5. Lock Selected Seats
+#### 5. Select Ticket Types
+```javascript
+// Get available ticket types with calculated prices for the showtime
+GET /ticket-types?showtimeId={showtimeId}
+
+// Returns ticket types like:
+// [
+//   { "id": "uuid", "code": "adult", "label": "NGƯỜI LỚN", "price": 100000.00 },
+//   { "id": "uuid", "code": "student", "label": "HSSV/U22-GV", "price": 80000.00 },
+//   { "id": "uuid", "code": "senior", "label": "NGƯỜI CAO TUỔI", "price": 75000.00 }
+// ]
+```
+
+#### 6. Lock Selected Seats with Ticket Types
 ```javascript
 POST /bookings/lock
 {
   "showtimeId": "uuid",
   "userId": "uuid",
-  "seatIds": ["seat-uuid-1", "seat-uuid-2"]
+  "seats": [
+    {
+      "showtimeSeatId": "seat-uuid-1",
+      "ticketTypeId": "adult-uuid"
+    },
+    {
+      "showtimeSeatId": "seat-uuid-2",
+      "ticketTypeId": "student-uuid"
+    }
+  ]
 }
-// Seats locked for 10 minutes
+// Seats locked for 10 minutes with ticket type prices applied
 ```
 
-#### 6. Apply Promotion Code (Optional)
+#### 7. Apply Promotion Code (Optional)
 ```javascript
 // Validate promotion
 GET /promotions/code/WINTER2024
@@ -117,7 +141,7 @@ GET /promotions/code/WINTER2024
 GET /promotions/valid
 ```
 
-#### 7A. Two-Step Checkout (Traditional)
+#### 8A. Two-Step Checkout (Traditional)
 ```javascript
 // Step 1: Confirm booking
 POST /bookings/confirm
@@ -138,7 +162,7 @@ POST /payments/order
 // Returns payment URL, redirect user
 ```
 
-#### 7B. Atomic Checkout (Recommended)
+#### 8B. Atomic Checkout (Recommended)
 ```javascript
 // One-step: Confirm booking + Initiate payment
 POST /checkout
@@ -152,7 +176,7 @@ POST /checkout
 // If payment fails, booking is not created (atomic transaction)
 ```
 
-#### 8. Payment Gateway
+#### 9. Payment Gateway
 ```javascript
 // User completes payment on PayPal/Momo
 // Gateway redirects back to your return URL with order ID
@@ -167,7 +191,7 @@ POST /payments/order/capture
 // On success: Booking status → CONFIRMED, Seats → BOOKED
 ```
 
-#### 9. View Booking
+#### 10. View Booking
 ```javascript
 // Get user's bookings
 GET /bookings/my-bookings
@@ -176,7 +200,7 @@ GET /bookings/my-bookings
 GET /bookings/{bookingId}
 ```
 
-#### 10. Generate QR Code (Frontend)
+#### 11. Generate QR Code (Frontend)
 ```javascript
 // Frontend generates QR code from booking ID
 // Then updates booking with QR code URL
@@ -247,24 +271,30 @@ POST /showtimes
   "startTime": "2024-11-17T19:30:00"
 }
 // System automatically creates showtime seats with calculated prices
+
+// 3. Assign ticket types to showtime
+POST /showtimes/{showtimeId}/ticket-types
+{
+  "ticketTypeIds": ["adult-uuid", "student-uuid", "senior-uuid"]
+}
 ```
 
 ### Pricing Configuration
 ```javascript
-// 1. Set base price
+// 1. Set base price (only one active at a time)
 POST /price-base
 {
   "name": "Standard Base Price 2024",
   "basePrice": 80000.00
 }
 
-// 2. Add price modifiers
+// 2. Add price modifiers (seat/showtime conditions)
 POST /price-modifiers
 {
   "name": "VIP Seat Premium",
   "conditionType": "SEAT_TYPE",
   "conditionValue": "VIP",
-  "modifierType": "ADD",
+  "modifierType": "FIXED_AMOUNT",
   "modifierValue": 20000.00
 }
 
@@ -273,12 +303,59 @@ POST /price-modifiers
   "name": "Weekend Surcharge",
   "conditionType": "DAY_TYPE",
   "conditionValue": "WEEKEND",
-  "modifierType": "MULTIPLY",
+  "modifierType": "PERCENTAGE",
   "modifierValue": 1.2
 }
 
-// 3. Recalculate existing showtime prices (if needed)
+// 3. Create ticket types (user selection categories)
+POST /ticket-types
+{
+  "code": "adult",
+  "label": "NGƯỜI LỚN",
+  "modifierType": "PERCENTAGE",
+  "modifierValue": 0, // No change (100%)
+  "active": true,
+  "sortOrder": 0
+}
+
+POST /ticket-types
+{
+  "code": "student",
+  "label": "HSSV/U22-GV",
+  "modifierType": "PERCENTAGE",
+  "modifierValue": -20, // 20% discount
+  "active": true,
+  "sortOrder": 1
+}
+
+POST /ticket-types
+{
+  "code": "senior",
+  "label": "NGƯỜI CAO TUỔI",
+  "modifierType": "PERCENTAGE",
+  "modifierValue": -25, // 25% discount
+  "active": true,
+  "sortOrder": 2
+}
+
+// 4. Recalculate existing showtime prices (if needed)
 POST /showtime-seats/showtime/{showtimeId}/recalculate-prices
+```
+
+**Pricing Flow:**
+```
+Base Price (80,000)
+  ↓
++ Seat/Showtime Modifiers (VIP +20,000, Weekend ×1.2)
+  = Seat Base Price (120,000)
+  ↓
+× Ticket Type Modifier (Student -20%)
+  = Final Lock Price (96,000)
+  ↓
+- Membership Discount (Gold -15%)
+  ↓
+- Promotion Code (WINTER2024 -10%)
+  = Final Booking Price
 ```
 
 ### Promotions Setup
