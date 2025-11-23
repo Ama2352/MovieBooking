@@ -7,13 +7,17 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.api.moviebooking.helpers.utils.SessionHelper;
+import com.api.moviebooking.models.dtos.SessionContext;
 import com.api.moviebooking.models.dtos.checkout.CheckoutPaymentRequest;
 import com.api.moviebooking.models.dtos.checkout.CheckoutPaymentResponse;
 import com.api.moviebooking.services.CheckoutService;
 
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
@@ -21,17 +25,26 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/checkout")
 @RequiredArgsConstructor
 @Tag(name = "Checkout Operations")
-@SecurityRequirement(name = "bearerToken")
 public class CheckoutController {
 
         private final CheckoutService checkoutService;
+        private final SessionHelper sessionHelper;
 
         @PostMapping
-        @Operation(summary = "Confirm booking and initiate payment", description = "Atomically validates seat locks, creates a pending booking, and initiates payment. If payment initiation fails, the entire transaction is rolled back.")
+        @Operation(summary = "Atomic booking + payment with guest support", description = """
+                        Confirms booking and initiates payment in one transaction. Rolls back if payment fails.
+                        Authenticated users use JWT; guests use X-Session-Id and provide guestInfo.
+                        """, parameters = {
+                        @Parameter(name = "X-Session-Id", description = "Guest session ID (required for guests, ignored if JWT present)", example = "550e8400-e29b-41d4-a716-446655440000", required = false, schema = @Schema(type = "string", format = "uuid"))
+        })
         public ResponseEntity<CheckoutPaymentResponse> confirmAndInitiate(
-                        @Valid @RequestBody CheckoutPaymentRequest request) {
+                        @Valid @RequestBody CheckoutPaymentRequest request,
+                        HttpServletRequest httpRequest) {
 
-                CheckoutPaymentResponse response = checkoutService.confirmBookingAndInitiatePayment(request);
+                // Extract session context (userId from JWT or sessionId from header)
+                SessionContext session = sessionHelper.extractSessionContext(httpRequest);
+
+                CheckoutPaymentResponse response = checkoutService.confirmBookingAndInitiatePayment(request, session);
                 return ResponseEntity.status(HttpStatus.CREATED).body(response);
         }
 }

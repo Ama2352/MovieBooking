@@ -27,10 +27,8 @@ public class RedisLockService {
 
     private final RedisTemplate<String, Object> redisTemplate;
 
-    // Lock prefixes for different types
+    // Lock prefix for seat locks
     private static final String SEAT_LOCK_PREFIX = "lock:seat:";
-    private static final String USER_LOCK_PREFIX = "lock:user:";
-    private static final String SHOWTIME_LOCK_PREFIX = "lock:showtime:";
 
     /**
      * Attempt to acquire a distributed lock
@@ -149,20 +147,6 @@ public class RedisLockService {
      */
     public String generateSeatLockKey(UUID showtimeId, UUID seatId) {
         return SEAT_LOCK_PREFIX + showtimeId + ":" + seatId;
-    }
-
-    /**
-     * Generate lock key for user's booking session
-     */
-    public String generateUserSessionKey(UUID userId, UUID showtimeId) {
-        return USER_LOCK_PREFIX + userId + ":showtime:" + showtimeId;
-    }
-
-    /**
-     * Generate lock key for showtime-level operations
-     */
-    public String generateShowtimeLockKey(UUID showtimeId) {
-        return SHOWTIME_LOCK_PREFIX + showtimeId;
     }
 
     /**

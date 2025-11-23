@@ -2,14 +2,12 @@ package com.api.moviebooking.services;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.security.Principal;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import org.springframework.boot.autoconfigure.security.oauth2.resource.OAuth2ResourceServerProperties.Jwt;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -19,11 +17,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.api.moviebooking.helpers.exceptions.EntityDeletionForbiddenException;
-import com.api.moviebooking.helpers.mapstructs.MembershipTierMapper;
 import com.api.moviebooking.helpers.mapstructs.UserMapper;
 import com.api.moviebooking.models.dtos.auth.LoginRequest;
 import com.api.moviebooking.models.dtos.auth.RegisterRequest;
-import com.api.moviebooking.models.dtos.membershipTier.MembershipTierDataResponse;
 import com.api.moviebooking.models.dtos.user.CreateGuestRequest;
 import com.api.moviebooking.models.dtos.user.UpdatePasswordRequest;
 import com.api.moviebooking.models.dtos.user.UpdateProfileRequest;
@@ -49,13 +45,9 @@ public class UserService {
     private final JwtService jwtService;
     private final CustomUserDetailsService customUserDetailsService;
     private final MembershipTierService membershipTierService;
-    private final MembershipTierMapper membershipTierMapper;
     private final RefreshTokenRepo refreshTokenRepo;
     private final BookingRepo bookingRepo;
-    private final JwtService JwtService;
     private final UserMapper userMapper;
-
-    private static final String VN_PHONE_REGEX = "^(03|05|07|08|09)[0-9]{8}$";
 
     public User findByEmail(String email) {
         return userRepo.findByEmail(email)
@@ -87,10 +79,6 @@ public class UserService {
 
         if (!password.equals(confirmPassword)) {
             throw new IllegalArgumentException("Confirm passwords do not match");
-        }
-
-        if (!phoneNumber.matches(VN_PHONE_REGEX)) {
-            throw new IllegalArgumentException("Invalid Vietnamese phone number");
         }
 
         String encodedPassword = passwordEncoder.encode(password);
@@ -135,11 +123,6 @@ public class UserService {
     public User getCurrentUser() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         return findByEmail(email);
-    }
-
-    public UUID getUserIdFromPrincipal(Principal principal) {
-        String email = principal.getName();
-        return findByEmail(email).getId();
     }
 
     @Transactional
@@ -240,28 +223,6 @@ public class UserService {
         }
     }
 
-    public String registerGuest(CreateGuestRequest request) {
-
-        Optional<User> existingUser = userRepo.findByEmail(request.getEmail());
-
-        if (existingUser.isPresent() && existingUser.get().getRole() != UserRole.GUEST) {
-            throw new IllegalArgumentException("Email belongs to a registered user. Please log in.");
-        }
-
-        if (!request.getPhoneNumber().matches(VN_PHONE_REGEX)) {
-            throw new IllegalArgumentException("Invalid Vietnamese phone number");
-        }
-
-        User guestUser = existingUser.orElseGet(User::new);
-        guestUser.setEmail(request.getEmail());
-        guestUser.setUsername(request.getUsername());
-        guestUser.setPhoneNumber(request.getPhoneNumber());
-        guestUser.setRole(UserRole.GUEST);
-        User savedUser = userRepo.save(guestUser);
-
-        return savedUser.getId().toString();
-    }
-
     // ========== User Profile Management ==========
 
     /**
@@ -283,14 +244,11 @@ public class UserService {
     public UserProfileResponse updateUserProfile(UpdateProfileRequest request) {
         User user = getCurrentUser();
 
-        if (request.getUsername() != null && !request.getUsername().isBlank()) {
+        if (!request.getUsername().isBlank()) {
             user.setUsername(request.getUsername());
         }
 
-        if (request.getPhoneNumber() != null && !request.getPhoneNumber().isBlank()) {
-            if (!request.getPhoneNumber().matches(VN_PHONE_REGEX)) {
-                throw new IllegalArgumentException("Invalid Vietnamese phone number");
-            }
+        if (!request.getPhoneNumber().isBlank()) {
             user.setPhoneNumber(request.getPhoneNumber());
         }
 
