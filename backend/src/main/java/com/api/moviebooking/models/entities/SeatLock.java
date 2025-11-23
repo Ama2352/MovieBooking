@@ -8,15 +8,18 @@ import java.util.UUID;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UuidGenerator;
 
+import com.api.moviebooking.models.enums.LockOwnerType;
+
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.JoinTable;
-import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -27,6 +30,10 @@ import lombok.Setter;
  * Entity representing a temporary seat lock during booking process
  * Locks are automatically released after expiry time or when booking is
  * confirmed/cancelled
+ * 
+ * - Supports both authenticated users (USER) and guest sessions (GUEST_SESSION)
+ * - lockOwnerId: userId for authenticated, sessionId for guests
+ * - user: nullable, only populated after guest completes checkout
  */
 @Entity
 @NoArgsConstructor
@@ -51,8 +58,31 @@ public class SeatLock {
     @Column(unique = true, nullable = false)
     private String lockKey;
 
+    /**
+     * Identifier of the lock owner
+     * - For authenticated users: User.id (UUID as string)
+     * - For guest sessions: temporary sessionId (UUID as string)
+     * This is the primary identifier for lock ownership
+     */
+    @Column(nullable = false)
+    private String lockOwnerId;
+
+    /**
+     * Type of lock owner (USER or GUEST_SESSION)
+     * Determines how to interpret lockOwnerId
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private LockOwnerType lockOwnerType;
+
+    /**
+     * Reference to User entity
+     * - For authenticated users: set immediately
+     * - For guests: NULL until checkout, then populated when User record is created
+     * NULLABLE to support guest sessions
+     */
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(nullable = false)
+    @JoinColumn(nullable = true)
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -60,11 +90,11 @@ public class SeatLock {
     private Showtime showtime;
 
     /**
-     * List of seats locked in this session
+     * List of seat lock entries with ticket type and price information
+     * Each entry represents a locked seat with user-selected ticket type
      */
-    @ManyToMany(cascade = { CascadeType.PERSIST, CascadeType.MERGE })
-    @JoinTable(name = "seat_lock_seats", joinColumns = @JoinColumn(name = "seat_lock_id"), inverseJoinColumns = @JoinColumn(name = "showtime_seat_id"))
-    private List<ShowtimeSeat> lockedSeats = new ArrayList<>();
+    @OneToMany(mappedBy = "seatLock", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<SeatLockSeat> seatLockSeats = new ArrayList<>();
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)

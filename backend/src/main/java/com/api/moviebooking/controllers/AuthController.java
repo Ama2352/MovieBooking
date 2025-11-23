@@ -75,11 +75,4 @@ public class AuthController {
                         cookieService.createAccessTokenCookie(newAccessToken).toString())
                 .build();
     }
-
-    @PostMapping("/guest/register")
-    public ResponseEntity<Map<String, String>> registerGuest(@Valid @RequestBody CreateGuestRequest request) {
-        String userId = userService.registerGuest(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("userId", userId));
-    }
-
 }

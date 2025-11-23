@@ -9,15 +9,21 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.api.moviebooking.helpers.exceptions.ResourceNotFoundException;
+import com.api.moviebooking.helpers.mapstructs.TicketTypeMapper;
 import com.api.moviebooking.models.dtos.ticketType.CreateTicketTypeRequest;
 import com.api.moviebooking.models.dtos.ticketType.TicketTypeResponse;
+import com.api.moviebooking.models.dtos.ticketType.TicketTypePublicResponse;
 import com.api.moviebooking.models.dtos.ticketType.UpdateTicketTypeRequest;
 import com.api.moviebooking.models.entities.Seat;
 import com.api.moviebooking.models.entities.Showtime;
+import com.api.moviebooking.models.entities.ShowtimeTicketType;
 import com.api.moviebooking.models.entities.TicketType;
 import com.api.moviebooking.repositories.ShowtimeRepo;
-import com.api.moviebooking.repositories.ShowtimeSeatRepo;
+import com.api.moviebooking.repositories.SeatLockSeatRepo;
+import com.api.moviebooking.repositories.BookingSeatRepo;
+import com.api.moviebooking.repositories.ShowtimeTicketTypeRepo;
 import com.api.moviebooking.repositories.TicketTypeRepo;
+import com.api.moviebooking.models.enums.*;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,66 +35,110 @@ public class TicketTypeService {
 
     private final TicketTypeRepo ticketTypeRepo;
     private final ShowtimeRepo showtimeRepo;
-    private final ShowtimeSeatRepo showtimeSeatRepo;
+    private final SeatLockSeatRepo seatLockSeatRepo;
+    private final BookingSeatRepo bookingSeatRepo;
+    private final ShowtimeTicketTypeRepo showtimeTicketTypeRepo;
     private final PriceCalculationService priceCalculationService;
+    private final TicketTypeMapper ticketTypeMapper;
 
     /**
      * Get all active ticket types with their base prices
      * Used for guest endpoint: GET /ticket-types
      */
-    public List<TicketTypeResponse> getAllActiveTicketTypes() {
+    public List<TicketTypePublicResponse> getAllActiveTicketTypes() {
         List<TicketType> ticketTypes = ticketTypeRepo.findAllByActiveTrue();
         return ticketTypes.stream()
-                .map(this::toResponse)
+                .map(ticketTypeMapper::toPublicResponse)
                 .collect(Collectors.toList());
     }
 
     /**
      * Get ticket types with calculated prices for a specific showtime
-     * Used for guest endpoint: GET /ticket-types?showtimeId={showtimeId}&userId={userId}
-     * Prices are calculated by applying ticket type modifiers to showtime seat base prices
+     * Used for guest endpoint: GET /ticket-types?showtimeId={showtimeId}
+     * 
+     * Returns only ticket types that are enabled for this specific showtime via
+     * ShowtimeTicketType.
+     * Prices are calculated based on a NORMAL seat as a reference price.
+     * The actual final price will vary based on the specific seat selected (VIP,
+     * COUPLE, etc.)
+     * and will be calculated during the seat locking phase.
      */
-    public List<TicketTypeResponse> getTicketTypesForShowtime(UUID showtimeId, UUID userId) {
+    public List<TicketTypePublicResponse> getTicketTypesForShowtime(UUID showtimeId, UUID userId) {
         Showtime showtime = showtimeRepo.findById(showtimeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Showtime", "id", showtimeId));
 
-        List<TicketType> ticketTypes = ticketTypeRepo.findAllByActiveTrue();
+        // Get only ticket types that are active for this specific showtime
+        List<ShowtimeTicketType> showtimeTicketTypes = showtimeTicketTypeRepo
+                .findActiveTicketTypesByShowtime(showtimeId);
 
-        // For each ticket type, calculate price based on seat type mapping
-        // "double" ticket type maps to COUPLE seat, others map to NORMAL seat
+        // If no ticket types are assigned to this showtime, fall back to all active
+        // ticket types
+        List<TicketType> ticketTypes;
+        if (showtimeTicketTypes.isEmpty()) {
+            log.warn("No ticket types assigned to showtime {}. Falling back to all active ticket types.", showtimeId);
+            ticketTypes = ticketTypeRepo.findAllByActiveTrue();
+        } else {
+            ticketTypes = showtimeTicketTypes.stream()
+                    .map(ShowtimeTicketType::getTicketType)
+                    .collect(Collectors.toList());
+        }
+
+        // Calculate reference price based on NORMAL seat type
+        // This gives users an idea of ticket type pricing
+        // Actual price will be calculated per seat during lock phase
+        BigDecimal referenceSeatPrice = calculateReferencePriceForShowtime(showtime);
+
         return ticketTypes.stream()
                 .map(ticketType -> {
-                    // Determine seat type from ticket type ID
-                    Seat dummySeat = new Seat();
-                    dummySeat.setSeatType(getSeatTypeFromTicketType(ticketType.getTicketTypeId()));
+                    // Apply ticket type modifier to reference price
+                    BigDecimal priceWithTicketType = applyTicketTypeModifier(referenceSeatPrice, ticketType);
 
-                    // Get base showtime seat price (without ticket type modifier)
-                    BigDecimal baseSeatPrice = priceCalculationService.calculatePrice(showtime, dummySeat, null);
-
-                    // Apply ticket type modifier to base price
-                    BigDecimal finalPrice = applyTicketTypeModifier(baseSeatPrice, ticketType);
-
-                    TicketTypeResponse response = toResponse(ticketType);
-                    response.setPrice(finalPrice);
+                    TicketTypePublicResponse response = ticketTypeMapper.toPublicResponse(ticketType);
+                    response.setPrice(priceWithTicketType);
                     return response;
                 })
                 .collect(Collectors.toList());
     }
 
     /**
+     * Calculate reference price for a showtime based on NORMAL seat type
+     * This is used to show estimated ticket type prices before seat selection
+     * 
+     * @param showtime The showtime to calculate price for
+     * @return Base price including showtime modifiers (time, day, format, room) for
+     *         a NORMAL seat
+     */
+    private BigDecimal calculateReferencePriceForShowtime(Showtime showtime) {
+        // Create a reference seat with NORMAL type for price calculation
+        Seat referenceSeat = new Seat();
+        referenceSeat.setSeatType(SeatType.NORMAL);
+
+        // Calculate base price for the showtime with NORMAL seat
+        return priceCalculationService.calculatePrice(showtime, referenceSeat);
+    }
+
+    /**
      * Apply ticket type modifier to a base price
+     * This is the ONLY place where ticket type pricing should be applied
      * PERCENTAGE: finalPrice = basePrice * (1 + modifierValue / 100)
      * FIXED_AMOUNT: finalPrice = basePrice + modifierValue
+     * 
+     * @param basePrice  The base price from PriceCalculationService (already
+     *                   includes seat/showtime modifiers)
+     * @param ticketType The ticket type with modifier configuration
+     * @return Final price after applying ticket type modifier
      */
-    private BigDecimal applyTicketTypeModifier(BigDecimal basePrice, TicketType ticketType) {
+    public BigDecimal applyTicketTypeModifier(BigDecimal basePrice, TicketType ticketType) {
         switch (ticketType.getModifierType()) {
             case PERCENTAGE:
-                // e.g., basePrice = 100000, modifierValue = -20 -> finalPrice = 100000 * (1 - 0.20) = 80000
+                // e.g., basePrice = 100000, modifierValue = -20 -> finalPrice = 100000 * (1 -
+                // 0.20) = 80000
                 BigDecimal multiplier = BigDecimal.ONE.add(ticketType.getModifierValue().divide(new BigDecimal("100")));
                 return basePrice.multiply(multiplier).setScale(0, java.math.RoundingMode.HALF_UP);
 
             case FIXED_AMOUNT:
-                // e.g., basePrice = 100000, modifierValue = -15000 -> finalPrice = 100000 - 15000 = 85000
+                // e.g., basePrice = 100000, modifierValue = -15000 -> finalPrice = 100000 -
+                // 15000 = 85000
                 return basePrice.add(ticketType.getModifierValue()).setScale(0, java.math.RoundingMode.HALF_UP);
 
             default:
@@ -98,12 +148,12 @@ public class TicketTypeService {
 
     /**
      * Get all ticket types (including inactive) for admin
-     * Used for admin endpoint: GET /admin/ticket-types
+     * Used for admin endpoint: GET /ticket-types/admin
      */
     public List<TicketTypeResponse> getAllTicketTypesForAdmin() {
         List<TicketType> ticketTypes = ticketTypeRepo.findAllOrderedBySortOrder();
         return ticketTypes.stream()
-                .map(this::toResponseWithAdminFields)
+                .map(ticketTypeMapper::toAdminResponse)
                 .collect(Collectors.toList());
     }
 
@@ -113,24 +163,23 @@ public class TicketTypeService {
      */
     @Transactional
     public TicketTypeResponse createTicketType(CreateTicketTypeRequest request) {
-        // Validate ticket type ID is unique
-        if (ticketTypeRepo.existsByTicketTypeId(request.getTicketTypeId())) {
-            throw new IllegalArgumentException("Ticket type ID already exists: " + request.getTicketTypeId());
+        // Validate ticket type code is unique
+        if (ticketTypeRepo.existsByCode(request.getCode())) {
+            throw new IllegalArgumentException("Ticket type code already exists: " + request.getCode());
         }
 
         TicketType ticketType = new TicketType();
-        ticketType.setTicketTypeId(request.getTicketTypeId());
+        ticketType.setCode(request.getCode());
         ticketType.setLabel(request.getLabel());
-        ticketType.setDescription(request.getDescription());
         ticketType.setModifierType(request.getModifierType());
         ticketType.setModifierValue(request.getModifierValue());
         ticketType.setActive(request.getActive());
         ticketType.setSortOrder(request.getSortOrder());
 
         ticketTypeRepo.save(ticketType);
-        log.info("Created ticket type: {}", ticketType.getTicketTypeId());
+        log.info("Created ticket type: {}", ticketType.getCode());
 
-        return toResponseWithAdminFields(ticketType);
+        return ticketTypeMapper.toAdminResponse(ticketType);
     }
 
     /**
@@ -144,10 +193,6 @@ public class TicketTypeService {
 
         if (request.getLabel() != null) {
             ticketType.setLabel(request.getLabel());
-        }
-
-        if (request.getDescription() != null) {
-            ticketType.setDescription(request.getDescription());
         }
 
         if (request.getModifierType() != null) {
@@ -167,14 +212,14 @@ public class TicketTypeService {
         }
 
         ticketTypeRepo.save(ticketType);
-        log.info("Updated ticket type: {}", ticketType.getTicketTypeId());
+        log.info("Updated ticket type: {}", ticketType.getCode());
 
-        return toResponseWithAdminFields(ticketType);
+        return ticketTypeMapper.toAdminResponse(ticketType);
     }
 
     /**
      * Delete a ticket type
-     * Soft delete if used in bookings, hard delete if not used
+     * Soft delete if used in seat locks or bookings, hard delete if not used
      * Used for admin endpoint: DELETE /admin/ticket-types/{id}
      */
     @Transactional
@@ -182,62 +227,59 @@ public class TicketTypeService {
         TicketType ticketType = ticketTypeRepo.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("TicketType", "id", id));
 
-        // Check if ticket type is used in any showtime seats
-        boolean isUsed = showtimeSeatRepo.isTicketTypeUsed(id);
+        // Check if ticket type is used in seat locks or bookings
+        // SeatLockSeat: temporary locks (may contain this ticket type)
+        // BookingSeat: confirmed bookings (historical data, must preserve)
+        boolean isUsedInLocks = seatLockSeatRepo.isTicketTypeUsed(id);
+        boolean isUsedInBookings = isTicketTypeUsedInBookings(id);
 
-        if (isUsed) {
+        if (isUsedInLocks || isUsedInBookings) {
             // Soft delete: set active to false
             ticketType.setActive(false);
             ticketTypeRepo.save(ticketType);
-            log.info("Soft deleted ticket type (set active=false): {}", ticketType.getTicketTypeId());
+            log.info("Soft deleted ticket type (set active=false, used in {} locks, {} bookings): {}",
+                    isUsedInLocks ? "some" : "no",
+                    isUsedInBookings ? "some" : "no",
+                    ticketType.getCode());
         } else {
             // Hard delete: remove from database
             ticketTypeRepo.delete(ticketType);
-            log.info("Hard deleted ticket type: {}", ticketType.getTicketTypeId());
+            log.info("Hard deleted ticket type: {}", ticketType.getCode());
         }
     }
 
     /**
-     * Convert entity to response DTO (basic fields only)
-     * Price field is null - should be set by caller based on context
+     * Validate that a ticket type is available for a specific showtime
+     * Throws IllegalArgumentException if not available
+     * 
+     * @param showtimeId   The showtime ID
+     * @param ticketTypeId The ticket type ID
+     * @throws ResourceNotFoundException if ticket type doesn't exist
+     * @throws IllegalArgumentException  if ticket type is not available for the
+     *                                   showtime
      */
-    private TicketTypeResponse toResponse(TicketType ticketType) {
-        return TicketTypeResponse.builder()
-                .id(ticketType.getId())
-                .ticketTypeId(ticketType.getTicketTypeId())
-                .label(ticketType.getLabel())
-                .price(null) // Price will be calculated and set by caller
-                .build();
-    }
+    public void validateTicketTypeForShowtime(UUID showtimeId, UUID ticketTypeId) {
+        // First check if ticket type exists
+        TicketType ticketType = ticketTypeRepo.findById(ticketTypeId)
+                .orElseThrow(() -> new ResourceNotFoundException("TicketType", "id", ticketTypeId));
 
-    /**
-     * Convert entity to response DTO (with admin fields)
-     * Includes modifier information for admins to see configuration
-     */
-    private TicketTypeResponse toResponseWithAdminFields(TicketType ticketType) {
-        return TicketTypeResponse.builder()
-                .id(ticketType.getId())
-                .ticketTypeId(ticketType.getTicketTypeId())
-                .label(ticketType.getLabel())
-                .description(ticketType.getDescription())
-                .modifierType(ticketType.getModifierType())
-                .modifierValue(ticketType.getModifierValue())
-                .price(null) // No base price in new architecture
-                .active(ticketType.getActive())
-                .sortOrder(ticketType.getSortOrder())
-                .build();
-    }
+        // Then check if it's active for this showtime
+        boolean isValidForShowtime = showtimeTicketTypeRepo.existsActiveByShowtimeAndTicketType(
+                showtimeId, ticketTypeId);
 
-    /**
-     * Map ticket type ID to seat type for pricing calculation
-     * "double" ticket type represents COUPLE seats
-     * All other ticket types represent NORMAL seats (adult, student, senior, member, etc.)
-     */
-    private com.api.moviebooking.models.enums.SeatType getSeatTypeFromTicketType(String ticketTypeId) {
-        if ("double".equalsIgnoreCase(ticketTypeId)) {
-            return com.api.moviebooking.models.enums.SeatType.COUPLE;
+        if (!isValidForShowtime) {
+            throw new IllegalArgumentException(
+                    String.format("Ticket type '%s' is not available for this showtime. " +
+                            "Please select from the available ticket types for this showtime.",
+                            ticketType.getCode()));
         }
-        // Default to NORMAL for all other ticket types (adult, student, senior, member, etc.)
-        return com.api.moviebooking.models.enums.SeatType.NORMAL;
+    }
+
+    /**
+     * Check if ticket type is used in any booking seats
+     * Uses BookingSeatRepo to check historical bookings
+     */
+    private boolean isTicketTypeUsedInBookings(UUID ticketTypeId) {
+        return bookingSeatRepo.isTicketTypeUsed(ticketTypeId);
     }
 }

@@ -366,33 +366,6 @@ class RedisLockServiceTest {
         assertEquals("lock:seat:" + showtimeId + ":" + seatId, key);
     }
 
-    @Test
-    @DisplayName("Generate user session key with correct format")
-    void testGenerateUserSessionKey() {
-        // Arrange
-        UUID userId = UUID.randomUUID();
-        UUID showtimeId = UUID.randomUUID();
-
-        // Act
-        String key = redisLockService.generateUserSessionKey(userId, showtimeId);
-
-        // Assert
-        assertEquals("lock:user:" + userId + ":showtime:" + showtimeId, key);
-    }
-
-    @Test
-    @DisplayName("Generate showtime lock key with correct format")
-    void testGenerateShowtimeLockKey() {
-        // Arrange
-        UUID showtimeId = UUID.randomUUID();
-
-        // Act
-        String key = redisLockService.generateShowtimeLockKey(showtimeId);
-
-        // Assert
-        assertEquals("lock:showtime:" + showtimeId, key);
-    }
-
     // ==================== acquireMultipleSeatsLock() Tests - V(G) = 4
     // ====================
     // Cyclomatic Complexity: 4 (3 decision nodes: for loop isLocked check, for loop

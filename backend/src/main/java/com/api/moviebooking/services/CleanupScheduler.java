@@ -1,14 +1,7 @@
 package com.api.moviebooking.services;
 
-import java.time.LocalDateTime;
-import java.util.List;
-
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-
-import com.api.moviebooking.models.entities.Booking;
-import com.api.moviebooking.models.enums.BookingStatus;
-import com.api.moviebooking.repositories.BookingRepo;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,8 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 public class CleanupScheduler {
 
     private final BookingService bookingService;
-    private final BookingRepo bookingRepo;
-    private final CheckoutLifecycleService checkoutLifecycleService;
+    private final CheckoutService checkoutService;
 
     /**
      * Runs every minute to cleanup expired locks
@@ -48,7 +40,7 @@ public class CleanupScheduler {
     public void cleanupExpiredPendingPayments() {
         log.debug("Running payment timeout cleanup task");
         try {
-            bookingService.cleanupExpiredPendingPayments();
+            checkoutService.cleanupExpiredPendingPayments();
         } catch (Exception e) {
             log.error("Error during payment timeout cleanup", e);
         }

@@ -14,5 +14,4 @@ public interface SnackRepo extends JpaRepository<Snack, UUID> {
     boolean existsByCinemaIdAndName(UUID cinemaId, String name);
 
     boolean existsByCinemaIdAndNameAndIdNot(UUID cinemaId, String name, UUID id);
-
 }

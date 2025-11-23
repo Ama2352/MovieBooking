@@ -18,5 +18,20 @@ public class SeatAvailabilityResponse {
     private List<UUID> availableSeats;
     private List<UUID> lockedSeats;
     private List<UUID> bookedSeats;
+
+    /**
+     * Optional: If the requesting session has active locks, include them
+     */
+    private SessionLockInfo sessionLockInfo;
     private String message;
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class SessionLockInfo {
+        private UUID lockId;
+        private List<UUID> myLockedSeats; // Seats locked by this session
+        private Integer remainingSeconds;
+    }
 }

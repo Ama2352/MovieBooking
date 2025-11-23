@@ -17,7 +17,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.api.moviebooking.models.dtos.priceModifier.AddPriceModifierRequest;
-import com.api.moviebooking.models.dtos.priceModifier.ConditionTypeInfo;
 import com.api.moviebooking.models.dtos.priceModifier.PriceModifierDataResponse;
 import com.api.moviebooking.models.dtos.priceModifier.UpdatePriceModifierRequest;
 import com.api.moviebooking.models.enums.ConditionType;
@@ -40,9 +39,9 @@ public class PriceModifierController {
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     @SecurityRequirement(name = "bearerToken")
-    @Operation(summary = "Add a new price modifier (Admin only)", 
-               description = "Create a modifier that affects ticket prices based on conditions like day type, time range, format, room type, or seat type")
-    public ResponseEntity<PriceModifierDataResponse> addPriceModifier(@Valid @RequestBody AddPriceModifierRequest request) {
+    @Operation(summary = "Add a new price modifier (Admin only)", description = "Create a modifier that affects ticket prices based on conditions like day type, time range, format, room type, or seat type")
+    public ResponseEntity<PriceModifierDataResponse> addPriceModifier(
+            @Valid @RequestBody AddPriceModifierRequest request) {
         PriceModifierDataResponse response = priceModifierService.addPriceModifier(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
@@ -99,44 +98,5 @@ public class PriceModifierController {
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("Invalid condition type: " + conditionType);
         }
-    }
-
-    @GetMapping("/condition-types")
-    @Operation(summary = "Get available condition types with descriptions and examples", 
-               description = "Returns all valid condition types that can be used when creating price modifiers")
-    public ResponseEntity<List<ConditionTypeInfo>> getConditionTypes() {
-        List<ConditionTypeInfo> conditionTypes = new java.util.ArrayList<>();
-        
-        conditionTypes.add(new ConditionTypeInfo(
-            "DAY_TYPE",
-            "Apply modifier based on day of week",
-            java.util.Arrays.asList("WEEKEND", "WEEKDAY")
-        ));
-        
-        conditionTypes.add(new ConditionTypeInfo(
-            "TIME_RANGE",
-            "Apply modifier based on showtime start hour",
-            java.util.Arrays.asList("MORNING", "AFTERNOON", "EVENING", "NIGHT")
-        ));
-        
-        conditionTypes.add(new ConditionTypeInfo(
-            "FORMAT",
-            "Apply modifier based on movie format",
-            java.util.Arrays.asList("2D", "3D", "IMAX", "4DX")
-        ));
-        
-        conditionTypes.add(new ConditionTypeInfo(
-            "ROOM_TYPE",
-            "Apply modifier based on room type",
-            java.util.Arrays.asList("STANDARD", "VIP", "IMAX", "STARIUM")
-        ));
-        
-        conditionTypes.add(new ConditionTypeInfo(
-            "SEAT_TYPE",
-            "Apply modifier based on seat type",
-            java.util.Arrays.asList("NORMAL", "VIP", "COUPLE")
-        ));
-        
-        return ResponseEntity.ok(conditionTypes);
     }
 }

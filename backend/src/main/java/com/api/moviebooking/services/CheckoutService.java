@@ -1,12 +1,22 @@
 package com.api.moviebooking.services;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.api.moviebooking.helpers.exceptions.CustomException;
+import com.api.moviebooking.helpers.exceptions.LockExpiredException;
 import com.api.moviebooking.helpers.exceptions.ResourceNotFoundException;
+import com.api.moviebooking.helpers.mapstructs.BookingMapper;
+import com.api.moviebooking.models.dtos.SessionContext;
 import com.api.moviebooking.models.dtos.booking.BookingResponse;
 import com.api.moviebooking.models.dtos.booking.ConfirmBookingRequest;
 import com.api.moviebooking.models.dtos.checkout.CheckoutPaymentRequest;
@@ -14,77 +24,285 @@ import com.api.moviebooking.models.dtos.checkout.CheckoutPaymentResponse;
 import com.api.moviebooking.models.dtos.payment.InitiatePaymentRequest;
 import com.api.moviebooking.models.dtos.payment.InitiatePaymentResponse;
 import com.api.moviebooking.models.entities.Booking;
+import com.api.moviebooking.models.entities.BookingSeat;
+import com.api.moviebooking.models.entities.BookingSnack;
+import com.api.moviebooking.models.entities.Promotion;
+import com.api.moviebooking.models.entities.SeatLock;
+import com.api.moviebooking.models.entities.SeatLockSeat;
+import com.api.moviebooking.models.entities.Snack;
+import com.api.moviebooking.models.entities.User;
+import com.api.moviebooking.models.enums.BookingStatus;
+import com.api.moviebooking.models.enums.SeatStatus;
+import com.api.moviebooking.models.enums.UserRole;
 import com.api.moviebooking.repositories.BookingRepo;
+import com.api.moviebooking.repositories.PromotionRepo;
+import com.api.moviebooking.repositories.SeatLockRepo;
+import com.api.moviebooking.repositories.ShowtimeSeatRepo;
+import com.api.moviebooking.repositories.SnackRepo;
+import com.api.moviebooking.repositories.UserRepo;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-/**
- * Service for handling the complete checkout flow atomically
- * Ensures that booking confirmation and payment initiation happen in a single
- * transaction
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class CheckoutService {
 
-        private final BookingService bookingService;
-        private final PaymentService paymentService;
-        private final BookingRepo bookingRepo;
+    private final SeatLockRepo seatLockRepo;
+    private final BookingRepo bookingRepo;
+    private final UserRepo userRepo;
+    private final SnackRepo snackRepo;
+    private final PromotionRepo promotionRepo;
+    private final ShowtimeSeatRepo showtimeSeatRepo;
+    private final BookingMapper bookingMapper;
+    private final PromotionService promotionService;
+    private final PaymentService paymentService;
+    private final CheckoutLifecycleService checkoutLifecycleService;
 
-        @Value("${payment.timeout.minutes}")
-        private int paymentTimeoutMinutes;
+    @Value("${booking.payment.timeout.minutes:15}")
+    private Integer paymentTimeoutMinutes;
 
-        /**
-         * Confirm booking and initiate payment atomically (API: POST /checkout)
-         * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
-         * Nodes: findById
-         */
-        @Transactional
-        public CheckoutPaymentResponse confirmBookingAndInitiatePayment(CheckoutPaymentRequest request) {
-                log.info("Starting atomic checkout process for user {} with lock {}",
-                                request.getUserId(), request.getLockId());
+    /**
+     * Confirm booking with guest support
+     * 
+     * Flow:
+     * 1. Find and validate seat lock
+     * 2. Check lock ownership matches session
+     * 3. For guests: Create User record with role=GUEST
+     * 4. For authenticated: Use existing User
+     * 5. Create Booking with PENDING_PAYMENT status
+     * 6. Mark seats as BOOKED
+     * 7. Link seat lock to user (if was guest)
+     */
+    @Transactional
+    public BookingResponse confirmBooking(ConfirmBookingRequest request, SessionContext session) {
+        log.info("Session {} (type: {}) confirming booking for lock {}",
+                session.getLockOwnerId(), session.getLockOwnerType(), request.getLockId());
 
-                // Step 1: Confirm booking (creates PENDING_PAYMENT booking)
-                ConfirmBookingRequest confirmRequest = new ConfirmBookingRequest(
-                                request.getLockId(),
-                                request.getUserId(),
-                                request.getPromotionCode());
+        // Find and validate lock
+        SeatLock seatLock = seatLockRepo.findById(request.getLockId())
+                .orElseThrow(() -> new ResourceNotFoundException("Seat lock not found"));
 
-                BookingResponse booking = bookingService.confirmBooking(confirmRequest);
-                log.info("Booking confirmed with ID: {}", booking.getBookingId());
-
-                // Set payment expiry to 17 minutes from now (extends beyond the 10-min lock)
-                Booking bookingEntity = bookingRepo.findById(booking.getBookingId())
-                                .orElseThrow(() -> new ResourceNotFoundException("Booking", "id",
-                                                booking.getBookingId()));
-                bookingEntity.setPaymentExpiresAt(LocalDateTime.now().plusMinutes(paymentTimeoutMinutes));
-                bookingRepo.save(bookingEntity);
-                log.info("Payment expiry set to {} minutes from now for booking {}", paymentTimeoutMinutes,
-                                booking.getBookingId());
-
-                // Step 2: Initiate payment with gateway
-                // If this fails, the entire transaction will rollback including the booking
-                InitiatePaymentRequest initiatePaymentRequest = InitiatePaymentRequest.builder()
-                                .bookingId(booking.getBookingId())
-                                .paymentMethod(request.getPaymentMethod())
-                                .amount(booking.getFinalPrice())
-                                .build();
-
-                InitiatePaymentResponse payment = paymentService.createOrder(initiatePaymentRequest);
-                log.info("Payment initiated with ID: {}", payment.paymentId());
-
-                // Step 3: Build response
-                CheckoutPaymentResponse response = CheckoutPaymentResponse.builder()
-                                .bookingId(booking.getBookingId())
-                                .paymentId(payment.paymentId())
-                                .paymentMethod(request.getPaymentMethod())
-                                .redirectUrl(payment.paymentUrl())
-                                .message("Booking pending payment. Complete payment using the provided redirect URL.")
-                                .build();
-
-                log.info("Checkout process completed successfully for booking {}", booking.getBookingId());
-                return response;
+        // Validate lock ownership
+        if (!seatLock.getLockOwnerId().equals(session.getLockOwnerId())) {
+            throw new CustomException(
+                    "Lock does not belong to this session",
+                    HttpStatus.FORBIDDEN);
         }
+
+        if (!seatLock.isActive()) {
+            throw new LockExpiredException("Lock is no longer active");
+        }
+
+        if (LocalDateTime.now().isAfter(seatLock.getExpiresAt())) {
+            throw new LockExpiredException("Lock has expired. Please lock seats again.");
+        }
+
+        // Get or create User
+        User user;
+        if (session.isAuthenticated()) {
+            // Authenticated user - fetch from database
+            user = userRepo.findById(session.getUserId())
+                    .orElseThrow(() -> new ResourceNotFoundException("User", "id", session.getUserId()));
+            log.info("Using authenticated user: {}", user.getId());
+        } else {
+            // Guest session - create new User record
+            if (request.getGuestInfo() == null) {
+                throw new CustomException(
+                        "Guest information required for guest booking",
+                        HttpStatus.BAD_REQUEST);
+            }
+
+            // Create guest user
+            user = createGuestUser(request.getGuestInfo());
+            log.info("Created guest user: {} with email: {}", user.getId(), user.getEmail());
+
+            // Link seat lock to newly created user
+            seatLock.setUser(user);
+            seatLockRepo.save(seatLock);
+        }
+
+        // Validate snacks
+        List<UUID> snackIds = request.getSnackCombos() == null ? List.of()
+                : request.getSnackCombos().stream()
+                        .map(ConfirmBookingRequest.SnackComboItem::getSnackId)
+                        .collect(Collectors.toList());
+        List<Snack> snacks = snackRepo.findAllById(snackIds);
+        if (snacks.size() != snackIds.size()) {
+            throw new ResourceNotFoundException("One or more snacks not found");
+        }
+
+        // Get seat IDs from lock
+        List<UUID> seatIds = seatLock.getSeatLockSeats().stream()
+                .map(sls -> sls.getShowtimeSeat().getId())
+                .collect(Collectors.toList());
+
+        // Update seats to BOOKED
+        showtimeSeatRepo.updateMultipleSeatsStatus(seatIds, SeatStatus.BOOKED);
+
+        // Create booking
+        Booking booking = new Booking();
+        booking.setUser(user);
+        booking.setShowtime(seatLock.getShowtime());
+        booking.setStatus(BookingStatus.PENDING_PAYMENT);
+        booking.setPaymentExpiresAt(LocalDateTime.now().plusMinutes(paymentTimeoutMinutes));
+        booking.setQrPayload(null);
+        booking.setQrCode(null);
+        booking.setLoyaltyPointsAwarded(false);
+        booking.setRefunded(false);
+
+        // Add snacks
+        if (request.getSnackCombos() != null) {
+            Map<UUID, Snack> snackMap = snacks.stream()
+                    .collect(Collectors.toMap(Snack::getId, snack -> snack));
+
+            List<BookingSnack> bookingSnacks = request.getSnackCombos().stream()
+                    .map(item -> {
+                        Snack snack = snackMap.get(item.getSnackId());
+                        BookingSnack bookingSnack = new BookingSnack();
+                        bookingSnack.setBooking(booking);
+                        bookingSnack.setSnack(snack);
+                        bookingSnack.setQuantity(item.getQuantity());
+                        return bookingSnack;
+                    })
+                    .collect(Collectors.toList());
+            booking.getBookingSnacks().addAll(bookingSnacks);
+        }
+
+        // Create booking seats from lock
+        BigDecimal totalPrice = BigDecimal.ZERO;
+        for (SeatLockSeat seatLockSeat : seatLock.getSeatLockSeats()) {
+            BookingSeat bookingSeat = new BookingSeat();
+            bookingSeat.setBooking(booking);
+            bookingSeat.setShowtimeSeat(seatLockSeat.getShowtimeSeat());
+            bookingSeat.setTicketTypeApplied(seatLockSeat.getTicketType());
+            bookingSeat.setPrice(seatLockSeat.getPrice());
+
+            booking.getBookingSeats().add(bookingSeat);
+            totalPrice = totalPrice.add(seatLockSeat.getPrice());
+        }
+
+        // Add snack prices
+        if (request.getSnackCombos() != null) {
+            for (BookingSnack bs : booking.getBookingSnacks()) {
+                BigDecimal snackTotal = bs.getSnack().getPrice()
+                        .multiply(BigDecimal.valueOf(bs.getQuantity()));
+                totalPrice = totalPrice.add(snackTotal);
+            }
+        }
+
+        booking.setTotalPrice(totalPrice);
+
+        // Apply promotion if provided
+        if (request.getPromotionCode() != null && !request.getPromotionCode().trim().isEmpty()) {
+            Promotion promotion = promotionRepo.findByCode(request.getPromotionCode())
+                    .orElseThrow(() -> new ResourceNotFoundException("Promotion", "code",
+                            request.getPromotionCode()));
+
+            BigDecimal discount = promotionService.calculateDiscount(promotion, totalPrice);
+            booking.setDiscountValue(discount);
+            booking.setDiscountReason("Promotion: " + promotion.getName());
+            booking.setFinalPrice(totalPrice.subtract(discount));
+        } else {
+            booking.setDiscountValue(BigDecimal.ZERO);
+            booking.setFinalPrice(totalPrice);
+        }
+
+        // Save booking
+        bookingRepo.save(booking);
+
+        // Deactivate lock (seats are now booked)
+        seatLock.setActive(false);
+        seatLockRepo.save(seatLock);
+
+        log.info("Booking {} created for user {} with status PENDING_PAYMENT",
+                booking.getId(), user.getId());
+
+        return bookingMapper.toBookingResponse(booking);
+    }
+
+    private User createGuestUser(ConfirmBookingRequest.GuestInfo guestInfo) {
+
+        // Check if email already exists
+        User existing = userRepo.findByEmail(guestInfo.getEmail()).orElse(null);
+        if (existing != null && existing.getRole() != UserRole.GUEST) {
+            throw new CustomException(
+                    "Email already has an account. Please login.",
+                    HttpStatus.CONFLICT);
+        }
+
+        User guestUser = new User();
+        guestUser.setEmail(guestInfo.getEmail());
+        guestUser.setUsername(guestInfo.getUsername());
+        guestUser.setPhoneNumber(guestInfo.getPhoneNumber());
+        guestUser.setRole(UserRole.GUEST);
+        return userRepo.save(guestUser);
+    }
+
+    @Transactional
+    public CheckoutPaymentResponse confirmBookingAndInitiatePayment(
+            CheckoutPaymentRequest request,
+            SessionContext session) {
+
+        log.info("Starting combined checkout for session {} (type: {})",
+                session.getLockOwnerId(), session.getLockOwnerType());
+
+        // Step 1: Confirm booking (creates booking with PENDING_PAYMENT status)
+        ConfirmBookingRequest confirmRequest = new ConfirmBookingRequest();
+        confirmRequest.setLockId(request.getLockId());
+        confirmRequest.setPromotionCode(request.getPromotionCode());
+        confirmRequest.setSnackCombos(request.getSnackCombos());
+        confirmRequest.setGuestInfo(request.getGuestInfo());
+
+        BookingResponse bookingResponse = confirmBooking(confirmRequest, session);
+
+        log.info("Booking {} created successfully, initiating payment", bookingResponse.getBookingId());
+
+        // Step 2: Initiate payment
+        InitiatePaymentRequest paymentRequest = InitiatePaymentRequest
+                .builder()
+                .bookingId(bookingResponse.getBookingId())
+                .paymentMethod(request.getPaymentMethod())
+                .amount(bookingResponse.getFinalPrice())
+                .build();
+
+        // Delegate to PaymentService for payment initiation
+        InitiatePaymentResponse paymentResponse;
+        try {
+            paymentResponse = paymentService.createOrder(paymentRequest);
+        } catch (Exception e) {
+            log.error("Payment initiation failed for booking {}, transaction will be rolled back",
+                    bookingResponse.getBookingId(), e);
+            throw new CustomException(
+                    "Payment initiation failed: " + e.getMessage(),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+        log.info("Payment {} initiated successfully for booking {}",
+                paymentResponse.paymentId(), bookingResponse.getBookingId());
+
+        // Step 3: Build combined response
+        return CheckoutPaymentResponse.builder()
+                .bookingId(bookingResponse.getBookingId())
+                .paymentId(paymentResponse.paymentId())
+                .paymentMethod(request.getPaymentMethod())
+                .redirectUrl(paymentResponse.paymentUrl())
+                .message("Booking confirmed and payment initiated successfully")
+                .build();
+    }
+
+    @Transactional
+    public void cleanupExpiredPendingPayments() {
+        List<Booking> expiredBookings = bookingRepo
+                .findByStatusAndPaymentExpiresAtBefore(BookingStatus.PENDING_PAYMENT,
+                        LocalDateTime.now());
+
+        if (expiredBookings.isEmpty()) {
+            return;
+        }
+
+        log.info("Expiring {} pending bookings due to payment timeout", expiredBookings.size());
+        expiredBookings.forEach(checkoutLifecycleService::handlePaymentTimeout);
+    }
 }

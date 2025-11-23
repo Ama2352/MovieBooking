@@ -30,6 +30,8 @@ Creates a new promotional code.
 }
 ```
 
+**Note:** `createdAt` and `updatedAt` are automatically populated by the system and should not be included in the request.
+
 #### Request Field Constraints
 | Field | Type | Required | Constraints |
 |-------|------|----------|-------------|
@@ -64,6 +66,8 @@ Creates a new promotional code.
   "updatedAt": "2024-11-17T10:00:00"
 }
 ```
+
+**Note:** `createdAt` and `updatedAt` are automatically populated with the current timestamp.
 
 #### Authentication
 - **Required**: Yes (Bearer Token)
@@ -502,7 +506,13 @@ async function createPromotion(formData) {
    - **Deactivate**: Keeps data, prevents new usage
    - **Delete**: Permanent removal (avoid if already used)
 
-10. **Analytics**:
+10. **Guest User Restrictions**:
+    - **Guest users CANNOT use promotion codes**
+    - Only registered users (with `UserRole.USER` or `UserRole.ADMIN`) can apply promotions
+    - Attempting to apply a promotion as a guest will result in a 400 Bad Request error
+    - Encourage guests to register to unlock promotion benefits
+
+11. **Analytics**:
     - Track promotion usage for marketing analysis
     - Monitor conversion rates per promotion
     - Calculate ROI on promotional campaigns

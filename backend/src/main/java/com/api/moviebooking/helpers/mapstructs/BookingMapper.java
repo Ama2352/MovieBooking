@@ -32,7 +32,6 @@ public interface BookingMapper {
     @Mapping(target = "rowLabel", source = "showtimeSeat.seat.rowLabel")
     @Mapping(target = "seatNumber", source = "showtimeSeat.seat.seatNumber")
     @Mapping(target = "seatType", source = "showtimeSeat.seat.seatType")
-    @Mapping(target = "price", source = "priceFinal")
     BookingResponse.SeatDetail toSeatDetail(BookingSeat bookingSeat);
 
     default String formatRoomName(Booking booking) {

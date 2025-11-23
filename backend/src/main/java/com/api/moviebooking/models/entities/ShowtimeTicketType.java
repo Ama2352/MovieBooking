@@ -43,7 +43,7 @@ public class ShowtimeTicketType {
     private TicketType ticketType;
 
     @Column(nullable = false)
-    private Boolean isActive = true;
+    private Boolean active = true;
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)

@@ -38,6 +38,7 @@ public final class PublicEndpointConfig {
         public static final String[] CINEMAS = { "/cinemas/**" };
         public static final String[] PAYMENTS = { "/payments/**" };
         public static final String[] BOOKINGS = { "/bookings/**" };
-        public static final String[] BOOKING_LOCKS = { "/bookings/lock/**" };
         public static final String[] TESTS = { "/test/**" };
+        public static final String[] TICKET_TYPES = { "/ticket-types/**" };
+        public static final String[] SEAT_LOCKS = { "/seat-locks/**" };
 }

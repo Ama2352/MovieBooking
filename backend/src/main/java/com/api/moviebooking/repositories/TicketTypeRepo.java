@@ -20,14 +20,14 @@ public interface TicketTypeRepo extends JpaRepository<TicketType, UUID> {
     List<TicketType> findAllByActiveTrue();
 
     /**
-     * Find ticket type by its logical ID
+     * Find ticket type by its code (e.g., 'adult', 'student', etc.)
      */
-    Optional<TicketType> findByTicketTypeId(String ticketTypeId);
+    Optional<TicketType> findByCode(String code);
 
     /**
-     * Check if ticket type ID already exists
+     * Check if ticket type code already exists
      */
-    boolean existsByTicketTypeId(String ticketTypeId);
+    boolean existsByCode(String code);
 
     /**
      * Find all ticket types ordered by sort order (for admin)
