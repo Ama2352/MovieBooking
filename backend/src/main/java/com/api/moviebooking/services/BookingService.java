@@ -19,6 +19,7 @@ import com.api.moviebooking.helpers.exceptions.MaxSeatsExceededException;
 import com.api.moviebooking.helpers.exceptions.ResourceNotFoundException;
 import com.api.moviebooking.helpers.exceptions.SeatLockedException;
 import com.api.moviebooking.models.dtos.SessionContext;
+import com.api.moviebooking.models.dtos.booking.BookingResponse;
 import com.api.moviebooking.models.dtos.booking.LockSeatsRequest;
 import com.api.moviebooking.models.dtos.booking.LockSeatsResponse;
 import com.api.moviebooking.models.dtos.booking.SeatAvailabilityResponse;
@@ -36,6 +37,7 @@ import com.api.moviebooking.repositories.ShowtimeRepo;
 import com.api.moviebooking.repositories.ShowtimeSeatRepo;
 import com.api.moviebooking.repositories.TicketTypeRepo;
 import com.api.moviebooking.repositories.UserRepo;
+import com.api.moviebooking.helpers.mapstructs.BookingMapper;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -54,6 +56,7 @@ public class BookingService {
         private final PriceCalculationService priceCalculationService;
         private final TicketTypeService ticketTypeService;
         private final BookingRepo bookingRepo;
+        private final BookingMapper bookingMapper;
 
         @Value("${booking.lock.duration.minutes:10}")
         private Integer lockDurationMinutes;
@@ -64,6 +67,44 @@ public class BookingService {
         public Booking getBookingById(UUID bookingId) {
                 return bookingRepo.findById(bookingId)
                                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
+        }
+
+        /**
+         * Get all bookings for a user
+         */
+        @Transactional(readOnly = true)
+        public List<BookingResponse> getUserBookings(UUID userId) {
+                List<Booking> bookings = bookingRepo.findByUserId(userId);
+                return bookings.stream()
+                                .map(bookingMapper::toBookingResponse)
+                                .collect(Collectors.toList());
+        }
+
+        /**
+         * Get a specific booking by ID for a user (authorization check)
+         */
+        @Transactional(readOnly = true)
+        public BookingResponse getBookingByIdForUser(UUID bookingId, UUID userId) {
+                Booking booking = bookingRepo.findByIdAndUserId(bookingId, userId)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "Booking not found or you don't have permission to view it"));
+                return bookingMapper.toBookingResponse(booking);
+        }
+
+        /**
+         * Update QR code URL for a booking
+         */
+        @Transactional
+        public BookingResponse updateQrCode(UUID bookingId, UUID userId, String qrCodeUrl) {
+                Booking booking = bookingRepo.findByIdAndUserId(bookingId, userId)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "Booking not found or you don't have permission to update it"));
+
+                booking.setQrCode(qrCodeUrl);
+                bookingRepo.save(booking);
+
+                log.info("Updated QR code for booking {} by user {}", bookingId, userId);
+                return bookingMapper.toBookingResponse(booking);
         }
 
         /**
