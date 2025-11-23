@@ -34,6 +34,8 @@ Creates a new base price configuration.
 }
 ```
 
+**Note:** `createdAt` and `updatedAt` are automatically populated by the system and should not be included in the request.
+
 #### Response
 - **Status Code**: `201 CREATED`
 - **Body**:
@@ -47,6 +49,8 @@ Creates a new base price configuration.
   "updatedAt": "2024-11-17T10:00:00"
 }
 ```
+
+**Note:** `createdAt` and `updatedAt` are automatically populated with the current timestamp.
 
 #### Authentication
 - **Required**: Yes (Bearer Token)
@@ -191,6 +195,8 @@ Creates a new price modifier rule.
 }
 ```
 
+**Note:** `createdAt` and `updatedAt` are automatically populated by the system and should not be included in the request.
+
 #### Request Fields
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
@@ -216,6 +222,8 @@ Creates a new price modifier rule.
   "updatedAt": "2024-11-17T10:00:00"
 }
 ```
+
+**Note:** `createdAt` and `updatedAt` are automatically populated with the current timestamp.
 
 #### Authentication
 - **Required**: Yes (Bearer Token)

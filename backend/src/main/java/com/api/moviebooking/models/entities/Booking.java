@@ -83,9 +83,12 @@ public class Booking {
 
     private String refundReason;
 
-    @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "booking", cascade = { CascadeType.MERGE, CascadeType.PERSIST }, orphanRemoval = true)
     private List<BookingSeat> bookingSeats = new ArrayList<>();
 
-    @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "booking", cascade = { CascadeType.MERGE, CascadeType.PERSIST }, orphanRemoval = true)
     private List<BookingPromotion> bookingPromotions = new ArrayList<>();
+
+    @OneToMany(mappedBy = "booking", cascade = { CascadeType.MERGE, CascadeType.PERSIST }, orphanRemoval = true)
+    private List<BookingSnack> bookingSnacks = new ArrayList<>();
 }

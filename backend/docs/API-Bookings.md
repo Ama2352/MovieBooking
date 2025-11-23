@@ -196,9 +196,25 @@ Confirms the booking after seat locking, transitions seats from LOCKED to BOOKED
 {
   "lockId": "2c3d4e5f-6a7b-8c9d-0e1f-2a3b4c5d6e7f",
   "userId": "7b2e9a1c-4567-89ab-cdef-123456789012",
-  "promotionCode": "WINTER2024"
+  "promotionCode": "WINTER2024",
+  "snackCombos": [
+    { "snackId": "e1f2a3b4-c5d6-7e8f-9a0b-1c2d3e4f5a6b", "quantity": 2 },
+    { "snackId": "f2a3b4c5-d6e7-8f9a-0b1c-2d3e4f5a6b7c", "quantity": 1 }
+  ]
 }
 ```
+
+**Note:**
+- `snackCombos` is now an array of objects, each with `snackId` and `quantity` fields.
+- This replaces the previous map structure for snack combos.
+
+#### Request Fields
+- `lockId`: UUID of the seat lock (required)
+- `userId`: UUID of the user (required)
+- `promotionCode`: Optional promotion code for discount
+  - **Note**: Guest users cannot use promotion codes. Only registered users can apply promotions.
+- `snackCombos`: Optional array of snack combo selections  
+  - Each item: `{ "snackId": UUID, "quantity": Integer }`
 
 #### Response
 - **Status Code**: `200 OK`
@@ -362,6 +378,12 @@ Attaches a Cloudinary QR code URL to the booking after frontend generates it.
 }
 ```
 
+**Common Causes:**
+- Seat locks expired
+- Invalid promotion code
+- **Guest users attempting to use promotion codes** (guests must register to use promotions)
+- Invalid snack IDs
+
 ### 404 Not Found
 ```json
 {
@@ -405,5 +427,9 @@ Attaches a Cloudinary QR code URL to the booking after frontend generates it.
 1. **Seat Lock Duration**: Seats are locked for 10 minutes (600 seconds). After expiration, they become available again.
 2. **Promotion Codes**: Applied during booking confirmation. Must be active and valid.
 3. **QR Code**: Frontend should generate QR code after successful payment and update the booking.
-4. **Guest Users**: Can create bookings but must track their userId for retrieval.
+4. **Guest Users**: 
+   - Can create bookings but must track their userId for retrieval
+   - **Cannot use promotion codes** - must register for an account to apply promotions
+   - **Do not receive membership tier discounts** - only registered users with assigned tiers get discounts
+   - Can still purchase snacks and tickets at regular prices
 5. **Back Button**: Always call `/bookings/lock/back` when user navigates away to release seats immediately.

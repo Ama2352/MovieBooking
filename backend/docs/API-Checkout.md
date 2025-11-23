@@ -33,17 +33,26 @@ Atomically validates seat locks, creates a pending booking, and initiates paymen
   "lockId": "2c3d4e5f-6a7b-8c9d-0e1f-2a3b4c5d6e7f",
   "userId": "7b2e9a1c-4567-89ab-cdef-123456789012",
   "promotionCode": "WINTER2024",
-  "paymentMethod": "PAYPAL"
+  "paymentMethod": "PAYPAL",
+  "snackCombos": [
+    { "snackId": "e1f2a3b4-c5d6-7e8f-9a0b-1c2d3e4f5a6b", "quantity": 2 },
+    { "snackId": "f2a3b4c5-d6e7-8f9a-0b1c-2d3e4f5a6b7c", "quantity": 1 }
+  ]
 }
 ```
+
+**Note:**
+- `snackCombos` is an array of objects, each with `snackId` and `quantity` fields.
+
 
 #### Request Fields
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `lockId` | UUID | Yes | ID of the seat lock |
 | `userId` | UUID | Yes | ID of the user (guest or registered) |
-| `promotionCode` | String | No | Promotion code for discount |
+| `promotionCode` | String | No | Promotion code for discount. **Note**: Guest users cannot use promotions - only registered users |
 | `paymentMethod` | String | Yes | Payment method: PAYPAL or MOMO |
+| `snackCombos` | Array | No | List of snack combo selections. Each item: `{ "snackId": UUID, "quantity": Integer }` |
 
 #### Response
 - **Status Code**: `201 CREATED`
@@ -211,7 +220,9 @@ User Actions                  API Calls                     Backend Processing
 - Seat locks expired (older than 10 minutes)
 - No seats locked for this showtime
 - Invalid promotion code
+- **Guest users attempting to use promotion codes** (guests cannot apply promotions)
 - Invalid payment method
+- Invalid snack IDs
 
 ### 409 Conflict
 ```json
@@ -294,7 +305,12 @@ User Actions                  API Calls                     Backend Processing
 
 7. **Retry Logic**: If checkout fails due to gateway error, user can retry. Seats remain locked until timeout.
 
-8. **Guest Users**: Fully supported. Use guest userId from guest registration.
+8. **Guest Users**: 
+   - Fully supported for basic booking flow
+   - Use guest userId from guest registration
+   - **Cannot use promotion codes** - promotions are only available to registered users
+   - **Do not receive membership tier discounts** - only registered users with assigned tiers
+   - Can purchase tickets and snacks at regular prices
 
 9. **Concurrent Users**: Seat locking prevents double-booking even with concurrent checkout attempts.
 

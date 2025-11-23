@@ -50,7 +50,8 @@ public class CheckoutService {
                 ConfirmBookingRequest confirmRequest = new ConfirmBookingRequest(
                                 request.getLockId(),
                                 request.getUserId(),
-                                request.getPromotionCode());
+                                request.getPromotionCode(),
+                                request.getSnackCombos());
 
                 BookingResponse booking = bookingService.confirmBooking(confirmRequest);
                 log.info("Booking confirmed with ID: {}", booking.getBookingId());

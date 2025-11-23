@@ -1,5 +1,7 @@
 package com.api.moviebooking.models.dtos.booking;
 
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import jakarta.validation.constraints.NotNull;
@@ -19,4 +21,15 @@ public class ConfirmBookingRequest {
     private UUID userId;
 
     private String promotionCode; // Optional promotion code for discount
+
+    // Optional snack combo selection
+    private List<SnackComboItem> snackCombos; // List of snack combo items
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class SnackComboItem {
+        private UUID snackId;
+        private Integer quantity;
+    }
 }

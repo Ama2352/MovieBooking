@@ -18,6 +18,7 @@ import com.api.moviebooking.models.enums.ModifierType;
 import com.api.moviebooking.repositories.PriceModifierRepo;
 import com.api.moviebooking.repositories.ShowtimeSeatRepo;
 
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -29,6 +30,7 @@ public class PriceModifierService {
     private final PriceModifierRepo priceModifierRepo;
     private final ShowtimeSeatRepo showtimeSeatRepo;
     private final PriceModifierMapper priceModifierMapper;
+    private final EntityManager entityManager;
 
     private PriceModifier findPriceModifierById(UUID id) {
         return priceModifierRepo.findById(id)
@@ -58,6 +60,8 @@ public class PriceModifierService {
         // increase prices
 
         priceModifierRepo.save(priceModifier);
+        entityManager.flush();
+        entityManager.refresh(priceModifier);
         return priceModifierMapper.toDataResponse(priceModifier);
     }
 
@@ -79,6 +83,8 @@ public class PriceModifierService {
         }
 
         priceModifierRepo.save(priceModifier);
+        entityManager.flush();
+        entityManager.refresh(priceModifier);
         return priceModifierMapper.toDataResponse(priceModifier);
     }
 

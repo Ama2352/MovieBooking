@@ -16,6 +16,7 @@ import com.api.moviebooking.models.entities.PriceBase;
 import com.api.moviebooking.repositories.PriceBaseRepo;
 import com.api.moviebooking.repositories.ShowtimeSeatRepo;
 
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -27,6 +28,7 @@ public class PriceBaseService {
     private final PriceBaseRepo priceBaseRepo;
     private final ShowtimeSeatRepo showtimeSeatRepo;
     private final PriceBaseMapper priceBaseMapper;
+    private final EntityManager entityManager;
 
     private PriceBase findPriceBaseById(UUID id) {
         return priceBaseRepo.findById(id)
@@ -46,6 +48,8 @@ public class PriceBaseService {
 
         PriceBase priceBase = priceBaseMapper.toEntity(request);
         priceBaseRepo.save(priceBase);
+        entityManager.flush();
+        entityManager.refresh(priceBase);
         return priceBaseMapper.toDataResponse(priceBase);
     }
 
@@ -72,6 +76,8 @@ public class PriceBaseService {
         }
 
         priceBaseRepo.save(priceBase);
+        entityManager.flush();
+        entityManager.refresh(priceBase);
         return priceBaseMapper.toDataResponse(priceBase);
     }
 

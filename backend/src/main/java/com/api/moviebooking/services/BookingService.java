@@ -26,25 +26,11 @@ import com.api.moviebooking.models.dtos.booking.ConfirmBookingRequest;
 import com.api.moviebooking.models.dtos.booking.LockSeatsRequest;
 import com.api.moviebooking.models.dtos.booking.LockSeatsResponse;
 import com.api.moviebooking.models.dtos.booking.SeatAvailabilityResponse;
-import com.api.moviebooking.models.entities.Booking;
-import com.api.moviebooking.models.entities.BookingPromotion;
-import com.api.moviebooking.models.entities.BookingSeat;
-import com.api.moviebooking.models.entities.Promotion;
-import com.api.moviebooking.models.entities.SeatLock;
-import com.api.moviebooking.models.entities.SeatLockSeat;
-import com.api.moviebooking.models.entities.Showtime;
-import com.api.moviebooking.models.entities.ShowtimeSeat;
-import com.api.moviebooking.models.entities.TicketType;
-import com.api.moviebooking.models.entities.User;
+import com.api.moviebooking.models.entities.*;
 import com.api.moviebooking.models.enums.BookingStatus;
 import com.api.moviebooking.models.enums.SeatStatus;
-import com.api.moviebooking.repositories.BookingRepo;
-import com.api.moviebooking.repositories.SeatLockRepo;
-import com.api.moviebooking.repositories.SeatLockSeatRepo;
-import com.api.moviebooking.repositories.ShowtimeSeatRepo;
-import com.api.moviebooking.repositories.ShowtimeRepo;
-import com.api.moviebooking.repositories.TicketTypeRepo;
-import com.api.moviebooking.repositories.UserRepo;
+import com.api.moviebooking.models.enums.UserRole;
+import com.api.moviebooking.repositories.*;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -60,7 +46,7 @@ public class BookingService {
 
         private final RedisLockService redisLockService;
         private final SeatLockRepo seatLockRepo;
-        private final SeatLockSeatRepo seatLockSeatRepo;
+        private final SnackRepo snackRepo;
         private final ShowtimeSeatRepo showtimeSeatRepo;
         private final ShowtimeRepo showtimeRepo;
         private final UserRepo userRepo;
@@ -247,20 +233,13 @@ public class BookingService {
 
         /**
          * Handle user pressing back button (API: POST /bookings/lock/back)
+         * Delegates to releaseSeats() - both actions have the same effect
          * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
-         * Nodes: findActiveLockByUserAndShowtime
+         * Nodes: delegated to releaseSeats
          */
         @Transactional
         public void handleBackButton(UUID userId, UUID showtimeId) {
-                log.info("User {} pressed back button for showtime {}", userId, showtimeId);
-
-                SeatLock activeLock = seatLockRepo.findActiveLockByUserAndShowtime(userId, showtimeId)
-                                .orElseThrow(() -> new ResourceNotFoundException("No active lock found"));
-
-                // Simply release the seats immediately
-                releaseSeatsInternal(activeLock, false);
-
-                log.info("Released lock {} for user {} after back button press", activeLock.getId(), userId);
+                releaseSeats(userId, showtimeId);
         }
 
         /**
@@ -276,6 +255,15 @@ public class BookingService {
                 // Find and validate lock
                 SeatLock seatLock = seatLockRepo.findById(request.getLockId())
                                 .orElseThrow(() -> new ResourceNotFoundException("Seat lock not found"));
+
+                List<UUID> snackIds = request.getSnackCombos() == null ? List.of()
+                                : request.getSnackCombos().stream()
+                                                .map(ConfirmBookingRequest.SnackComboItem::getSnackId)
+                                                .collect(Collectors.toList());
+                List<Snack> snacks = snackRepo.findAllById(snackIds);
+                if (snacks.size() != snackIds.size()) {
+                        throw new ResourceNotFoundException("One or more snacks not found");
+                }
 
                 if (!seatLock.getUser().getId().equals(request.getUserId())) {
                         throw new IllegalArgumentException("Lock does not belong to this user");
@@ -311,6 +299,22 @@ public class BookingService {
                 booking.setRefundReason(null);
                 booking.setRefundedAt(null);
 
+                Map<UUID, Snack> snackMap = snacks.stream().collect(
+                                Collectors.toMap(Snack::getId, snack -> snack));
+                List<BookingSnack> bookingSnacks = request.getSnackCombos().stream()
+                                .map(item -> {
+                                        Snack snack = snackMap.get(item.getSnackId());
+                                        Integer quantity = item.getQuantity();
+
+                                        BookingSnack bookingSnack = new BookingSnack();
+                                        bookingSnack.setBooking(booking);
+                                        bookingSnack.setSnack(snack);
+                                        bookingSnack.setQuantity(quantity);
+                                        return bookingSnack;
+                                })
+                                .collect(Collectors.toList());
+                booking.getBookingSnacks().addAll(bookingSnacks);
+
                 // Create BookingSeat entries from SeatLockSeat - copy ticket type and price
                 BigDecimal totalPrice = BigDecimal.ZERO;
                 for (SeatLockSeat seatLockSeat : seatLock.getSeatLockSeats()) {
@@ -327,11 +331,16 @@ public class BookingService {
                 booking.setTotalPrice(totalPrice);
                 booking.setFinalPrice(totalPrice); // Default to total price
 
-                // Apply membership tier discount first
+                // Apply membership tier discount first (registered users only)
                 applyMembershipTierDiscount(booking);
 
                 // Apply promotion if provided (stacks with membership discount)
+                // Guest users cannot use promotions
                 if (request.getPromotionCode() != null && !request.getPromotionCode().isBlank()) {
+                        if (seatLock.getUser().getRole() == UserRole.GUEST) {
+                                throw new IllegalArgumentException(
+                                                "Guest users cannot apply promotion codes. Please register for an account to use promotions.");
+                        }
                         applyPromotionToBooking(booking, request.getPromotionCode(), request.getUserId());
                 }
 
@@ -354,7 +363,9 @@ public class BookingService {
         }
 
         /**
-         * Release seats manually (user cancels or navigates away)
+         * Release seats manually (user cancels, navigates away, or presses back button)
+         * Used by both DELETE /bookings/lock/release and POST /bookings/lock/back
+         * endpoints
          * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
          * Nodes: seatLock != null
          */
@@ -367,6 +378,10 @@ public class BookingService {
 
                 if (seatLock != null) {
                         releaseSeatsInternal(seatLock, false);
+                        log.info("Released lock {} for user {} and showtime {}", seatLock.getId(), userId, showtimeId);
+                } else {
+                        log.info("No active lock found for user {} and showtime {} - nothing to release", userId,
+                                        showtimeId);
                 }
         }
 
@@ -378,6 +393,13 @@ public class BookingService {
          */
         @Transactional
         public SeatAvailabilityResponse checkAvailability(UUID showtimeId, UUID userId) {
+
+                // Only validate showtime, not userId because guest users are allowed to lock
+                // seats and confirm bookings
+                if (!showtimeRepo.existsById(showtimeId)) {
+                        throw new ResourceNotFoundException("Showtime", "id", showtimeId);
+                }
+
                 // Check for and release ANY existing locks for authenticated user
                 List<SeatLock> existingLocks = seatLockRepo.findAllActiveLocksForUser(userId);
 
@@ -468,6 +490,12 @@ public class BookingService {
          */
         private void applyMembershipTierDiscount(Booking booking) {
                 User user = booking.getUser();
+
+                // Guest users don't have membership tiers
+                if (user.getRole() == UserRole.GUEST) {
+                        log.debug("Guest user {} - skipping membership tier discount", user.getId());
+                        return;
+                }
 
                 // Check if user has membership tier with discount
                 if (user.getMembershipTier() == null) {
@@ -607,26 +635,22 @@ public class BookingService {
         }
 
         private void releaseSeatsInternal(SeatLock seatLock, boolean expiredCleanup) {
-                try {
-                        // Update seat status to AVAILABLE
-                        List<UUID> seatIds = seatLock.getSeatLockSeats().stream()
-                                        .map(sls -> sls.getShowtimeSeat().getId())
-                                        .collect(Collectors.toList());
+                // Update seat status to AVAILABLE
+                List<UUID> seatIds = seatLock.getSeatLockSeats().stream()
+                                .map(sls -> sls.getShowtimeSeat().getId())
+                                .collect(Collectors.toList());
 
-                        showtimeSeatRepo.updateMultipleSeatsStatus(seatIds, SeatStatus.AVAILABLE);
+                showtimeSeatRepo.updateMultipleSeatsStatus(seatIds, SeatStatus.AVAILABLE);
 
-                        // Release Redis locks
-                        redisLockService.releaseMultipleSeatsLock(
-                                        seatLock.getShowtime().getId(), seatIds, seatLock.getLockKey());
+                // Release Redis locks
+                redisLockService.releaseMultipleSeatsLock(
+                                seatLock.getShowtime().getId(), seatIds, seatLock.getLockKey());
 
-                        // Deactivate lock
-                        seatLock.setActive(false);
-                        seatLockRepo.save(seatLock);
+                // Deactivate lock
+                seatLock.setActive(false);
+                seatLockRepo.save(seatLock);
 
-                        log.info("Released seat lock {} (expired: {})", seatLock.getId(), expiredCleanup);
-                } catch (Exception e) {
-                        log.error("Error releasing seat lock {}", seatLock.getId(), e);
-                }
+                log.info("Released seat lock {} (expired: {})", seatLock.getId(), expiredCleanup);
         }
 
         /**

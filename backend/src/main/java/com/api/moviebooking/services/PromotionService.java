@@ -18,6 +18,7 @@ import com.api.moviebooking.models.entities.Promotion;
 import com.api.moviebooking.models.enums.DiscountType;
 import com.api.moviebooking.repositories.PromotionRepo;
 
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -26,6 +27,7 @@ public class PromotionService {
 
     private final PromotionRepo promotionRepo;
     private final PromotionMapper promotionMapper;
+    private final EntityManager entityManager;
 
     /**
      * Predicate nodes (d): 1 -> V(G)=d+1=2
@@ -74,6 +76,8 @@ public class PromotionService {
 
         Promotion newPromotion = promotionMapper.toEntity(request);
         promotionRepo.save(newPromotion);
+        entityManager.flush();
+        entityManager.refresh(newPromotion);
         return promotionMapper.toDataResponse(newPromotion);
     }
 
@@ -168,6 +172,8 @@ public class PromotionService {
         }
 
         promotionRepo.save(promotion);
+        entityManager.flush();
+        entityManager.refresh(promotion);
         return promotionMapper.toDataResponse(promotion);
     }
 
