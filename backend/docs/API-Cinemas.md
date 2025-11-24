@@ -407,6 +407,69 @@ Retrieves all snacks across all cinemas.
 
 ---
 
+### 16. Get Movies by Cinema and Status
+**GET** `/cinemas/{cinemaId}/movies`
+
+Retrieves all movies showing at a specific cinema filtered by status (SHOWING or UPCOMING).
+
+#### Path Parameters
+- `cinemaId`: UUID of the cinema
+
+#### Query Parameters
+- `status`: MovieStatus (required) - Filter by movie status (SHOWING or UPCOMING)
+
+#### Response
+- **Status Code**: `200 OK`
+- **Body**: Array of MovieDataResponse objects
+```json
+[
+  {
+    "movieId": "123e4567-e89b-12d3-a456-426614174000",
+    "title": "Oppenheimer",
+    "genre": "Biography, Drama, History",
+    "description": "The story of J. Robert Oppenheimer and his role in developing the atomic bomb",
+    "duration": 180,
+    "minimumAge": 13,
+    "director": "Christopher Nolan",
+    "actors": "Cillian Murphy, Emily Blunt, Matt Damon, Robert Downey Jr.",
+    "posterUrl": "https://cdn.example.com/posters/oppenheimer.jpg",
+    "posterCloudinaryId": "movies/oppenheimer_poster",
+    "trailerUrl": "https://youtube.com/watch?v=xyz123",
+    "status": "SHOWING",
+    "language": "English"
+  },
+  {
+    "movieId": "456e7890-e12b-34d5-a678-901234567890",
+    "title": "The Dark Knight",
+    "genre": "Action, Crime, Drama",
+    "description": "Batman faces the Joker in Gotham City",
+    "duration": 152,
+    "minimumAge": 13,
+    "director": "Christopher Nolan",
+    "actors": "Christian Bale, Heath Ledger, Aaron Eckhart",
+    "posterUrl": "https://cdn.example.com/posters/dark-knight.jpg",
+    "posterCloudinaryId": "movies/dark_knight_poster",
+    "trailerUrl": "https://youtube.com/watch?v=abc789",
+    "status": "SHOWING",
+    "language": "English"
+  }
+]
+```
+
+#### Authentication
+- **Required**: No (Public endpoint)
+
+#### Examples
+- Currently showing: `GET /cinemas/{cinemaId}/movies?status=SHOWING`
+- Coming soon: `GET /cinemas/{cinemaId}/movies?status=UPCOMING`
+
+#### Notes
+- Returns distinct movies that have showtimes at the specified cinema
+- Movies are filtered by their current status
+- An empty array is returned if no movies match the criteria
+
+---
+
 ## Data Models
 
 ### CinemaDataResponse
@@ -440,6 +503,25 @@ Retrieves all snacks across all cinemas.
   "type": "COMBO",
   "imageUrl": "https://cdn.example.com/popcorn-combo.jpg",
   "imageCloudinaryId": "snacks/popcorn_combo_abc123"
+}
+```
+
+### MovieDataResponse
+```json
+{
+  "movieId": "123e4567-e89b-12d3-a456-426614174000",
+  "title": "Oppenheimer",
+  "genre": "Biography, Drama, History",
+  "description": "The story of J. Robert Oppenheimer and his role in developing the atomic bomb",
+  "duration": 180,
+  "minimumAge": 13,
+  "director": "Christopher Nolan",
+  "actors": "Cillian Murphy, Emily Blunt, Matt Damon, Robert Downey Jr.",
+  "posterUrl": "https://cdn.example.com/posters/oppenheimer.jpg",
+  "posterCloudinaryId": "movies/oppenheimer_poster",
+  "trailerUrl": "https://youtube.com/watch?v=xyz123",
+  "status": "SHOWING",
+  "language": "English"
 }
 ```
 
@@ -529,6 +611,28 @@ async function loadSnacks(cinemaId) {
   }, {});
   
   displaySnackMenu(grouped);
+}
+```
+
+### Display Movies at Cinema
+```javascript
+// Get currently showing movies at a specific cinema
+async function loadCinemaMovies(cinemaId) {
+  const response = await fetch(`/cinemas/${cinemaId}/movies?status=SHOWING`);
+  const movies = await response.json();
+  
+  // Display movies
+  movies.forEach(movie => {
+    const card = createMovieCard(movie);
+    movieGrid.appendChild(card);
+  });
+}
+
+// Get upcoming movies at a specific cinema
+async function loadUpcomingCinemaMovies(cinemaId) {
+  const response = await fetch(`/cinemas/${cinemaId}/movies?status=UPCOMING`);
+  const movies = await response.json();
+  displayUpcomingMovies(movies);
 }
 ```
 

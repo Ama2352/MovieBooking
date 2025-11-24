@@ -13,18 +13,22 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.api.moviebooking.models.dtos.cinema.AddCinemaRequest;
 import com.api.moviebooking.models.dtos.cinema.CinemaDataResponse;
 import com.api.moviebooking.models.dtos.cinema.UpdateCinemaRequest;
+import com.api.moviebooking.models.dtos.movie.MovieDataResponse;
 import com.api.moviebooking.models.dtos.room.AddRoomRequest;
 import com.api.moviebooking.models.dtos.room.RoomDataResponse;
 import com.api.moviebooking.models.dtos.room.UpdateRoomRequest;
 import com.api.moviebooking.models.dtos.snack.AddSnackRequest;
 import com.api.moviebooking.models.dtos.snack.SnackDataResponse;
 import com.api.moviebooking.models.dtos.snack.UpdateSnackRequest;
+import com.api.moviebooking.models.enums.MovieStatus;
 import com.api.moviebooking.services.CinemaService;
+import com.api.moviebooking.services.MovieService;
 
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -38,6 +42,7 @@ import lombok.RequiredArgsConstructor;
 public class CinemaController {
 
     private final CinemaService cinemaService;
+    private final MovieService movieService;
 
     @PostMapping
     @SecurityRequirement(name = "bearerToken")
@@ -150,6 +155,14 @@ public class CinemaController {
     @GetMapping("/snacks")
     public ResponseEntity<List<SnackDataResponse>> getAllSnacks() {
         List<SnackDataResponse> response = cinemaService.getAllSnacks();
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{cinemaId}/movies")
+    public ResponseEntity<List<MovieDataResponse>> getMoviesByCinemaAndStatus(
+            @PathVariable UUID cinemaId,
+            @RequestParam MovieStatus status) {
+        List<MovieDataResponse> response = movieService.getMoviesByCinemaAndStatus(cinemaId, status);
         return ResponseEntity.ok(response);
     }
 }

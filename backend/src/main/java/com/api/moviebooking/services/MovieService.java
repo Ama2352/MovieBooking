@@ -24,6 +24,7 @@ import com.api.moviebooking.models.entities.Showtime;
 import com.api.moviebooking.models.enums.MovieStatus;
 import com.api.moviebooking.repositories.MovieRepo;
 import com.api.moviebooking.repositories.ShowtimeRepo;
+import com.api.moviebooking.repositories.CinemaRepo;
 
 import lombok.RequiredArgsConstructor;
 
@@ -34,6 +35,7 @@ public class MovieService {
     private final MovieRepo movieRepo;
     private final ShowtimeRepo showtimeRepo;
     private final MovieMapper movieMapper;
+    private final CinemaRepo cinemaRepo;
 
     /**
      * Predicate nodes (d): 0 -> V(G)=d+1=1
@@ -212,11 +214,11 @@ public class MovieService {
      */
     public List<CinemaShowtimesResponse> getMovieShowtimesByDate(UUID movieId, LocalDate date) {
         Movie movie = findMovieById(movieId);
-        
+
         // Check if querying for today
         LocalDate today = LocalDate.now();
         boolean isToday = date.isEqual(today);
-        
+
         // Define start and end time
         LocalDateTime startOfDay;
         if (isToday) {
@@ -227,16 +229,16 @@ public class MovieService {
             startOfDay = date.atStartOfDay();
         }
         LocalDateTime endOfDay = date.atTime(LocalTime.MAX);
-        
+
         // Get all showtimes for this movie on the specified date
         List<Showtime> showtimes = showtimeRepo.findByMovieAndStartTimeBetween(movie, startOfDay, endOfDay);
-        
+
         // Group showtimes by cinema
         Map<UUID, CinemaShowtimesResponse> cinemaMap = new LinkedHashMap<>();
-        
+
         for (Showtime showtime : showtimes) {
             UUID cinemaId = showtime.getRoom().getCinema().getId();
-            
+
             // Create cinema entry if not exists
             if (!cinemaMap.containsKey(cinemaId)) {
                 CinemaShowtimesResponse cinemaResponse = new CinemaShowtimesResponse();
@@ -246,17 +248,35 @@ public class MovieService {
                 cinemaResponse.setShowtimes(new ArrayList<>());
                 cinemaMap.put(cinemaId, cinemaResponse);
             }
-            
+
             // Add showtime info to cinema
             CinemaShowtimesResponse.ShowtimeInfo showtimeInfo = new CinemaShowtimesResponse.ShowtimeInfo();
             showtimeInfo.setShowtimeId(showtime.getId());
             showtimeInfo.setStartTime(showtime.getStartTime().toString());
             showtimeInfo.setFormat(showtime.getFormat());
             showtimeInfo.setRoomName("Phòng " + showtime.getRoom().getRoomNumber());
-            
+
             cinemaMap.get(cinemaId).getShowtimes().add(showtimeInfo);
         }
-        
+
         return new ArrayList<>(cinemaMap.values());
+    }
+
+    /**
+     * Get movies by cinema and status
+     * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
+     * Nodes: findCinemaById
+     */
+    public List<MovieDataResponse> getMoviesByCinemaAndStatus(UUID cinemaId, MovieStatus status) {
+        // Validate cinema exists
+        if (!cinemaRepo.existsById(cinemaId)) {
+            throw new ResourceNotFoundException("Cinema", "id", cinemaId);
+        }
+
+        // Get distinct movies from showtimes at this cinema with the specified status
+        List<Movie> movies = showtimeRepo.findDistinctMoviesByCinemaAndStatus(cinemaId, status);
+        return movies.stream()
+                .map(movieMapper::toDataResponse)
+                .collect(Collectors.toList());
     }
 }
