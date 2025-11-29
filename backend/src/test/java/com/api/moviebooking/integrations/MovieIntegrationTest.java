@@ -31,6 +31,9 @@ import com.api.moviebooking.models.dtos.movie.UpdateMovieRequest;
 import com.api.moviebooking.models.entities.Movie;
 import com.api.moviebooking.models.enums.MovieStatus;
 import com.api.moviebooking.repositories.MovieRepo;
+import com.api.moviebooking.tags.RegressionTest;
+import com.api.moviebooking.tags.SanityTest;
+import com.api.moviebooking.tags.SmokeTest;
 
 import io.restassured.http.ContentType;
 import io.restassured.module.mockmvc.RestAssuredMockMvc;
@@ -81,6 +84,9 @@ class MovieIntegrationTest {
         // ==================== Movie CRUD Tests ====================
 
         @Test
+        @SmokeTest
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should create movie successfully when authenticated as admin")
         @WithMockUser(roles = "ADMIN")
         void testAddMovie_Success() {
@@ -114,6 +120,7 @@ class MovieIntegrationTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should fail to create movie when not authenticated")
         void testAddMovie_Unauthorized() {
                 AddMovieRequest request = AddMovieRequest.builder()
@@ -139,6 +146,7 @@ class MovieIntegrationTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should fail to create movie with invalid data")
         @WithMockUser(roles = "ADMIN")
         void testAddMovie_InvalidData() {
@@ -165,6 +173,8 @@ class MovieIntegrationTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should fail to create movie with duplicate title")
         @WithMockUser(roles = "ADMIN")
         void testAddMovie_DuplicateTitle() {
@@ -206,6 +216,9 @@ class MovieIntegrationTest {
         }
 
         @Test
+        @SmokeTest
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should get movie by ID successfully")
         @WithMockUser(roles = "USER")
         void testGetMovie_Success() {
@@ -234,6 +247,7 @@ class MovieIntegrationTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should return 404 when movie not found")
         void testGetMovie_NotFound() {
                 UUID randomId = UUID.randomUUID();
@@ -246,6 +260,8 @@ class MovieIntegrationTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should update movie successfully")
         @WithMockUser(roles = "ADMIN")
         void testUpdateMovie_Success() {
@@ -284,6 +300,7 @@ class MovieIntegrationTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should fail to update movie when not authenticated as admin")
         @WithMockUser(roles = "USER")
         void testUpdateMovie_Forbidden() {
@@ -317,6 +334,8 @@ class MovieIntegrationTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should delete movie successfully when no showtimes exist")
         @WithMockUser(roles = "ADMIN")
         void testDeleteMovie_Success() {
@@ -346,6 +365,7 @@ class MovieIntegrationTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should fail to delete movie when not authenticated as admin")
         @WithMockUser(roles = "USER")
         void testDeleteMovie_Forbidden() {
@@ -370,6 +390,9 @@ class MovieIntegrationTest {
         }
 
         @Test
+        @SmokeTest
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should get all movies successfully")
         void testGetAllMovies_Success() {
                 Movie movie1 = new Movie();
@@ -409,6 +432,8 @@ class MovieIntegrationTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should search movies by title successfully")
         void testSearchMoviesByTitle_Success() {
                 Movie movie1 = new Movie();
@@ -448,6 +473,8 @@ class MovieIntegrationTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should filter movies by status successfully")
         void testFilterMoviesByStatus_Success() {
                 Movie movie1 = new Movie();
@@ -488,6 +515,7 @@ class MovieIntegrationTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should filter movies by genre successfully")
         void testFilterMoviesByGenre_Success() {
                 Movie movie1 = new Movie();
@@ -528,6 +556,7 @@ class MovieIntegrationTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should search movies with multiple filters successfully")
         void testSearchMoviesAdvanced_Success() {
                 Movie movie1 = new Movie();

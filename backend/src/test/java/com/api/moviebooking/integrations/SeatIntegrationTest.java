@@ -20,7 +20,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.transaction.annotation.Transactional;
+//import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -37,6 +37,9 @@ import com.api.moviebooking.models.enums.SeatType;
 import com.api.moviebooking.repositories.CinemaRepo;
 import com.api.moviebooking.repositories.RoomRepo;
 import com.api.moviebooking.repositories.SeatRepo;
+import com.api.moviebooking.tags.RegressionTest;
+import com.api.moviebooking.tags.SanityTest;
+import com.api.moviebooking.tags.SmokeTest;
 
 import io.restassured.http.ContentType;
 import io.restassured.module.mockmvc.RestAssuredMockMvc;
@@ -103,6 +106,9 @@ class SeatIntegrationTest {
         class SingleSeatCRUDTests {
 
                 @Test
+                @SmokeTest
+                @SanityTest
+                @RegressionTest
                 @WithMockUser(roles = "ADMIN")
                 @DisplayName("Should create seat successfully")
                 void testAddSeat_Success() {
@@ -168,7 +174,8 @@ class SeatIntegrationTest {
                 }
 
                 @Test
-                @DisplayName("Should fail to create seat without authentication")
+                @RegressionTest
+                @DisplayName("Should fail to create seat when not authenticated")
                 void testAddSeat_Unauthorized() {
                         AddSeatRequest request = new AddSeatRequest();
                         request.setRoomId(testRoom.getId());
@@ -186,6 +193,7 @@ class SeatIntegrationTest {
                 }
 
                 @Test
+                @RegressionTest
                 @WithMockUser(roles = "USER")
                 @DisplayName("Should fail to create seat with USER role")
                 void testAddSeat_Forbidden() {
@@ -205,6 +213,7 @@ class SeatIntegrationTest {
                 }
 
                 @Test
+                @RegressionTest
                 @WithMockUser(roles = "ADMIN")
                 @DisplayName("Should fail with invalid seat data")
                 void testAddSeat_InvalidData() {
@@ -224,6 +233,7 @@ class SeatIntegrationTest {
                 }
 
                 @Test
+                @RegressionTest
                 @WithMockUser(roles = "ADMIN")
                 @DisplayName("Should fail with non-existent room")
                 void testAddSeat_RoomNotFound() {
@@ -243,6 +253,8 @@ class SeatIntegrationTest {
                 }
 
                 @Test
+                @SanityTest
+                @RegressionTest
                 @WithMockUser(roles = "ADMIN")
                 @DisplayName("Should update seat successfully")
                 void testUpdateSeat_Success() {
@@ -271,6 +283,8 @@ class SeatIntegrationTest {
                 }
 
                 @Test
+                @SanityTest
+                @RegressionTest
                 @WithMockUser(roles = "ADMIN")
                 @DisplayName("Should delete seat successfully")
                 void testDeleteSeat_Success() {
@@ -293,6 +307,9 @@ class SeatIntegrationTest {
                 }
 
                 @Test
+                @SmokeTest
+                @SanityTest
+                @RegressionTest
                 @WithMockUser(roles = "ADMIN")
                 @DisplayName("Should get seat by ID")
                 void testGetSeat_Success() {
@@ -314,6 +331,7 @@ class SeatIntegrationTest {
                 }
 
                 @Test
+                @RegressionTest
                 @WithMockUser(roles = "ADMIN")
                 @DisplayName("Should return 404 for non-existent seat")
                 void testGetSeat_NotFound() {
@@ -334,6 +352,9 @@ class SeatIntegrationTest {
         class BulkGenerationTests {
 
                 @Test
+                @SmokeTest
+                @SanityTest
+                @RegressionTest
                 @WithMockUser(roles = "ADMIN")
                 @DisplayName("Should generate seats successfully")
                 void testGenerateSeats_Success() {
@@ -360,6 +381,8 @@ class SeatIntegrationTest {
                 }
 
                 @Test
+                @SanityTest
+                @RegressionTest
                 @WithMockUser(roles = "ADMIN")
                 @DisplayName("Should generate seats with VIP rows")
                 void testGenerateSeats_WithVIPRows() {
@@ -389,6 +412,8 @@ class SeatIntegrationTest {
                 }
 
                 @Test
+                @SanityTest
+                @RegressionTest
                 @WithMockUser(roles = "ADMIN")
                 @DisplayName("Should generate seats with couple rows")
                 void testGenerateSeats_WithCoupleRows() {
@@ -411,6 +436,7 @@ class SeatIntegrationTest {
                 }
 
                 @Test
+                @RegressionTest
                 @WithMockUser(roles = "ADMIN")
                 @DisplayName("Should generate seats with mixed types")
                 void testGenerateSeats_MixedTypes() {
@@ -435,6 +461,7 @@ class SeatIntegrationTest {
                 }
 
                 @Test
+                @RegressionTest
                 @WithMockUser(roles = "ADMIN")
                 @DisplayName("Should fail with invalid row count")
                 void testGenerateSeats_InvalidRows() {
@@ -453,6 +480,7 @@ class SeatIntegrationTest {
                 }
 
                 @Test
+                @RegressionTest
                 @WithMockUser(roles = "ADMIN")
                 @DisplayName("Should generate seats with many rows")
                 void testGenerateSeats_ManyRows() {
@@ -481,6 +509,8 @@ class SeatIntegrationTest {
         class QueryTests {
 
                 @Test
+                @SanityTest
+                @RegressionTest
                 @DisplayName("Should get all seats")
                 void testGetAllSeats_Success() {
                         Seat seat1 = new Seat();
@@ -506,6 +536,9 @@ class SeatIntegrationTest {
                 }
 
                 @Test
+                @SmokeTest
+                @SanityTest
+                @RegressionTest
                 @DisplayName("Should get seats by room")
                 void testGetSeatsByRoom_Success() {
                         Seat seat1 = new Seat();
@@ -532,6 +565,7 @@ class SeatIntegrationTest {
                 }
 
                 @Test
+                @RegressionTest
                 @DisplayName("Should return empty list for room with no seats")
                 void testGetSeatsByRoom_Empty() {
                         given()
@@ -543,6 +577,7 @@ class SeatIntegrationTest {
                 }
 
                 @Test
+                @RegressionTest
                 @DisplayName("Should get row labels preview")
                 void testGetRowLabels_Success() {
                         given()
@@ -558,6 +593,7 @@ class SeatIntegrationTest {
                 }
 
                 @Test
+                @RegressionTest
                 @DisplayName("Should get row labels for 26 rows")
                 void testGetRowLabels_26Rows() {
                         given()
@@ -572,6 +608,7 @@ class SeatIntegrationTest {
                 }
 
                 @Test
+                @RegressionTest
                 @DisplayName("Should get default row labels")
                 void testGetRowLabels_Default() {
                         given()
@@ -593,6 +630,7 @@ class SeatIntegrationTest {
         class BusinessLogicTests {
 
                 @Test
+                @RegressionTest
                 @WithMockUser(roles = "ADMIN")
                 @DisplayName("Should prevent duplicate seat in same position")
                 void testAddSeat_DuplicatePosition() {
@@ -624,6 +662,7 @@ class SeatIntegrationTest {
                 }
 
                 @Test
+                @RegressionTest
                 @WithMockUser(roles = "ADMIN")
                 @DisplayName("Should maintain seat ordering by row and number")
                 void testSeatOrdering() {

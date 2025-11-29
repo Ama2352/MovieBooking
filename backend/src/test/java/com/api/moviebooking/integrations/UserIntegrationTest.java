@@ -31,6 +31,9 @@ import com.api.moviebooking.repositories.MembershipTierRepo;
 import com.api.moviebooking.repositories.RefreshTokenRepo;
 import com.api.moviebooking.repositories.UserRepo;
 import com.api.moviebooking.services.JwtService;
+import com.api.moviebooking.tags.RegressionTest;
+import com.api.moviebooking.tags.SanityTest;
+import com.api.moviebooking.tags.SmokeTest;
 
 import io.restassured.module.mockmvc.RestAssuredMockMvc;
 
@@ -127,6 +130,9 @@ class UserIntegrationTest {
     class LogoutTests {
 
         @Test
+        @SmokeTest
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should logout successfully with valid refresh token cookie")
         @WithMockUser
         void testLogout_Success() {
@@ -143,6 +149,7 @@ class UserIntegrationTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should return 200 with invalid refresh token (service catches exception)")
         @WithMockUser
         void testLogout_InvalidToken() {
@@ -155,6 +162,8 @@ class UserIntegrationTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should fail logout without authentication")
         void testLogout_Unauthorized() {
             given()
@@ -166,6 +175,7 @@ class UserIntegrationTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should handle missing refresh token cookie")
         @WithMockUser
         void testLogout_MissingCookie() {
@@ -188,6 +198,8 @@ class UserIntegrationTest {
     class LogoutAllTests {
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should logout all sessions successfully")
         @WithMockUser
         void testLogoutAllSessions_Success() {
@@ -204,6 +216,7 @@ class UserIntegrationTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should return 200 with non-existent user (service catches exception)")
         @WithMockUser
         void testLogoutAllSessions_UserNotFound() {
@@ -216,6 +229,7 @@ class UserIntegrationTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should fail without authentication")
         void testLogoutAllSessions_Unauthorized() {
             given()
@@ -227,6 +241,7 @@ class UserIntegrationTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should require email parameter")
         @WithMockUser
         void testLogoutAllSessions_MissingParameter() {
@@ -249,6 +264,9 @@ class UserIntegrationTest {
     class RefreshTokenTests {
 
         @Test
+        @SmokeTest
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should refresh access token successfully")
         @WithMockUser
         void testRefreshToken_Success() {
@@ -262,6 +280,8 @@ class UserIntegrationTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should fail with invalid refresh token")
         @WithMockUser
         void testRefreshToken_InvalidToken() {
@@ -276,6 +296,8 @@ class UserIntegrationTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should fail with revoked refresh token")
         @WithMockUser
         void testRefreshToken_RevokedToken() {
@@ -293,6 +315,7 @@ class UserIntegrationTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should fail without authentication")
         void testRefreshToken_Unauthorized() {
             given()
@@ -304,6 +327,7 @@ class UserIntegrationTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should handle missing refresh token cookie")
         @WithMockUser
         void testRefreshToken_MissingCookie() {
@@ -326,6 +350,7 @@ class UserIntegrationTest {
     class MultiUserTests {
 
         @Test
+        @RegressionTest
         @DisplayName("Should handle logout for different users independently")
         @WithMockUser
         void testLogout_MultipleUsers() {
@@ -364,6 +389,7 @@ class UserIntegrationTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should refresh token multiple times")
         @WithMockUser
         void testRefreshToken_MultipleTimes() throws InterruptedException {
@@ -389,6 +415,8 @@ class UserIntegrationTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should revoke all sessions and prevent refresh")
         @WithMockUser
         void testLogoutAllThenRefresh() {

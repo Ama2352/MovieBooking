@@ -25,6 +25,9 @@ import com.api.moviebooking.models.enums.SeatStatus;
 import com.api.moviebooking.models.enums.SeatType;
 import com.api.moviebooking.repositories.ShowtimeRepo;
 import com.api.moviebooking.repositories.ShowtimeSeatRepo;
+import com.api.moviebooking.tags.RegressionTest;
+import com.api.moviebooking.tags.SanityTest;
+import com.api.moviebooking.tags.SmokeTest;
 
 /**
  * Unit tests for ShowtimeSeatService.
@@ -100,6 +103,9 @@ class ShowtimeSeatServiceTest {
     class GenerateSeatsTests {
 
         @Test
+        @SmokeTest
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should generate showtime seats successfully")
         void testGenerateShowtimeSeats_Success() {
             Object[] priceData = new Object[] { new BigDecimal("100000"), "{}" };
@@ -119,6 +125,7 @@ class ShowtimeSeatServiceTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should throw exception when showtime not found")
         void testGenerateShowtimeSeats_ShowtimeNotFound() {
             when(showtimeRepo.findById(showtimeId)).thenReturn(Optional.empty());
@@ -131,6 +138,7 @@ class ShowtimeSeatServiceTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should throw exception when room has no seats")
         void testGenerateShowtimeSeats_NoSeats() {
             room.setSeats(Collections.emptyList());
@@ -145,6 +153,8 @@ class ShowtimeSeatServiceTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should set initial status to AVAILABLE")
         void testGenerateShowtimeSeats_InitialStatus() {
             Object[] priceData = new Object[] { new BigDecimal("100000"), "{}" };
@@ -175,6 +185,8 @@ class ShowtimeSeatServiceTest {
     class UpdateSeatTests {
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should update seat status")
         void testUpdateShowtimeSeat_Status() {
             UpdateShowtimeSeatRequest request = new UpdateShowtimeSeatRequest();
@@ -193,6 +205,8 @@ class ShowtimeSeatServiceTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should update seat price")
         void testUpdateShowtimeSeat_Price() {
             UpdateShowtimeSeatRequest request = new UpdateShowtimeSeatRequest();
@@ -208,6 +222,8 @@ class ShowtimeSeatServiceTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should update both status and price")
         void testUpdateShowtimeSeat_Both() {
             UpdateShowtimeSeatRequest request = new UpdateShowtimeSeatRequest();
@@ -225,6 +241,7 @@ class ShowtimeSeatServiceTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should throw exception for invalid status")
         void testUpdateShowtimeSeat_InvalidStatus() {
             UpdateShowtimeSeatRequest request = new UpdateShowtimeSeatRequest();
@@ -238,6 +255,7 @@ class ShowtimeSeatServiceTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should handle case-insensitive status")
         void testUpdateShowtimeSeat_CaseInsensitiveStatus() {
             UpdateShowtimeSeatRequest request = new UpdateShowtimeSeatRequest();
@@ -262,6 +280,8 @@ class ShowtimeSeatServiceTest {
     class ResetStatusTests {
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should reset locked seat to available")
         void testResetShowtimeSeatStatus_Locked() {
             showtimeSeat.setStatus(SeatStatus.LOCKED);
@@ -279,6 +299,8 @@ class ShowtimeSeatServiceTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should reset booked seat to available")
         void testResetShowtimeSeatStatus_Booked() {
             showtimeSeat.setStatus(SeatStatus.BOOKED);
@@ -302,6 +324,9 @@ class ShowtimeSeatServiceTest {
     class QueryTests {
 
         @Test
+        @SmokeTest
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should get showtime seat by ID")
         void testGetShowtimeSeat() {
             when(showtimeSeatRepo.findById(showtimeSeatId)).thenReturn(Optional.of(showtimeSeat));
@@ -315,6 +340,9 @@ class ShowtimeSeatServiceTest {
         }
 
         @Test
+        @SmokeTest
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should get seats by showtime")
         void testGetSeatsByShowtime() {
             List<ShowtimeSeat> seats = Arrays.asList(showtimeSeat);
@@ -329,6 +357,9 @@ class ShowtimeSeatServiceTest {
         }
 
         @Test
+        @SmokeTest
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should get available seats only")
         void testGetAvailableSeats() {
             List<ShowtimeSeat> availableSeats = Arrays.asList(showtimeSeat);
@@ -344,6 +375,7 @@ class ShowtimeSeatServiceTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should throw exception for non-existent seat")
         void testGetShowtimeSeat_NotFound() {
             when(showtimeSeatRepo.findById(showtimeSeatId)).thenReturn(Optional.empty());
@@ -363,6 +395,8 @@ class ShowtimeSeatServiceTest {
     class RecalculatePricesTests {
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should recalculate prices for all seats")
         void testRecalculatePrices_Success() {
             List<ShowtimeSeat> seats = Arrays.asList(showtimeSeat);
@@ -384,6 +418,8 @@ class ShowtimeSeatServiceTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should update price breakdown")
         void testRecalculatePrices_UpdatesBreakdown() {
             List<ShowtimeSeat> seats = Arrays.asList(showtimeSeat);
@@ -402,6 +438,7 @@ class ShowtimeSeatServiceTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should throw exception when showtime not found")
         void testRecalculatePrices_ShowtimeNotFound() {
             when(showtimeRepo.findById(showtimeId)).thenReturn(Optional.empty());
@@ -414,6 +451,8 @@ class ShowtimeSeatServiceTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should recalculate multiple seats")
         void testRecalculatePrices_MultipleSeats() {
             ShowtimeSeat seat2Instance = new ShowtimeSeat();

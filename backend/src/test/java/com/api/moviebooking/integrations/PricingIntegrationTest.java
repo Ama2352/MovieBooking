@@ -35,6 +35,9 @@ import com.api.moviebooking.models.enums.ConditionType;
 import com.api.moviebooking.models.enums.ModifierType;
 import com.api.moviebooking.repositories.PriceBaseRepo;
 import com.api.moviebooking.repositories.PriceModifierRepo;
+import com.api.moviebooking.tags.RegressionTest;
+import com.api.moviebooking.tags.SanityTest;
+import com.api.moviebooking.tags.SmokeTest;
 
 import io.restassured.http.ContentType;
 import io.restassured.module.mockmvc.RestAssuredMockMvc;
@@ -84,6 +87,9 @@ class PricingIntegrationTest {
     class PriceBaseTests {
 
         @Test
+        @SmokeTest
+        @SanityTest
+        @RegressionTest
         @WithMockUser(roles = "ADMIN")
         @DisplayName("Should create base price successfully")
         void testAddPriceBase_Success() {
@@ -104,6 +110,7 @@ class PricingIntegrationTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should fail without authentication")
         void testAddPriceBase_Unauthorized() {
             AddPriceBaseRequest request = new AddPriceBaseRequest();
@@ -120,6 +127,7 @@ class PricingIntegrationTest {
         }
 
         @Test
+        @RegressionTest
         @WithMockUser(roles = "USER")
         @DisplayName("Should fail with USER role")
         void testAddPriceBase_Forbidden() {
@@ -137,6 +145,7 @@ class PricingIntegrationTest {
         }
 
         @Test
+        @RegressionTest
         @WithMockUser(roles = "ADMIN")
         @DisplayName("Should fail with invalid data")
         void testAddPriceBase_InvalidData() {
@@ -154,6 +163,9 @@ class PricingIntegrationTest {
         }
 
         @Test
+        @SmokeTest
+        @SanityTest
+        @RegressionTest
         @WithMockUser(roles = "ADMIN")
         @DisplayName("Should get active base price")
         void testGetActiveBasePrice_Success() {
@@ -174,6 +186,8 @@ class PricingIntegrationTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @WithMockUser(roles = "ADMIN")
         @DisplayName("Should update base price")
         void testUpdatePriceBase_Success() {
@@ -199,6 +213,8 @@ class PricingIntegrationTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @WithMockUser(roles = "ADMIN")
         @DisplayName("Should delete base price")
         void testDeletePriceBase_Success() {
@@ -219,6 +235,7 @@ class PricingIntegrationTest {
         }
 
         @Test
+        @RegressionTest
         @WithMockUser(roles = "ADMIN")
         @DisplayName("Should get all base prices")
         void testGetAllPriceBases_Success() {
@@ -250,6 +267,9 @@ class PricingIntegrationTest {
     class PriceModifierTests {
 
         @Test
+        @SmokeTest
+        @SanityTest
+        @RegressionTest
         @WithMockUser(roles = "ADMIN")
         @DisplayName("Should create seat type modifier")
         void testAddPriceModifier_SeatType() {
@@ -275,6 +295,7 @@ class PricingIntegrationTest {
         }
 
         @Test
+        @RegressionTest
         @WithMockUser(roles = "ADMIN")
         @DisplayName("Should create day type modifier")
         void testAddPriceModifier_DayType() {
@@ -298,6 +319,7 @@ class PricingIntegrationTest {
         }
 
         @Test
+        @RegressionTest
         @WithMockUser(roles = "ADMIN")
         @DisplayName("Should create time range modifier")
         void testAddPriceModifier_TimeRange() {
@@ -319,6 +341,7 @@ class PricingIntegrationTest {
         }
 
         @Test
+        @RegressionTest
         @WithMockUser(roles = "ADMIN")
         @DisplayName("Should create format modifier")
         void testAddPriceModifier_Format() {
@@ -341,6 +364,7 @@ class PricingIntegrationTest {
         }
 
         @Test
+        @RegressionTest
         @WithMockUser(roles = "ADMIN")
         @DisplayName("Should create room type modifier")
         void testAddPriceModifier_RoomType() {
@@ -362,6 +386,8 @@ class PricingIntegrationTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @WithMockUser(roles = "ADMIN")
         @DisplayName("Should get active modifiers")
         void testGetActiveModifiers_Success() {
@@ -393,6 +419,7 @@ class PricingIntegrationTest {
         }
 
         @Test
+        @RegressionTest
         @WithMockUser(roles = "ADMIN")
         @DisplayName("Should filter by condition type")
         void testGetModifiersByCondition_Success() {
@@ -431,6 +458,7 @@ class PricingIntegrationTest {
         }
 
         @Test
+        @RegressionTest
         @WithMockUser(roles = "ADMIN")
         @DisplayName("Should get condition types info")
         void testGetConditionTypes_Success() {
@@ -443,6 +471,8 @@ class PricingIntegrationTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @WithMockUser(roles = "ADMIN")
         @DisplayName("Should update modifier")
         void testUpdateModifier_Success() {
@@ -471,6 +501,8 @@ class PricingIntegrationTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @WithMockUser(roles = "ADMIN")
         @DisplayName("Should delete modifier")
         void testDeleteModifier_Success() {
@@ -503,6 +535,8 @@ class PricingIntegrationTest {
     class PriceCalculationTests {
 
         @Test
+        @SanityTest
+        @RegressionTest
         @WithMockUser(roles = "ADMIN")
         @DisplayName("Should calculate price with ADD modifiers")
         void testPriceCalculation_Add() {
@@ -532,6 +566,8 @@ class PricingIntegrationTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @WithMockUser(roles = "ADMIN")
         @DisplayName("Should calculate price with MULTIPLY modifiers")
         void testPriceCalculation_Multiply() {
@@ -556,6 +592,8 @@ class PricingIntegrationTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @WithMockUser(roles = "ADMIN")
         @DisplayName("Should stack multiple modifiers")
         void testPriceCalculation_MultipleModifiers() {

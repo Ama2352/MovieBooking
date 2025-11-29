@@ -7,7 +7,7 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Optional;
+//import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -38,7 +38,7 @@ import com.api.moviebooking.models.entities.Payment;
 import com.api.moviebooking.models.entities.Room;
 import com.api.moviebooking.models.entities.Showtime;
 import com.api.moviebooking.models.entities.User;
-import com.api.moviebooking.models.entities.MembershipTier;
+//import com.api.moviebooking.models.entities.MembershipTier;
 import com.api.moviebooking.models.enums.BookingStatus;
 import com.api.moviebooking.models.enums.MovieStatus;
 import com.api.moviebooking.models.enums.PaymentMethod;
@@ -51,9 +51,12 @@ import com.api.moviebooking.repositories.PaymentRepo;
 import com.api.moviebooking.repositories.RoomRepo;
 import com.api.moviebooking.repositories.ShowtimeRepo;
 import com.api.moviebooking.repositories.UserRepo;
-import com.api.moviebooking.repositories.BookingRepo;
-import com.api.moviebooking.repositories.PaymentRepo;
-import com.api.moviebooking.repositories.UserRepo;
+// import com.api.moviebooking.repositories.BookingRepo;
+// import com.api.moviebooking.repositories.PaymentRepo;
+// import com.api.moviebooking.repositories.UserRepo;
+import com.api.moviebooking.tags.RegressionTest;
+import com.api.moviebooking.tags.SanityTest;
+import com.api.moviebooking.tags.SmokeTest;
 
 import io.restassured.http.ContentType;
 import io.restassured.module.mockmvc.RestAssuredMockMvc;
@@ -190,6 +193,9 @@ class PaymentIntegrationTest {
         class momoPaymentFlowTests {
 
                 @Test
+                @SmokeTest
+                @SanityTest
+                @RegressionTest
                 @WithMockUser(username = "test@payment.com", roles = "USER")
                 @DisplayName("Should successfully initiate momo payment and create PENDING record")
                 void testInitiatemomoPayment() {
@@ -215,6 +221,9 @@ class PaymentIntegrationTest {
                 }
 
                 @Test
+                @SmokeTest
+                @SanityTest
+                @RegressionTest
                 @WithMockUser(username = "test@payment.com", roles = "USER")
                 @DisplayName("Should successfully verify completed momo payment")
                 void testVerifymomoPayment() {
@@ -255,6 +264,7 @@ class PaymentIntegrationTest {
                 }
 
                 @Test
+                @RegressionTest
                 @WithMockUser(username = "test@payment.com", roles = "USER")
                 @DisplayName("Should return payment not found for invalid transaction ID")
                 void testVerifymomoPaymentNotFound() {
@@ -282,6 +292,8 @@ class PaymentIntegrationTest {
         class PaymentValidationTests {
 
                 @Test
+                @SanityTest
+                @RegressionTest
                 @WithMockUser(username = "test@payment.com", roles = "USER")
                 @DisplayName("Should accept payment for pending payment booking")
                 void testAcceptPaymentForPendingBooking() {
@@ -305,6 +317,8 @@ class PaymentIntegrationTest {
                 }
 
                 @Test
+                @SanityTest
+                @RegressionTest
                 @WithMockUser(username = "test@payment.com", roles = "USER")
                 @DisplayName("Should reject payment with mismatched amount")
                 void testRejectPaymentWithMismatchedAmount() {
@@ -327,6 +341,7 @@ class PaymentIntegrationTest {
                 }
 
                 @Test
+                @RegressionTest
                 @WithMockUser(username = "test@payment.com", roles = "USER")
                 @DisplayName("Should reject payment with invalid payment method")
                 void testRejectInvalidPaymentMethod() {
@@ -346,6 +361,7 @@ class PaymentIntegrationTest {
                 }
 
                 @Test
+                @RegressionTest
                 @DisplayName("Should reject payment without authentication")
                 void testRejectPaymentWithoutAuth() {
                         InitiatePaymentRequest request = InitiatePaymentRequest.builder()
@@ -366,6 +382,7 @@ class PaymentIntegrationTest {
                 }
 
                 @Test
+                @RegressionTest
                 @WithMockUser(username = "test@payment.com", roles = "USER")
                 @DisplayName("Should reject payment with null booking ID")
                 void testRejectPaymentWithNullBookingId() {
@@ -394,6 +411,8 @@ class PaymentIntegrationTest {
         class PaymentSearchTests {
 
                 @Test
+                @SanityTest
+                @RegressionTest
                 @WithMockUser(username = "test@payment.com", roles = "ADMIN")
                 @DisplayName("Should search payments by booking ID successfully")
                 void testSearchPaymentsByBookingId() {
@@ -418,6 +437,7 @@ class PaymentIntegrationTest {
                 }
 
                 @Test
+                @RegressionTest
                 @WithMockUser(username = "test@payment.com", roles = "ADMIN")
                 @DisplayName("Should search payments by status successfully")
                 void testSearchPaymentsByStatus() {
@@ -440,6 +460,7 @@ class PaymentIntegrationTest {
                 }
 
                 @Test
+                @RegressionTest
                 @DisplayName("Should reject search without authentication")
                 void testRejectSearchWithoutAuth() {
                         given()
@@ -459,6 +480,7 @@ class PaymentIntegrationTest {
         class PaymentDatabaseStateTests {
 
                 @Test
+                @RegressionTest
                 @DisplayName("Should create payment with correct initial state")
                 void testPaymentInitialState() {
                         Payment payment = new Payment();
@@ -478,6 +500,8 @@ class PaymentIntegrationTest {
                 }
 
                 @Test
+                @SanityTest
+                @RegressionTest
                 @DisplayName("Should update payment to SUCCESS with timestamp")
                 void testPaymentCompletedState() {
                         Payment payment = new Payment();
@@ -499,6 +523,8 @@ class PaymentIntegrationTest {
                 }
 
                 @Test
+                @SanityTest
+                @RegressionTest
                 @DisplayName("Should update payment to FAILED and cancel booking")
                 void testPaymentFailedState() {
                         Payment payment = new Payment();

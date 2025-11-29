@@ -23,6 +23,9 @@ import com.api.moviebooking.models.entities.Seat;
 import com.api.moviebooking.models.enums.SeatType;
 import com.api.moviebooking.repositories.RoomRepo;
 import com.api.moviebooking.repositories.SeatRepo;
+import com.api.moviebooking.tags.RegressionTest;
+import com.api.moviebooking.tags.SanityTest;
+import com.api.moviebooking.tags.SmokeTest;
 
 /**
  * Unit tests for SeatService.
@@ -75,6 +78,9 @@ class SeatServiceTest {
     class AddSeatTests {
 
         @Test
+        @SmokeTest
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should add seat successfully")
         void testAddSeat_Success() {
             AddSeatRequest request = new AddSeatRequest();
@@ -94,6 +100,7 @@ class SeatServiceTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should throw exception for non-existent room")
         void testAddSeat_RoomNotFound() {
             AddSeatRequest request = new AddSeatRequest();
@@ -109,6 +116,7 @@ class SeatServiceTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should throw exception for duplicate seat")
         void testAddSeat_Duplicate() {
             AddSeatRequest request = new AddSeatRequest();
@@ -131,6 +139,7 @@ class SeatServiceTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should allow case-insensitive row label check")
         void testAddSeat_CaseInsensitiveDuplicate() {
             AddSeatRequest request = new AddSeatRequest();
@@ -160,6 +169,8 @@ class SeatServiceTest {
     class UpdateSeatTests {
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should update seat number")
         void testUpdateSeat_SeatNumber() {
             UpdateSeatRequest request = new UpdateSeatRequest();
@@ -176,6 +187,8 @@ class SeatServiceTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should update row label")
         void testUpdateSeat_RowLabel() {
             UpdateSeatRequest request = new UpdateSeatRequest();
@@ -190,6 +203,8 @@ class SeatServiceTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should update seat type")
         void testUpdateSeat_SeatType() {
             UpdateSeatRequest request = new UpdateSeatRequest();
@@ -204,6 +219,7 @@ class SeatServiceTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should throw exception for non-existent seat")
         void testUpdateSeat_NotFound() {
             UpdateSeatRequest request = new UpdateSeatRequest();
@@ -225,6 +241,8 @@ class SeatServiceTest {
     class DeleteSeatTests {
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should delete seat with no showtimes")
         void testDeleteSeat_Success() {
             when(seatRepo.findById(seatId)).thenReturn(Optional.of(seat));
@@ -237,6 +255,7 @@ class SeatServiceTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should throw exception when seat has showtimes")
         void testDeleteSeat_HasShowtimes() {
             seat.getShowtimeSeats().add(new com.api.moviebooking.models.entities.ShowtimeSeat());
@@ -260,6 +279,9 @@ class SeatServiceTest {
     class BulkGenerationTests {
 
         @Test
+        @SmokeTest
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should generate seats successfully")
         void testGenerateSeats_Success() {
             GenerateSeatsRequest request = new GenerateSeatsRequest();
@@ -282,6 +304,8 @@ class SeatServiceTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should generate seats with VIP rows")
         void testGenerateSeats_WithVipRows() {
             GenerateSeatsRequest request = new GenerateSeatsRequest();
@@ -302,6 +326,8 @@ class SeatServiceTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should generate seats with couple rows")
         void testGenerateSeats_WithCoupleRows() {
             GenerateSeatsRequest request = new GenerateSeatsRequest();
@@ -322,6 +348,7 @@ class SeatServiceTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should throw exception for room with existing seats")
         void testGenerateSeats_RoomHasSeats() {
             room.getSeats().add(seat);
@@ -341,6 +368,7 @@ class SeatServiceTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should throw exception for invalid VIP row label")
         void testGenerateSeats_InvalidVipRow() {
             GenerateSeatsRequest request = new GenerateSeatsRequest();
@@ -366,6 +394,8 @@ class SeatServiceTest {
     class RowLabelsTests {
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should generate row labels preview")
         void testGetRowLabelsPreview() {
             RowLabelsResponse result = seatService.getRowLabelsPreview(10);
@@ -378,6 +408,7 @@ class SeatServiceTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should generate extended row labels (AA, AB, etc.)")
         void testGetRowLabelsPreview_Extended() {
             RowLabelsResponse result = seatService.getRowLabelsPreview(30);
@@ -391,6 +422,7 @@ class SeatServiceTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should throw exception for invalid row count")
         void testGetRowLabelsPreview_InvalidCount() {
             assertThrows(IllegalArgumentException.class, () -> {
@@ -412,6 +444,9 @@ class SeatServiceTest {
     class QueryTests {
 
         @Test
+        @SmokeTest
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should get seat by ID")
         void testGetSeat() {
             when(seatRepo.findById(seatId)).thenReturn(Optional.of(seat));
@@ -424,6 +459,8 @@ class SeatServiceTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should get all seats")
         void testGetAllSeats() {
             List<Seat> seats = Arrays.asList(seat, seat);
@@ -437,6 +474,9 @@ class SeatServiceTest {
         }
 
         @Test
+        @SmokeTest
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should get seats by room")
         void testGetSeatsByRoom() {
             room.getSeats().addAll(Arrays.asList(seat, seat));
@@ -450,6 +490,7 @@ class SeatServiceTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should throw exception for non-existent room")
         void testGetSeatsByRoom_RoomNotFound() {
             when(roomRepo.findById(roomId)).thenReturn(Optional.empty());

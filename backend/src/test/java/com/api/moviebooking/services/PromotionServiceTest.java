@@ -27,6 +27,9 @@ import com.api.moviebooking.models.dtos.promotion.UpdatePromotionRequest;
 import com.api.moviebooking.models.entities.Promotion;
 import com.api.moviebooking.models.enums.DiscountType;
 import com.api.moviebooking.repositories.PromotionRepo;
+import com.api.moviebooking.tags.RegressionTest;
+import com.api.moviebooking.tags.SanityTest;
+import com.api.moviebooking.tags.SmokeTest;
 
 @ExtendWith(MockitoExtension.class)
 class PromotionServiceTest {
@@ -41,6 +44,9 @@ class PromotionServiceTest {
     private PromotionService promotionService;
 
     @Test
+    @SmokeTest
+    @SanityTest
+    @RegressionTest
     void addPromotionPercentage_mapsSavesAndReturnsResponse() {
         AddPromotionRequest req = AddPromotionRequest.builder()
                 .code("SUMMER2025")
@@ -78,6 +84,7 @@ class PromotionServiceTest {
     }
 
         @Test
+    @RegressionTest
     void addPromotionFixed_mapsSavesAndReturnsResponse() {
         AddPromotionRequest req = AddPromotionRequest.builder()
                 .code("SUMMER2025")
@@ -115,6 +122,7 @@ class PromotionServiceTest {
     }
 
     @Test
+    @RegressionTest
     void addPromotion_throwsWhenCodeAlreadyExists() {
         AddPromotionRequest req = AddPromotionRequest.builder()
                 .code("DUPLICATE")
@@ -134,6 +142,7 @@ class PromotionServiceTest {
     }
 
     @Test
+    @RegressionTest
     void addPromotion_throwsWhenEndDateBeforeStartDate() {
         AddPromotionRequest req = AddPromotionRequest.builder()
                 .code("INVALID")
@@ -153,6 +162,7 @@ class PromotionServiceTest {
     }
 
     @Test
+    @RegressionTest
     void addPromotion_throwsWhenPercentageExceeds100() {
         AddPromotionRequest req = AddPromotionRequest.builder()
                 .code("INVALID")
@@ -172,6 +182,7 @@ class PromotionServiceTest {
     }
 
     @Test
+    @RegressionTest
     void addPromotion_throwsWhenPerUserLimitExceedsUsageLimit() {
         AddPromotionRequest req = AddPromotionRequest.builder()
                 .code("INVALID")
@@ -191,6 +202,8 @@ class PromotionServiceTest {
     }
 
     @Test
+    @SanityTest
+    @RegressionTest
     void updatePromotion_updatesNonNullFieldsAndSaves() {
         UUID id = UUID.randomUUID();
         Promotion existing = new Promotion();
@@ -232,6 +245,7 @@ class PromotionServiceTest {
     }
 
     @Test
+    @RegressionTest
     void updatePromotion_throwsWhenNewCodeConflicts() {
         UUID id = UUID.randomUUID();
         Promotion existing = new Promotion();
@@ -249,6 +263,7 @@ class PromotionServiceTest {
     }
 
     @Test
+    @RegressionTest
     void updatePromotion_throwsWhenPercentageExceeds100() {
         UUID id = UUID.randomUUID();
         Promotion existing = new Promotion();
@@ -271,6 +286,7 @@ class PromotionServiceTest {
     }
 
     @Test
+    @RegressionTest
     void updatePromotion_throwsWhenPerUserLimitExceedsUsageLimit() {
         UUID id = UUID.randomUUID();
         Promotion existing = new Promotion();
@@ -294,6 +310,8 @@ class PromotionServiceTest {
     }
 
     @Test
+    @SanityTest
+    @RegressionTest
     void deactivatePromotion_setsIsActiveToFalse() {
         UUID id = UUID.randomUUID();
         Promotion promotion = new Promotion();
@@ -310,6 +328,8 @@ class PromotionServiceTest {
     }
 
     @Test
+    @SanityTest
+    @RegressionTest
     void deletePromotion_findsAndDeletes() {
         UUID id = UUID.randomUUID();
         Promotion existing = new Promotion();
@@ -324,6 +344,9 @@ class PromotionServiceTest {
     }
 
     @Test
+    @SmokeTest
+    @SanityTest
+    @RegressionTest
     void getPromotion_returnsMappedResponse() {
         UUID id = UUID.randomUUID();
         Promotion existing = new Promotion();
@@ -344,6 +367,9 @@ class PromotionServiceTest {
     }
 
     @Test
+    @SmokeTest
+    @SanityTest
+    @RegressionTest
     void getPromotionByCode_returnsMappedResponse() {
         Promotion existing = new Promotion();
         existing.setCode("TESTCODE");
@@ -362,6 +388,8 @@ class PromotionServiceTest {
     }
 
     @Test
+    @SanityTest
+    @RegressionTest
     void getAllPromotions_returnsMappedList() {
         Promotion promo1 = new Promotion();
         promo1.setCode("PROMO1");
@@ -388,6 +416,8 @@ class PromotionServiceTest {
     }
 
     @Test
+    @SanityTest
+    @RegressionTest
     void getActivePromotions_returnsMappedList() {
         Promotion promo = new Promotion();
         promo.setCode("ACTIVE");
@@ -407,6 +437,8 @@ class PromotionServiceTest {
     }
 
     @Test
+    @SanityTest
+    @RegressionTest
     void getValidPromotions_returnsMappedList() {
         Promotion promo = new Promotion();
         promo.setCode("VALID");

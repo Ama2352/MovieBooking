@@ -20,6 +20,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 
+import com.api.moviebooking.tags.RegressionTest;
+import com.api.moviebooking.tags.SanityTest;
+import com.api.moviebooking.tags.SmokeTest;
+
 @ExtendWith(MockitoExtension.class)
 class RedisLockServiceTest {
 
@@ -48,6 +52,9 @@ class RedisLockServiceTest {
     // Test Cases: 4 (covers all paths + null response edge case)
 
     @Test
+    @SmokeTest
+    @SanityTest
+    @RegressionTest
     @DisplayName("Successfully acquire lock when key is available")
     void testAcquireLock_Success() {
         // Arrange
@@ -64,6 +71,8 @@ class RedisLockServiceTest {
     }
 
     @Test
+    @SanityTest
+    @RegressionTest
     @DisplayName("Fail to acquire lock when key already exists")
     void testAcquireLock_Failure_AlreadyLocked() {
         // Arrange
@@ -80,6 +89,7 @@ class RedisLockServiceTest {
     }
 
     @Test
+    @RegressionTest
     @DisplayName("Handle Redis connection errors gracefully")
     void testAcquireLock_RedisException() {
         // Arrange
@@ -95,6 +105,7 @@ class RedisLockServiceTest {
     }
 
     @Test
+    @RegressionTest
     @DisplayName("Handle null response from Redis setIfAbsent")
     void testAcquireLock_NullResponse() {
         // Arrange
@@ -114,6 +125,9 @@ class RedisLockServiceTest {
     // Test Cases: 5 (covers all paths + delete failure edge case)
 
     @Test
+    @SmokeTest
+    @SanityTest
+    @RegressionTest
     @DisplayName("Successfully release owned lock")
     void testReleaseLock_Success() {
         // Arrange
@@ -131,6 +145,8 @@ class RedisLockServiceTest {
     }
 
     @Test
+    @SanityTest
+    @RegressionTest
     @DisplayName("Prevent releasing lock owned by another user")
     void testReleaseLock_NotOwned() {
         // Arrange
@@ -148,6 +164,7 @@ class RedisLockServiceTest {
     }
 
     @Test
+    @RegressionTest
     @DisplayName("Handle releasing non-existent lock")
     void testReleaseLock_LockDoesNotExist() {
         // Arrange
@@ -164,6 +181,7 @@ class RedisLockServiceTest {
     }
 
     @Test
+    @RegressionTest
     @DisplayName("Handle Redis connection errors gracefully during release")
     void testReleaseLock_RedisException() {
         // Arrange
@@ -178,6 +196,7 @@ class RedisLockServiceTest {
     }
 
     @Test
+    @RegressionTest
     @DisplayName("Handle edge case where delete operation fails")
     void testReleaseLock_DeleteFails() {
         // Arrange
@@ -199,6 +218,8 @@ class RedisLockServiceTest {
     // Note: V(G) ≤ 2, excluded from decision tables per requirements
 
     @Test
+    @SanityTest
+    @RegressionTest
     @DisplayName("Check if lock exists")
     void testIsLocked_Exists() {
         // Arrange
@@ -213,6 +234,7 @@ class RedisLockServiceTest {
     }
 
     @Test
+    @RegressionTest
     @DisplayName("Check if lock does not exist")
     void testIsLocked_DoesNotExist() {
         // Arrange
@@ -227,6 +249,7 @@ class RedisLockServiceTest {
     }
 
     @Test
+    @RegressionTest
     @DisplayName("Handle Redis errors when checking lock existence")
     void testIsLocked_RedisException() {
         // Arrange
@@ -245,6 +268,8 @@ class RedisLockServiceTest {
     // Note: V(G) ≤ 2, excluded from decision tables per requirements
 
     @Test
+    @SanityTest
+    @RegressionTest
     @DisplayName("Get remaining TTL for a lock")
     void testGetLockTTL_Success() {
         // Arrange
@@ -260,6 +285,7 @@ class RedisLockServiceTest {
     }
 
     @Test
+    @RegressionTest
     @DisplayName("Handle Redis errors when getting TTL")
     void testGetLockTTL_RedisException() {
         // Arrange
@@ -279,6 +305,8 @@ class RedisLockServiceTest {
     // Test Cases: 4 (covers all paths)
 
     @Test
+    @SanityTest
+    @RegressionTest
     @DisplayName("Successfully extend owned lock with valid TTL")
     void testExtendLock_Success() {
         // Arrange
@@ -301,6 +329,7 @@ class RedisLockServiceTest {
     }
 
     @Test
+    @RegressionTest
     @DisplayName("Prevent extending lock owned by another user")
     void testExtendLock_NotOwned() {
         // Arrange
@@ -318,6 +347,7 @@ class RedisLockServiceTest {
     }
 
     @Test
+    @RegressionTest
     @DisplayName("Handle extending lock with negative/expired TTL")
     void testExtendLock_NegativeTTL() {
         // Arrange
@@ -334,6 +364,7 @@ class RedisLockServiceTest {
     }
 
     @Test
+    @RegressionTest
     @DisplayName("Handle Redis connection errors gracefully during extend")
     void testExtendLock_RedisException() {
         // Arrange
@@ -353,6 +384,7 @@ class RedisLockServiceTest {
     // Note: V(G) = 1, excluded from decision tables per requirements
 
     @Test
+    @RegressionTest
     @DisplayName("Generate seat lock key with correct format")
     void testGenerateSeatLockKey() {
         // Arrange
@@ -373,6 +405,9 @@ class RedisLockServiceTest {
     // Test Cases: 4 (covers all paths including rollback)
 
     @Test
+    @SmokeTest
+    @SanityTest
+    @RegressionTest
     @DisplayName("Successfully lock all seats when available")
     void testAcquireMultipleSeatsLock_Success() {
         // Arrange
@@ -406,6 +441,8 @@ class RedisLockServiceTest {
     }
 
     @Test
+    @SanityTest
+    @RegressionTest
     @DisplayName("Fail when at least one seat is already locked")
     void testAcquireMultipleSeatsLock_OneSeatLocked() {
         // Arrange
@@ -434,6 +471,8 @@ class RedisLockServiceTest {
     }
 
     @Test
+    @SanityTest
+    @RegressionTest
     @DisplayName("Rollback successfully acquired locks on partial failure")
     void testAcquireMultipleSeatsLock_PartialFailure_Rollback() {
         // Arrange
@@ -477,6 +516,9 @@ class RedisLockServiceTest {
     // Note: V(G) ≤ 2, excluded from decision tables per requirements
 
     @Test
+    @SmokeTest
+    @SanityTest
+    @RegressionTest
     @DisplayName("Release multiple seat locks")
     void testReleaseMultipleSeatsLock() {
         // Arrange
@@ -507,6 +549,7 @@ class RedisLockServiceTest {
     }
 
     @Test
+    @RegressionTest
     @DisplayName("Handle empty seat list (edge case)")
     void testAcquireMultipleSeatsLock_EmptyList() {
         // Arrange

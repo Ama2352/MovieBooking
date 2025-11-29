@@ -32,6 +32,9 @@ import com.api.moviebooking.models.enums.MovieStatus;
 import com.api.moviebooking.models.enums.SeatStatus;
 import com.api.moviebooking.models.enums.SeatType;
 import com.api.moviebooking.repositories.*;
+import com.api.moviebooking.tags.RegressionTest;
+import com.api.moviebooking.tags.SanityTest;
+import com.api.moviebooking.tags.SmokeTest;
 
 import io.restassured.http.ContentType;
 import io.restassured.module.mockmvc.RestAssuredMockMvc;
@@ -168,6 +171,9 @@ class ShowtimeSeatIntegrationTest {
         class QueryTests {
 
                 @Test
+                @SmokeTest
+                @SanityTest
+                @RegressionTest
                 @DisplayName("Should get showtime seat by ID")
                 void testGetShowtimeSeat_Success() {
                         given()
@@ -182,6 +188,7 @@ class ShowtimeSeatIntegrationTest {
                 }
 
                 @Test
+                @RegressionTest
                 @DisplayName("Should return 404 for non-existent showtime seat")
                 void testGetShowtimeSeat_NotFound() {
                         given()
@@ -192,6 +199,9 @@ class ShowtimeSeatIntegrationTest {
                 }
 
                 @Test
+                @SmokeTest
+                @SanityTest
+                @RegressionTest
                 @DisplayName("Should get all seats for showtime")
                 void testGetSeatsByShowtime_Success() {
                         given()
@@ -204,7 +214,10 @@ class ShowtimeSeatIntegrationTest {
                 }
 
                 @Test
-                @DisplayName("Should get only available seats")
+                @SmokeTest
+                @SanityTest
+                @RegressionTest
+                @DisplayName("Should get available seats")
                 void testGetAvailableSeats_Success() {
                         given()
                                         .when()
@@ -217,6 +230,7 @@ class ShowtimeSeatIntegrationTest {
                 }
 
                 @Test
+                @RegressionTest
                 @DisplayName("Should return empty list when no available seats")
                 void testGetAvailableSeats_Empty() {
                         // Mark all seats as booked
@@ -234,6 +248,7 @@ class ShowtimeSeatIntegrationTest {
                 }
 
                 @Test
+                @RegressionTest
                 @DisplayName("Should handle non-existent showtime")
                 void testGetSeatsByShowtime_NotFound() {
                         given()
@@ -256,6 +271,8 @@ class ShowtimeSeatIntegrationTest {
         class AdminUpdateTests {
 
                 @Test
+                @SanityTest
+                @RegressionTest
                 @WithMockUser(roles = "ADMIN")
                 @DisplayName("Should update seat status")
                 void testUpdateShowtimeSeat_Status() {
@@ -276,6 +293,8 @@ class ShowtimeSeatIntegrationTest {
                 }
 
                 @Test
+                @SanityTest
+                @RegressionTest
                 @WithMockUser(roles = "ADMIN")
                 @DisplayName("Should update seat price")
                 void testUpdateShowtimeSeat_Price() {
@@ -297,6 +316,8 @@ class ShowtimeSeatIntegrationTest {
                 }
 
                 @Test
+                @SanityTest
+                @RegressionTest
                 @WithMockUser(roles = "ADMIN")
                 @DisplayName("Should update both status and price")
                 void testUpdateShowtimeSeat_Both() {
@@ -320,6 +341,7 @@ class ShowtimeSeatIntegrationTest {
                 }
 
                 @Test
+                @RegressionTest
                 @DisplayName("Should fail without authentication")
                 void testUpdateShowtimeSeat_Unauthorized() {
                         UpdateShowtimeSeatRequest request = new UpdateShowtimeSeatRequest();
@@ -335,6 +357,7 @@ class ShowtimeSeatIntegrationTest {
                 }
 
                 @Test
+                @RegressionTest
                 @WithMockUser(roles = "USER")
                 @DisplayName("Should fail with USER role")
                 void testUpdateShowtimeSeat_Forbidden() {
@@ -370,6 +393,7 @@ class ShowtimeSeatIntegrationTest {
                 }
 
                 @Test
+                @RegressionTest
                 @WithMockUser(roles = "ADMIN")
                 @DisplayName("Should reset locked seat")
                 void testResetSeatStatus_Locked() {
@@ -394,6 +418,8 @@ class ShowtimeSeatIntegrationTest {
         class PriceRecalculationTests {
 
                 @Test
+                @SanityTest
+                @RegressionTest
                 @WithMockUser(roles = "ADMIN")
                 @DisplayName("Should recalculate prices for all seats in showtime")
                 void testRecalculatePrices_Success() {
@@ -408,6 +434,7 @@ class ShowtimeSeatIntegrationTest {
                 }
 
                 @Test
+                @RegressionTest
                 @DisplayName("Should fail recalculation without authentication")
                 void testRecalculatePrices_Unauthorized() {
                         given()
@@ -419,6 +446,7 @@ class ShowtimeSeatIntegrationTest {
                 }
 
                 @Test
+                @RegressionTest
                 @WithMockUser(roles = "USER")
                 @DisplayName("Should fail recalculation with USER role")
                 void testRecalculatePrices_Forbidden() {
@@ -431,6 +459,7 @@ class ShowtimeSeatIntegrationTest {
                 }
 
                 @Test
+                @RegressionTest
                 @WithMockUser(roles = "ADMIN")
                 @DisplayName("Should handle non-existent showtime for recalculation")
                 void testRecalculatePrices_ShowtimeNotFound() {
@@ -454,6 +483,7 @@ class ShowtimeSeatIntegrationTest {
         class BusinessLogicTests {
 
                 @Test
+                @RegressionTest
                 @DisplayName("Should differentiate prices by seat type")
                 void testPriceDifferentiation() {
                         given()
@@ -477,6 +507,7 @@ class ShowtimeSeatIntegrationTest {
                 }
 
                 @Test
+                @RegressionTest
                 @DisplayName("Should maintain seat-showtime relationship")
                 void testSeatShowtimeRelationship() {
                         var seats = showtimeSeatRepo.findByShowtimeId(testShowtime.getId());
@@ -488,6 +519,7 @@ class ShowtimeSeatIntegrationTest {
                 }
 
                 @Test
+                @RegressionTest
                 @WithMockUser(roles = "ADMIN")
                 @DisplayName("Should allow status transition AVAILABLE -> LOCKED")
                 void testStatusTransition_AvailableToLocked() {
@@ -505,6 +537,7 @@ class ShowtimeSeatIntegrationTest {
                 }
 
                 @Test
+                @RegressionTest
                 @WithMockUser(roles = "ADMIN")
                 @DisplayName("Should allow status transition LOCKED -> BOOKED")
                 void testStatusTransition_LockedToBooked() {
@@ -526,6 +559,7 @@ class ShowtimeSeatIntegrationTest {
                 }
 
                 @Test
+                @RegressionTest
                 @WithMockUser(roles = "ADMIN")
                 @DisplayName("Should allow status transition BOOKED -> AVAILABLE (refund scenario)")
                 void testStatusTransition_BookedToAvailable() {
