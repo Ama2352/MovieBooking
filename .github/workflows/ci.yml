@@ -1,0 +1,288 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ main, develop, integrateSystemTests/** ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  # ----------------------------------------------------------------------
+  # 1. DETECT CHANGES (Tìm kiếm các file bị ảnh hưởng)
+  # ----------------------------------------------------------------------
+  detect-changes:
+    name: Detect Changed Modules
+    runs-on: ubuntu-latest
+    outputs:
+      test-classes: ${{ steps.detect.outputs.test_classes }}
+      test-tags: ${{ steps.detect.outputs.test_tags }}
+      has-changes: ${{ steps.detect.outputs.has_changes }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # Lấy độ sâu đủ để so sánh giữa nhánh hiện tại và nhánh gốc
+          fetch-depth: 2
+      
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+      
+      # Cần compile để chạy DynamicSanityTestSelector
+      - name: Compile test utilities
+        working-directory: ./backend
+        run: mvn test-compile -q
+      
+      - name: Detect changed modules and dependencies
+        id: detect
+        working-directory: ./backend
+        run: |
+          echo "🔍 Running Dynamic Sanity Test Selector..."
+          # Chạy công cụ Java để xác định test classes và tags
+          OUTPUT=$(mvn exec:java \
+            -Dexec.mainClass="com.api.moviebooking.utils.DynamicSanityTestSelector" \
+            -Dexec.classpathScope=test \
+            -q 2>&1)
+          
+          # Trích xuất kết quả từ output
+          TEST_CLASSES=$(echo "$OUTPUT" | awk -F'=' '/^TEST_CLASSES=/ {print $2}')
+          TEST_TAGS=$(echo "$OUTPUT" | awk -F'=' '/^TEST_TAGS=/ {print $2}')
+          
+          if [ -z "$TEST_CLASSES" ] && [ -z "$TEST_TAGS" ]; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "test_classes=$TEST_CLASSES" >> $GITHUB_OUTPUT
+            echo "test_tags=$TEST_TAGS" >> $GITHUB_OUTPUT
+          fi
+
+  # ----------------------------------------------------------------------
+  # 2. SMOKE TESTS (Cổng gác môi trường - Phải chạy đầu tiên)
+  # ----------------------------------------------------------------------
+  smoke-tests:
+    name: Run Smoke Tests (Gate)
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    
+    # Cấu hình Services cho Integration Test
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: moviebooking_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports: [ 5432:5432 ]
+        options: >- --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports: [ 6379:6379 ]
+        options: >- --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with: { java-version: '21', distribution: 'temurin', cache: maven }
+      
+      # [Lỗi 3 đã khắc phục]: Build Artifact trước khi chạy test
+      - name: Build Artifact (Skip Tests)
+        working-directory: ./backend
+        run: mvn clean package -DskipTests
+
+      - name: Run smoke tests
+        working-directory: ./backend
+        run: mvn test -Psmoke -DfailIfNoTests=false
+        env:
+          SPRING_PROFILES_ACTIVE: test
+      
+      - name: Upload smoke test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-test-results
+          path: backend/target/surefire-reports/
+
+  # ----------------------------------------------------------------------
+  # 3. RUN DYNAMIC SANITY TESTS (Kiểm tra Logic bị thay đổi)
+  # ----------------------------------------------------------------------
+  sanity-tests:
+    name: Run Dynamic Sanity Tests
+    runs-on: ubuntu-latest
+    needs: [detect-changes, smoke-tests] # Chạy sau khi Smoke pass
+    # CHỈ chạy nếu có file code thay đổi VÀ Smoke Test pass
+    if: needs.detect-changes.outputs.has-changes == 'true' && needs.smoke-tests.result == 'success'
+    
+    # ... (Giữ nguyên cấu hình Services như Smoke Tests)
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: moviebooking_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports: [ 5432:5432 ]
+        options: >- --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports: [ 6379:6379 ]
+        options: >- --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with: { java-version: '21', distribution: 'temurin', cache: maven }
+      
+      # Build Artifact (file JAR) trước khi chạy test
+      - name: Build Artifact (Skip Tests)
+        working-directory: ./backend
+        run: mvn clean package -DskipTests
+      
+      - name: Run sanity tests by test classes
+        if: needs.detect-changes.outputs.test-classes != ''
+        working-directory: ./backend
+        run: |
+          TEST_CLASSES="${{ needs.detect-changes.outputs.test-classes }}"
+          echo "🧪 Running tests for classes: $TEST_CLASSES"
+          mvn test -Dtest="$TEST_CLASSES" -DfailIfNoTests=false
+        env:
+          SPRING_PROFILES_ACTIVE: test
+      
+      - name: Run sanity tests by tags
+        if: needs.detect-changes.outputs.test-tags != ''
+        working-directory: ./backend
+        run: |
+          TEST_TAGS="${{ needs.detect-changes.outputs.test-tags }}"
+          echo "🏷️ Running tests with tags: $TEST_TAGS"
+          mvn test -Dgroups="$TEST_TAGS" -DfailIfNoTests=false
+        env:
+          SPRING_PROFILES_ACTIVE: test
+      
+      - name: Upload sanity test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sanity-test-results
+          path: backend/target/surefire-reports/
+
+  # ----------------------------------------------------------------------
+  # 4. RUN FULL REGRESSION TESTS (Kiểm tra Toàn diện)
+  # ----------------------------------------------------------------------
+  regression-tests:
+    name: Run Full Regression Tests
+    runs-on: ubuntu-latest
+    needs: [smoke-tests, sanity-tests] # Phải chạy sau Sanity và Smoke
+    if: |
+      github.event_name == 'push' || 
+      (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'run-full-tests'))
+    
+    # ... (Giữ nguyên cấu hình Services như Smoke Tests)
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: moviebooking_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports: [ 5432:5432 ]
+        options: >- --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports: [ 6379:6379 ]
+        options: >- --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with: { java-version: '21', distribution: 'temurin', cache: maven }
+
+      - name: Cache Maven packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
+
+      - name: Build Artifact (Skip Tests)
+        working-directory: ./backend
+        run: mvn clean package -DskipTests
+
+      - name: Run all regression tests
+        working-directory: ./backend
+        run: mvn test -Pregression -DfailIfNoTests=false
+        env:
+          SPRING_PROFILES_ACTIVE: test
+
+      - name: Upload regression test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: regression-test-results
+          path: backend/target/surefire-reports/
+
+      - name: Generate test report
+        if: always()
+        uses: dorny/test-reporter@v1
+        with:
+          name: Regression Test Results
+          path: backend/target/surefire-reports/*.xml
+          reporter: java-junit
+          fail-on-error: true
+
+  # ----------------------------------------------------------------------
+  # 5. BUILD DOCKER IMAGE (Continuous Delivery)
+  # ----------------------------------------------------------------------
+  build-docker:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    # CHỈ chạy khi Push và các test cần thiết pass
+    needs: [smoke-tests, regression-tests] 
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+        
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with: { java-version: '21', distribution: 'temurin', cache: maven }
+      
+      - name: Build Artifact (Skip Tests)
+        working-directory: ./backend
+        run: mvn clean package -DskipTests
+
+      - name: Build and Tag Docker image
+        working-directory: ./backend
+        run: |
+          # Giả sử DOCKER_USERNAME đã được cấu hình trong Secrets
+          DOCKER_USERNAME="${{ secrets.DOCKER_USERNAME }}"
+          IMAGE_TAG="${{ github.sha }}"
+          
+          # Đảm bảo bạn đã đăng nhập Docker Hub (bước này thường được thực hiện nếu bạn PUSH lên Registry)
+          # docker login -u $DOCKER_USERNAME -p ${{ secrets.DOCKER_PASSWORD }} 
+          
+          docker build -t $DOCKER_USERNAME/moviebooking-app:$IMAGE_TAG .
+
+      - name: Save Docker image to Artifact
+        run: docker save ${{ secrets.DOCKER_USERNAME }}/moviebooking-app:${{ github.sha }} | gzip > moviebooking-app.tar.gz
+
+      - name: Upload Docker image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image
+          path: moviebooking-app.tar.gz
