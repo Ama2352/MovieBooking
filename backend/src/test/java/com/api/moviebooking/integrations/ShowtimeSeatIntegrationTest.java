@@ -300,6 +300,7 @@ class ShowtimeSeatIntegrationTest {
                 void testUpdateShowtimeSeat_Price() {
                         UpdateShowtimeSeatRequest request = new UpdateShowtimeSeatRequest();
                         request.setPrice(new BigDecimal("110000"));
+                        request.setStatus("AVAILABLE"); // Ensure status is not updated
 
                         given()
                                         .contentType(ContentType.JSON)

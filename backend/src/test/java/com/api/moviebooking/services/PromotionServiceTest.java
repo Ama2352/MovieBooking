@@ -31,6 +31,8 @@ import com.api.moviebooking.tags.RegressionTest;
 import com.api.moviebooking.tags.SanityTest;
 import com.api.moviebooking.tags.SmokeTest;
 
+import jakarta.persistence.EntityManager;
+
 @ExtendWith(MockitoExtension.class)
 class PromotionServiceTest {
 
@@ -39,6 +41,9 @@ class PromotionServiceTest {
 
     @Mock
     private PromotionMapper promotionMapper;
+
+    @Mock
+    private EntityManager entityManager;
 
     @InjectMocks
     private PromotionService promotionService;

@@ -134,7 +134,7 @@ class MembershipTierIntegrationTest {
                                         .then()
                                         .statusCode(HttpStatus.CREATED.value())
                                         .body("discountType", equalTo("FIXED_AMOUNT"))
-                                        .body("discountValue", equalTo(20000.0f));
+                                        .body("discountValue", equalTo(20000));
                 }
 
                 @Test
@@ -590,7 +590,7 @@ class MembershipTierIntegrationTest {
                                         .then()
                                         .statusCode(HttpStatus.CREATED.value())
                                         .body("discountType", equalTo("FIXED_AMOUNT"))
-                                        .body("discountValue", equalTo(50000.0f));
+                                        .body("discountValue", equalTo(50000));
                 }
 
                 @Test

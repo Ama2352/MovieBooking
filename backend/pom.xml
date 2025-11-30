@@ -225,11 +225,11 @@
 					<excludes>
 						<exclude>**/BookingServiceDebugTest.java</exclude>
 					</excludes>
-					<!-- Enable JUnit 5 Platform -->
+					<!-- Disable parallel execution to prevent race conditions and data leakage -->
 					<properties>
 						<configurationParameters>
-							junit.jupiter.execution.parallel.enabled = true
-							junit.jupiter.execution.parallel.mode.default = concurrent
+							junit.jupiter.execution.parallel.enabled = false
+							junit.jupiter.execution.parallel.mode.default = same_thread
 						</configurationParameters>
 					</properties>
 					<!-- Test Groups Configuration -->

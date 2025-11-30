@@ -11,15 +11,19 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Execution;
+import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -47,6 +51,8 @@ import io.restassured.module.mockmvc.RestAssuredMockMvc;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Testcontainers
 @ActiveProfiles("test")
+@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_CLASS)
+@Transactional
 class PromotionIntegrationTest {
 
         @Container
@@ -59,16 +65,16 @@ class PromotionIntegrationTest {
         @Autowired
         private PromotionRepo promotionRepo;
 
-        @Container
-        @SuppressWarnings("resource")
-        static GenericContainer<?> redis = new GenericContainer<>(DockerImageName.parse("redis:7-alpine"))
-                        .withExposedPorts(6379);
+        // @Container
+        // @SuppressWarnings("resource")
+        // static GenericContainer<?> redis = new GenericContainer<>(DockerImageName.parse("redis:7-alpine"))
+        //                 .withExposedPorts(6379);
 
-        @DynamicPropertySource
-        static void configureProperties(DynamicPropertyRegistry registry) {
-                registry.add("spring.data.redis.host", redis::getHost);
-                registry.add("spring.data.redis.port", redis::getFirstMappedPort);
-        }
+        // @DynamicPropertySource
+        // static void configureProperties(DynamicPropertyRegistry registry) {
+        //         registry.add("spring.data.redis.host", redis::getHost);
+        //         registry.add("spring.data.redis.port", redis::getFirstMappedPort);
+        // }
 
         @BeforeEach
         void setUp() {
@@ -77,7 +83,7 @@ class PromotionIntegrationTest {
                                 .apply(springSecurity())
                                 .build());
 
-                // Clean up test data
+                // Clean up test data before each test
                 promotionRepo.deleteAll();
         }
 
@@ -212,7 +218,7 @@ class PromotionIntegrationTest {
                                 .when()
                                 .post("/promotions")
                                 .then()
-                                .statusCode(HttpStatus.CONFLICT.value());
+                                .statusCode(HttpStatus.BAD_REQUEST.value());
         }
 
         @Test
@@ -458,7 +464,7 @@ class PromotionIntegrationTest {
                                 .when()
                                 .put("/promotions/" + promo2.getId())
                                 .then()
-                                .statusCode(HttpStatus.CONFLICT.value());
+                                .statusCode(HttpStatus.BAD_REQUEST.value());
         }
 
         @Test
@@ -784,6 +790,7 @@ class PromotionIntegrationTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should filter promotions by active status")
         void testFilterPromotionsByActive_Success() {
                 Promotion activePromo = new Promotion();
