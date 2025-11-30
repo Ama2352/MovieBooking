@@ -1,0 +1,187 @@
+modules:
+  authentication:
+    description: "User authentication and authorization"
+    source_patterns:
+      - "**/controllers/AuthController.java"
+      - "**/services/AuthService.java"
+      - "**/security/JwtUtil.java"
+      - "**/security/SecurityConfig.java"
+      - "**/models/entities/User.java"
+    test_classes:
+      - "com.api.moviebooking.integrations.UserIntegrationTest"
+    test_tags:
+      - "AuthenticationTests"
+      - "SecurityTests"
+    dependent_modules:
+      - "user-profile"
+
+  cinema-management:
+    description: "Cinema, Room, and Snack management"
+    source_patterns:
+      - "**/controllers/CinemaController.java"
+      - "**/services/CinemaService.java"
+      - "**/models/entities/Cinema.java"
+      - "**/models/entities/Room.java"
+      - "**/models/entities/Snack.java"
+      - "**/repositories/CinemaRepo.java"
+      - "**/repositories/RoomRepo.java"
+      - "**/repositories/SnackRepo.java"
+    test_classes:
+      - "com.api.moviebooking.integrations.CinemaIntegrationTest"
+      - "com.api.moviebooking.services.CinemaServiceTest"
+    test_tags:
+      - "CinemaTests"
+    dependent_modules:
+      - "showtime-management"
+      - "seat-management"
+
+  movie-management:
+    description: "Movie catalog management"
+    source_patterns:
+      - "**/controllers/MovieController.java"
+      - "**/services/MovieService.java"
+      - "**/models/entities/Movie.java"
+      - "**/repositories/MovieRepo.java"
+    test_classes:
+      - "com.api.moviebooking.integrations.MovieIntegrationTest"
+      - "com.api.moviebooking.services.MovieServiceTest"
+    test_tags:
+      - "MovieTests"
+    dependent_modules:
+      - "showtime-management"
+
+  booking:
+    description: "Booking and ticket management"
+    source_patterns:
+      - "**/controllers/BookingController.java"
+      - "**/services/BookingService.java"
+      - "**/models/entities/Booking.java"
+      - "**/models/entities/BookingDetail.java"
+      - "**/repositories/BookingRepo.java"
+    test_classes:
+      - "com.api.moviebooking.integrations.BookingIntegrationTest"
+    test_tags:
+      - "BookingTests"
+    dependent_modules:
+      - "payment"
+      - "showtime-seat"
+      - "seat-management"
+
+  payment:
+    description: "Payment processing (MoMo, PayPal)"
+    source_patterns:
+      - "**/controllers/PaymentController.java"
+      - "**/services/PaymentService.java"
+      - "**/services/MoMoPaymentService.java"
+      - "**/services/PayPalPaymentService.java"
+      - "**/models/entities/Payment.java"
+      - "**/repositories/PaymentRepo.java"
+    test_classes:
+      - "com.api.moviebooking.integrations.PaymentIntegrationTest"
+    test_tags:
+      - "PaymentTests"
+    dependent_modules:
+      - "booking"
+      - "refund"
+
+  refund:
+    description: "Refund processing"
+    source_patterns:
+      - "**/controllers/RefundController.java"
+      - "**/services/RefundService.java"
+      - "**/models/entities/Refund.java"
+      - "**/repositories/RefundRepo.java"
+    test_classes:
+      - "com.api.moviebooking.integrations.RefundIntegrationTest"
+    test_tags:
+      - "RefundTests"
+    dependent_modules:
+      - "payment"
+      - "booking"
+
+  promotion:
+    description: "Promotion and discount management"
+    source_patterns:
+      - "**/controllers/PromotionController.java"
+      - "**/services/PromotionService.java"
+      - "**/models/entities/Promotion.java"
+      - "**/repositories/PromotionRepo.java"
+    test_classes:
+      - "com.api.moviebooking.integrations.PromotionIntegrationTest"
+      - "com.api.moviebooking.services.PromotionServiceTest"
+    test_tags:
+      - "PromotionTests"
+    dependent_modules:
+      - "booking"
+      - "payment"
+
+  showtime-management:
+    description: "Movie showtime scheduling"
+    source_patterns:
+      - "**/controllers/ShowtimeController.java"
+      - "**/services/ShowtimeService.java"
+      - "**/models/entities/Showtime.java"
+      - "**/models/entities/ShowtimeSeat.java"
+      - "**/repositories/ShowtimeRepo.java"
+      - "**/repositories/ShowtimeSeatRepo.java"
+    test_classes:
+      - "com.api.moviebooking.integrations.ShowtimeIntegrationTest"
+      - "com.api.moviebooking.integrations.ShowtimeSeatIntegrationTest"
+      - "com.api.moviebooking.services.ShowtimeServiceTest"
+      - "com.api.moviebooking.services.ShowtimeSeatServiceTest"
+    test_tags:
+      - "ShowtimeTests"
+    dependent_modules:
+      - "booking"
+      - "seat-management"
+
+  seat-management:
+    description: "Seat and seat type management"
+    source_patterns:
+      - "**/controllers/SeatController.java"
+      - "**/services/SeatService.java"
+      - "**/models/entities/Seat.java"
+      - "**/models/entities/SeatType.java"
+      - "**/repositories/SeatRepo.java"
+      - "**/repositories/SeatTypeRepo.java"
+    test_classes:
+      - "com.api.moviebooking.integrations.SeatIntegrationTest"
+      - "com.api.moviebooking.services.SeatServiceTest"
+    test_tags:
+      - "SeatTests"
+    dependent_modules:
+      - "showtime-management"
+      - "booking"
+
+  membership:
+    description: "Membership tier management"
+    source_patterns:
+      - "**/controllers/MembershipTierController.java"
+      - "**/services/MembershipTierService.java"
+      - "**/models/entities/MembershipTier.java"
+      - "**/repositories/MembershipTierRepo.java"
+    test_classes:
+      - "com.api.moviebooking.integrations.MembershipTierIntegrationTest"
+    test_tags:
+      - "MembershipTests"
+    dependent_modules:
+      - "authentication"
+
+  pricing:
+    description: "Dynamic pricing system"
+    source_patterns:
+      - "**/controllers/PriceBaseController.java"
+      - "**/controllers/PriceModifierController.java"
+      - "**/services/PricingIntegrationService.java"
+      - "**/models/entities/PriceBase.java"
+      - "**/models/entities/PriceModifier.java"
+      - "**/repositories/PriceBaseRepo.java"
+      - "**/repositories/PriceModifierRepo.java"
+    test_classes:
+      - "com.api.moviebooking.integrations.PricingIntegrationTest"
+      - "com.api.moviebooking.services.PricingIntegrationServiceTest"
+    test_tags:
+      - "PricingTests"
+    dependent_modules:
+      - "booking"
+      - "seat-management"

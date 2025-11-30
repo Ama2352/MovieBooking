@@ -41,6 +41,9 @@ import com.api.moviebooking.models.entities.Snack;
 import com.api.moviebooking.repositories.CinemaRepo;
 import com.api.moviebooking.repositories.RoomRepo;
 import com.api.moviebooking.repositories.SnackRepo;
+import com.api.moviebooking.tags.RegressionTest;
+import com.api.moviebooking.tags.SanityTest;
+import com.api.moviebooking.tags.SmokeTest;
 
 /**
  * White-Box Testing for CinemaService
@@ -152,6 +155,9 @@ class CinemaServiceTest {
          * Test Case TC-1: Successfully add a new cinema
          */
         @Test
+        @SmokeTest
+        @SanityTest
+        @RegressionTest
         @DisplayName("TC-1: Should successfully add cinema with unique name")
         void testAddCinema_Success() {
             AddCinemaRequest request = new AddCinemaRequest();
@@ -177,6 +183,7 @@ class CinemaServiceTest {
          * Test Case TC-2: Duplicate cinema name
          */
         @Test
+        @RegressionTest
         @DisplayName("TC-2: Should throw DuplicateResourceException when cinema name exists")
         void testAddCinema_DuplicateName() {
             AddCinemaRequest request = new AddCinemaRequest();
@@ -212,6 +219,8 @@ class CinemaServiceTest {
          * Test Case TC-1: Update all fields successfully
          */
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("TC-1: Should update all cinema fields successfully")
         void testUpdateCinema_AllFields() {
             UpdateCinemaRequest request = new UpdateCinemaRequest();
@@ -239,6 +248,7 @@ class CinemaServiceTest {
          * Test Case TC-2: Update only name
          */
         @Test
+        @RegressionTest
         @DisplayName("TC-2: Should update only cinema name")
         void testUpdateCinema_NameOnly() {
             UpdateCinemaRequest request = new UpdateCinemaRequest();
@@ -266,6 +276,7 @@ class CinemaServiceTest {
          * Test Case TC-3: Duplicate name during update
          */
         @Test
+        @RegressionTest
         @DisplayName("TC-3: Should throw DuplicateResourceException when updating to existing name")
         void testUpdateCinema_DuplicateName() {
             UpdateCinemaRequest request = new UpdateCinemaRequest();
@@ -286,6 +297,7 @@ class CinemaServiceTest {
          * Test Case TC-4: Update only address
          */
         @Test
+        @RegressionTest
         @DisplayName("TC-4: Should update only cinema address")
         void testUpdateCinema_AddressOnly() {
             UpdateCinemaRequest request = new UpdateCinemaRequest();
@@ -312,6 +324,7 @@ class CinemaServiceTest {
          * Test Case TC-5: Update only hotline
          */
         @Test
+        @RegressionTest
         @DisplayName("TC-5: Should update only cinema hotline")
         void testUpdateCinema_HotlineOnly() {
             UpdateCinemaRequest request = new UpdateCinemaRequest();
@@ -338,6 +351,7 @@ class CinemaServiceTest {
          * Test Case TC-6: Cinema not found
          */
         @Test
+        @RegressionTest
         @DisplayName("TC-6: Should throw ResourceNotFoundException when cinema not found")
         void testUpdateCinema_CinemaNotFound() {
             UpdateCinemaRequest request = new UpdateCinemaRequest();
@@ -369,6 +383,8 @@ class CinemaServiceTest {
          * Test Case TC-1: Successfully delete cinema with no dependencies
          */
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("TC-1: Should successfully delete cinema with no rooms or snacks")
         void testDeleteCinema_Success() {
             when(cinemaRepo.findById(cinemaId)).thenReturn(Optional.of(mockCinema));
@@ -383,6 +399,8 @@ class CinemaServiceTest {
          * Test Case TC-2: Cannot delete cinema with existing rooms
          */
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("TC-2: Should throw EntityDeletionForbiddenException when cinema has rooms")
         void testDeleteCinema_HasRooms() {
             mockCinema.getRooms().add(mockRoom);
@@ -401,6 +419,8 @@ class CinemaServiceTest {
          * Test Case TC-3: Cannot delete cinema with existing snacks
          */
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("TC-3: Should throw EntityDeletionForbiddenException when cinema has snacks")
         void testDeleteCinema_HasSnacks() {
             mockCinema.getSnacks().add(mockSnack);
@@ -419,6 +439,7 @@ class CinemaServiceTest {
          * Test Case TC-4: Cinema not found
          */
         @Test
+        @RegressionTest
         @DisplayName("TC-4: Should throw ResourceNotFoundException when cinema not found")
         void testDeleteCinema_CinemaNotFound() {
             when(cinemaRepo.findById(cinemaId)).thenReturn(Optional.empty());
@@ -447,6 +468,9 @@ class CinemaServiceTest {
          * Test Case TC-1: Successfully retrieve cinema by ID
          */
         @Test
+        @SmokeTest
+        @SanityTest
+        @RegressionTest
         @DisplayName("TC-1: Should successfully retrieve cinema by ID")
         void testGetCinema_Success() {
             when(cinemaRepo.findById(cinemaId)).thenReturn(Optional.of(mockCinema));
@@ -464,6 +488,7 @@ class CinemaServiceTest {
          * Test Case TC-2: Cinema not found
          */
         @Test
+        @RegressionTest
         @DisplayName("TC-2: Should throw ResourceNotFoundException when cinema not found")
         void testGetCinema_CinemaNotFound() {
             when(cinemaRepo.findById(cinemaId)).thenReturn(Optional.empty());
@@ -491,6 +516,9 @@ class CinemaServiceTest {
          * Test Case TC-1: Successfully add room to cinema
          */
         @Test
+        @SmokeTest
+        @SanityTest
+        @RegressionTest
         @DisplayName("TC-1: Should successfully add room with unique room number")
         void testAddRoom_Success() {
             AddRoomRequest request = new AddRoomRequest();
@@ -516,6 +544,7 @@ class CinemaServiceTest {
          * Test Case TC-2: Duplicate room number in same cinema
          */
         @Test
+        @RegressionTest
         @DisplayName("TC-2: Should throw DuplicateResourceException when room number exists in cinema")
         void testAddRoom_DuplicateRoomNumber() {
             AddRoomRequest request = new AddRoomRequest();
@@ -538,6 +567,7 @@ class CinemaServiceTest {
          * Test Case TC-3: Cinema not found
          */
         @Test
+        @RegressionTest
         @DisplayName("TC-3: Should throw ResourceNotFoundException when cinema not found")
         void testAddRoom_CinemaNotFound() {
             AddRoomRequest request = new AddRoomRequest();
@@ -572,6 +602,8 @@ class CinemaServiceTest {
          * Test Case TC-1: Update both room type and room number
          */
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("TC-1: Should update both room type and room number")
         void testUpdateRoom_BothFields() {
             UpdateRoomRequest request = new UpdateRoomRequest();
@@ -596,6 +628,7 @@ class CinemaServiceTest {
          * Test Case TC-2: Update only room type
          */
         @Test
+        @RegressionTest
         @DisplayName("TC-2: Should update only room type")
         void testUpdateRoom_RoomTypeOnly() {
             UpdateRoomRequest request = new UpdateRoomRequest();
@@ -620,6 +653,7 @@ class CinemaServiceTest {
          * Test Case TC-3: Update only room number with unique value
          */
         @Test
+        @RegressionTest
         @DisplayName("TC-3: Should update only room number when unique")
         void testUpdateRoom_RoomNumberOnly() {
             UpdateRoomRequest request = new UpdateRoomRequest();
@@ -645,6 +679,7 @@ class CinemaServiceTest {
          * Test Case TC-4: Duplicate room number during update
          */
         @Test
+        @RegressionTest
         @DisplayName("TC-4: Should throw DuplicateResourceException when updating to existing room number")
         void testUpdateRoom_DuplicateRoomNumber() {
             UpdateRoomRequest request = new UpdateRoomRequest();
@@ -665,6 +700,7 @@ class CinemaServiceTest {
          * Test Case TC-5: Room not found
          */
         @Test
+        @RegressionTest
         @DisplayName("TC-5: Should throw ResourceNotFoundException when room not found")
         void testUpdateRoom_RoomNotFound() {
             UpdateRoomRequest request = new UpdateRoomRequest();
@@ -696,6 +732,8 @@ class CinemaServiceTest {
          * Test Case TC-1: Successfully delete room with no dependencies
          */
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("TC-1: Should successfully delete room with no seats or showtimes")
         void testDeleteRoom_Success() {
             when(roomRepo.findById(roomId)).thenReturn(Optional.of(mockRoom));
@@ -710,6 +748,7 @@ class CinemaServiceTest {
          * Test Case TC-2: Cannot delete room with existing seats
          */
         @Test
+        @RegressionTest
         @DisplayName("TC-2: Should throw EntityDeletionForbiddenException when room has seats")
         void testDeleteRoom_HasSeats() {
             mockRoom.getSeats().add(new com.api.moviebooking.models.entities.Seat());
@@ -728,6 +767,7 @@ class CinemaServiceTest {
          * Test Case TC-3: Cannot delete room with existing showtimes
          */
         @Test
+        @RegressionTest
         @DisplayName("TC-3: Should throw EntityDeletionForbiddenException when room has showtimes")
         void testDeleteRoom_HasShowtimes() {
             mockRoom.getShowtimes().add(new com.api.moviebooking.models.entities.Showtime());
@@ -746,6 +786,7 @@ class CinemaServiceTest {
          * Test Case TC-4: Room not found
          */
         @Test
+        @RegressionTest
         @DisplayName("TC-4: Should throw ResourceNotFoundException when room not found")
         void testDeleteRoom_RoomNotFound() {
             when(roomRepo.findById(roomId)).thenReturn(Optional.empty());
@@ -774,6 +815,9 @@ class CinemaServiceTest {
          * Test Case TC-1: Successfully retrieve room by ID
          */
         @Test
+        @SmokeTest
+        @SanityTest
+        @RegressionTest
         @DisplayName("TC-1: Should successfully retrieve room by ID")
         void testGetRoom_Success() {
             when(roomRepo.findById(roomId)).thenReturn(Optional.of(mockRoom));
@@ -791,6 +835,7 @@ class CinemaServiceTest {
          * Test Case TC-2: Room not found
          */
         @Test
+        @RegressionTest
         @DisplayName("TC-2: Should throw ResourceNotFoundException when room not found")
         void testGetRoom_RoomNotFound() {
             when(roomRepo.findById(roomId)).thenReturn(Optional.empty());
@@ -818,6 +863,9 @@ class CinemaServiceTest {
          * Test Case TC-1: Successfully add snack to cinema
          */
         @Test
+        @SmokeTest
+        @SanityTest
+        @RegressionTest
         @DisplayName("TC-1: Should successfully add snack with unique name")
         void testAddSnack_Success() {
             AddSnackRequest request = new AddSnackRequest();
@@ -845,6 +893,7 @@ class CinemaServiceTest {
          * Test Case TC-2: Duplicate snack name in same cinema
          */
         @Test
+        @RegressionTest
         @DisplayName("TC-2: Should throw DuplicateResourceException when snack name exists in cinema")
         void testAddSnack_DuplicateName() {
             AddSnackRequest request = new AddSnackRequest();
@@ -869,6 +918,7 @@ class CinemaServiceTest {
          * Test Case TC-3: Cinema not found
          */
         @Test
+        @RegressionTest
         @DisplayName("TC-3: Should throw ResourceNotFoundException when cinema not found")
         void testAddSnack_CinemaNotFound() {
             AddSnackRequest request = new AddSnackRequest();
@@ -905,6 +955,8 @@ class CinemaServiceTest {
          * Test Case TC-1: Update all fields successfully
          */
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("TC-1: Should update all snack fields successfully")
         void testUpdateSnack_AllFields() {
             UpdateSnackRequest request = new UpdateSnackRequest();
@@ -933,6 +985,7 @@ class CinemaServiceTest {
          * Test Case TC-2: Update only name
          */
         @Test
+        @RegressionTest
         @DisplayName("TC-2: Should update only snack name")
         void testUpdateSnack_NameOnly() {
             UpdateSnackRequest request = new UpdateSnackRequest();
@@ -962,6 +1015,7 @@ class CinemaServiceTest {
          * Test Case TC-3: Duplicate name during update
          */
         @Test
+        @RegressionTest
         @DisplayName("TC-3: Should throw DuplicateResourceException when updating to existing name")
         void testUpdateSnack_DuplicateName() {
             UpdateSnackRequest request = new UpdateSnackRequest();
@@ -982,6 +1036,7 @@ class CinemaServiceTest {
          * Test Case TC-4: Update only description
          */
         @Test
+        @RegressionTest
         @DisplayName("TC-4: Should update only snack description")
         void testUpdateSnack_DescriptionOnly() {
             UpdateSnackRequest request = new UpdateSnackRequest();
@@ -1010,6 +1065,7 @@ class CinemaServiceTest {
          * Test Case TC-5: Update only price
          */
         @Test
+        @RegressionTest
         @DisplayName("TC-5: Should update only snack price")
         void testUpdateSnack_PriceOnly() {
             UpdateSnackRequest request = new UpdateSnackRequest();
@@ -1038,6 +1094,7 @@ class CinemaServiceTest {
          * Test Case TC-6: Update only type
          */
         @Test
+        @RegressionTest
         @DisplayName("TC-6: Should update only snack type")
         void testUpdateSnack_TypeOnly() {
             UpdateSnackRequest request = new UpdateSnackRequest();
@@ -1066,6 +1123,7 @@ class CinemaServiceTest {
          * Test Case TC-7: Snack not found
          */
         @Test
+        @RegressionTest
         @DisplayName("TC-7: Should throw ResourceNotFoundException when snack not found")
         void testUpdateSnack_SnackNotFound() {
             UpdateSnackRequest request = new UpdateSnackRequest();
@@ -1097,6 +1155,8 @@ class CinemaServiceTest {
          * Test Case TC-1: Successfully delete snack
          */
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("TC-1: Should successfully delete snack")
         void testDeleteSnack_Success() {
             when(snackRepo.findById(snackId)).thenReturn(Optional.of(mockSnack));
@@ -1111,6 +1171,7 @@ class CinemaServiceTest {
          * Test Case TC-2: Snack not found
          */
         @Test
+        @RegressionTest
         @DisplayName("TC-2: Should throw ResourceNotFoundException when snack not found")
         void testDeleteSnack_SnackNotFound() {
             when(snackRepo.findById(snackId)).thenReturn(Optional.empty());
@@ -1139,6 +1200,9 @@ class CinemaServiceTest {
          * Test Case TC-1: Successfully retrieve snack by ID
          */
         @Test
+        @SmokeTest
+        @SanityTest
+        @RegressionTest
         @DisplayName("TC-1: Should successfully retrieve snack by ID")
         void testGetSnack_Success() {
             when(snackRepo.findById(snackId)).thenReturn(Optional.of(mockSnack));
@@ -1156,6 +1220,7 @@ class CinemaServiceTest {
          * Test Case TC-2: Snack not found
          */
         @Test
+        @RegressionTest
         @DisplayName("TC-2: Should throw ResourceNotFoundException when snack not found")
         void testGetSnack_SnackNotFound() {
             when(snackRepo.findById(snackId)).thenReturn(Optional.empty());
@@ -1183,6 +1248,8 @@ class CinemaServiceTest {
          * Test Case TC-1: Successfully retrieve all cinemas
          */
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("TC-1: Should successfully retrieve all cinemas")
         void testGetAllCinemas_Success() {
             Cinema cinema1 = new Cinema();
@@ -1227,6 +1294,8 @@ class CinemaServiceTest {
          * Test Case TC-1: Successfully retrieve all rooms
          */
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("TC-1: Should successfully retrieve all rooms")
         void testGetAllRooms_Success() {
             Room room1 = new Room();
@@ -1271,6 +1340,8 @@ class CinemaServiceTest {
          * Test Case TC-1: Successfully retrieve all snacks
          */
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("TC-1: Should successfully retrieve all snacks")
         void testGetAllSnacks_Success() {
             Snack snack1 = new Snack();
