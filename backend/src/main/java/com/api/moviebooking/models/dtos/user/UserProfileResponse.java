@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 import com.api.moviebooking.models.dtos.membershipTier.MembershipTierDataResponse;
+import com.api.moviebooking.models.enums.UserRole;   // ⬅️ THÊM IMPORT NÀY
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -26,4 +27,7 @@ public class UserProfileResponse {
     private MembershipTierDataResponse membershipTier;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    // ⬇⬇⬇ THÊM TRƯỜNG ROLE Ở ĐÂY
+    private UserRole role;
 }

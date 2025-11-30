@@ -316,20 +316,38 @@ public class UserService {
      * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
      * Nodes: try-catch
      */
-    @Transactional
+    // @Transactional
+    // public UserProfileResponse updateUserRole(UUID userId, String role) {
+    //     User user = findUserById(userId);
+
+    //     try {
+    //         UserRole userRole = UserRole.valueOf(role.toUpperCase());
+    //         user.setRole(userRole);
+    //         userRepo.save(user);
+    //     } catch (IllegalArgumentException e) {
+    //         throw new IllegalArgumentException("Invalid role: " + role);
+    //     }
+
+    //     return getUserById(userId);
+    // }
     public UserProfileResponse updateUserRole(UUID userId, String role) {
-        User user = findUserById(userId);
+    User user = findUserById(userId);
 
-        try {
-            UserRole userRole = UserRole.valueOf(role.toUpperCase());
-            user.setRole(userRole);
-            userRepo.save(user);
-        } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Invalid role: " + role);
-        }
+    try {
+        String normalized = role == null ? "" : role
+                .replace("\"", "")  // bỏ dấu "
+                .trim()
+                .toUpperCase();
 
-        return getUserById(userId);
+        UserRole userRole = UserRole.valueOf(normalized);
+        user.setRole(userRole);
+        userRepo.save(user);
+    } catch (IllegalArgumentException e) {
+        throw new IllegalArgumentException("Invalid role: " + role);
     }
+
+    return getUserById(userId);
+}
 
     /**
      * Delete user (Admin)
