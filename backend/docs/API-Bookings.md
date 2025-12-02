@@ -24,15 +24,76 @@ Endpoints for managing movie ticket bookings with **session-based seat locking**
 ## Booking Flow
 1. **Generate Session ID** (guests only) - `crypto.randomUUID()` on frontend
 2. **Get Ticket Types** - `GET /ticket-types?showtimeId={id}`
-3. **Lock Seats** - `POST /seat-locks` (with X-Session-Id header)
-4. **Check Availability** - `GET /seat-locks/availability/{showtimeId}`
-5. **Confirm Booking** - `POST /bookings/confirm` (creates guest User account if needed)
-6. **Initiate Payment** - See Payment API or use `/checkout` for atomic flow
-7. **View Bookings** - `GET /bookings/my-bookings`
+3. **Lock Seats** - `POST /seat-locks` (with X-Session-Id header) - locks seats with ticket types, prices calculated
+4. **Preview Price** - `POST /bookings/price-preview` - uses lockId to get price breakdown with discounts
+5. **Check Availability** - `GET /seat-locks/availability/{showtimeId}` (optional, for UI updates)
+6. **Confirm Booking** - `POST /bookings/confirm` (creates guest User account if needed)
+7. **Initiate Payment** - See Payment API or use `/checkout` for atomic flow
+8. **View Bookings** - `GET /bookings/my-bookings`
 
 ---
 
+
 ## Endpoints
+
+### Price Preview
+**POST** `/bookings/price-preview`
+
+Calculates and returns a cost overview for a cinema booking transaction. Uses the seat lock to retrieve locked prices (which already include ticket type modifiers), then adds snacks and applies discounts.
+
+**Important:** This endpoint requires an active seat lock. Call `POST /seat-locks` first to lock seats with their ticket types.
+
+#### Headers
+- `Authorization: Bearer <token>` (authenticated users)
+- `X-Session-Id: <uuid>` (guest users - must be valid UUID format)
+
+#### Request Body
+```json
+{
+  "lockId": "2c3d4e5f-6a7b-8c9d-0e1f-2a3b4c5d6e7f",
+  "promotionCode": "WINTER2024",
+  "snacks": [
+    { "snackId": "e1f2a3b4-c5d6-7e8f-9a0b-1c2d3e4f5a6b", "quantity": 2 },
+    { "snackId": "f2a3b4c5-d6e7-8f9a-0b1c-2d3e4f5a6b7c", "quantity": 1 }
+  ]
+}
+```
+
+#### Request Fields
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `lockId` | UUID | Yes | ID of the seat lock (from `POST /seat-locks`) |
+| `promotionCode` | String | No | Promotion code for discount |
+| `snacks` | Array | No | Snack selections: `[{ snackId, quantity }]` |
+
+#### Response Body
+```json
+{
+  "subtotal": 250000.00,
+  "discount": 25000.00,
+  "total": 225000.00
+}
+```
+
+#### Description
+- `subtotal`: Total base price (tickets + snacks) before discounts. Ticket prices are taken from the seat lock (already calculated with ticket type modifiers).
+- `discount`: Total amount discounted (combines membership tier discount + promotion code discount)
+- `total`: Final amount to be paid
+
+#### Discount Calculation
+The discount is calculated by combining:
+1. **Membership Tier Discount**: For authenticated users with a membership tier (e.g., Gold tier with 10% off), this discount is applied automatically.
+2. **Promotion Code Discount**: If `promotionCode` is provided and valid, the promotion discount is added on top of the membership discount.
+
+**Note:** Both discounts are calculated on the subtotal, not compounded. The same discount calculation logic is used by both the price preview endpoint and the booking confirmation process, ensuring consistency between preview and actual charges.
+
+#### Authentication
+- **Required**: Yes (JWT or X-Session-Id)
+- Session must own the seat lock
+
+#### Error Responses
+- `400 Bad Request`: Lock does not belong to session, or lock is no longer active
+- `404 Not Found`: Seat lock not found, or snack not found
 
 ### 1. Lock Seats
 **POST** `/seat-locks`

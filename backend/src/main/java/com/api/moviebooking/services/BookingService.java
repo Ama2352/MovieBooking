@@ -20,14 +20,18 @@ import com.api.moviebooking.helpers.exceptions.ResourceNotFoundException;
 import com.api.moviebooking.helpers.exceptions.SeatLockedException;
 import com.api.moviebooking.models.dtos.SessionContext;
 import com.api.moviebooking.models.dtos.booking.BookingResponse;
+import com.api.moviebooking.models.dtos.booking.DiscountResult;
 import com.api.moviebooking.models.dtos.booking.LockSeatsRequest;
 import com.api.moviebooking.models.dtos.booking.LockSeatsResponse;
+import com.api.moviebooking.models.dtos.booking.PricePreviewRequest;
+import com.api.moviebooking.models.dtos.booking.PricePreviewResponse;
 import com.api.moviebooking.models.dtos.booking.SeatAvailabilityResponse;
 import com.api.moviebooking.models.entities.Booking;
 import com.api.moviebooking.models.entities.SeatLock;
 import com.api.moviebooking.models.entities.SeatLockSeat;
 import com.api.moviebooking.models.entities.Showtime;
 import com.api.moviebooking.models.entities.ShowtimeSeat;
+import com.api.moviebooking.models.entities.Snack;
 import com.api.moviebooking.models.entities.TicketType;
 import com.api.moviebooking.models.entities.User;
 import com.api.moviebooking.models.enums.SeatStatus;
@@ -35,6 +39,7 @@ import com.api.moviebooking.repositories.BookingRepo;
 import com.api.moviebooking.repositories.SeatLockRepo;
 import com.api.moviebooking.repositories.ShowtimeRepo;
 import com.api.moviebooking.repositories.ShowtimeSeatRepo;
+import com.api.moviebooking.repositories.SnackRepo;
 import com.api.moviebooking.repositories.TicketTypeRepo;
 import com.api.moviebooking.repositories.UserRepo;
 import com.api.moviebooking.helpers.mapstructs.BookingMapper;
@@ -50,6 +55,7 @@ public class BookingService {
         private final SeatLockRepo seatLockRepo;
         private final ShowtimeRepo showtimeRepo;
         private final ShowtimeSeatRepo showtimeSeatRepo;
+        private final SnackRepo snackRepo;
         private final TicketTypeRepo ticketTypeRepo;
         private final UserRepo userRepo;
         private final RedisLockService redisLockService;
@@ -57,6 +63,60 @@ public class BookingService {
         private final TicketTypeService ticketTypeService;
         private final BookingRepo bookingRepo;
         private final BookingMapper bookingMapper;
+
+        /**
+         * Calculate price preview for a booking transaction.
+         * Uses the SeatLock to get seat prices (already calculated with ticket types),
+         * then adds snacks and applies discounts.
+         * This ensures consistency with confirmBooking which uses the same SeatLock
+         * data.
+         */
+        public PricePreviewResponse calculatePricePreview(PricePreviewRequest request, SessionContext session) {
+                // 1. Find and validate lock
+                SeatLock seatLock = seatLockRepo.findById(request.getLockId())
+                                .orElseThrow(() -> new ResourceNotFoundException("Seat lock not found"));
+
+                // Validate lock ownership
+                if (!seatLock.getLockOwnerId().equals(session.getLockOwnerId())) {
+                        throw new IllegalArgumentException("Lock does not belong to this session");
+                }
+
+                if (!seatLock.isActive()) {
+                        throw new IllegalArgumentException("Lock is no longer active");
+                }
+
+                // 2. Calculate ticket subtotal from SeatLock (prices already include ticket
+                // type modifiers)
+                BigDecimal ticketSubtotal = BigDecimal.ZERO;
+                for (SeatLockSeat seatLockSeat : seatLock.getSeatLockSeats()) {
+                        ticketSubtotal = ticketSubtotal.add(seatLockSeat.getPrice());
+                }
+
+                // 3. Calculate snack subtotal
+                BigDecimal snackSubtotal = BigDecimal.ZERO;
+                if (request.getSnacks() != null) {
+                        for (PricePreviewRequest.SnackItem snackItem : request.getSnacks()) {
+                                Snack snack = snackRepo.findById(snackItem.getSnackId())
+                                                .orElseThrow(() -> new ResourceNotFoundException("Snack", "id",
+                                                                snackItem.getSnackId()));
+                                snackSubtotal = snackSubtotal
+                                                .add(snack.getPrice()
+                                                                .multiply(BigDecimal.valueOf(snackItem.getQuantity())));
+                        }
+                }
+
+                BigDecimal subtotal = ticketSubtotal.add(snackSubtotal);
+
+                // 4. Calculate discounts using shared logic
+                UUID userId = session.isAuthenticated() ? session.getUserId() : null;
+                DiscountResult discountResult = priceCalculationService.calculateDiscounts(
+                                subtotal, userId, request.getPromotionCode());
+
+                // 5. Calculate total
+                BigDecimal total = subtotal.subtract(discountResult.getTotalDiscount());
+
+                return new PricePreviewResponse(subtotal, discountResult.getTotalDiscount(), total);
+        }
 
         @Value("${booking.lock.duration.minutes:10}")
         private Integer lockDurationMinutes;

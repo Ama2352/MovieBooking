@@ -19,6 +19,7 @@ import com.api.moviebooking.helpers.mapstructs.BookingMapper;
 import com.api.moviebooking.models.dtos.SessionContext;
 import com.api.moviebooking.models.dtos.booking.BookingResponse;
 import com.api.moviebooking.models.dtos.booking.ConfirmBookingRequest;
+import com.api.moviebooking.models.dtos.booking.DiscountResult;
 import com.api.moviebooking.models.dtos.checkout.CheckoutPaymentRequest;
 import com.api.moviebooking.models.dtos.checkout.CheckoutPaymentResponse;
 import com.api.moviebooking.models.dtos.payment.InitiatePaymentRequest;
@@ -26,7 +27,6 @@ import com.api.moviebooking.models.dtos.payment.InitiatePaymentResponse;
 import com.api.moviebooking.models.entities.Booking;
 import com.api.moviebooking.models.entities.BookingSeat;
 import com.api.moviebooking.models.entities.BookingSnack;
-import com.api.moviebooking.models.entities.Promotion;
 import com.api.moviebooking.models.entities.SeatLock;
 import com.api.moviebooking.models.entities.SeatLockSeat;
 import com.api.moviebooking.models.entities.Snack;
@@ -35,7 +35,6 @@ import com.api.moviebooking.models.enums.BookingStatus;
 import com.api.moviebooking.models.enums.SeatStatus;
 import com.api.moviebooking.models.enums.UserRole;
 import com.api.moviebooking.repositories.BookingRepo;
-import com.api.moviebooking.repositories.PromotionRepo;
 import com.api.moviebooking.repositories.SeatLockRepo;
 import com.api.moviebooking.repositories.ShowtimeSeatRepo;
 import com.api.moviebooking.repositories.SnackRepo;
@@ -53,12 +52,11 @@ public class CheckoutService {
     private final BookingRepo bookingRepo;
     private final UserRepo userRepo;
     private final SnackRepo snackRepo;
-    private final PromotionRepo promotionRepo;
     private final ShowtimeSeatRepo showtimeSeatRepo;
     private final BookingMapper bookingMapper;
-    private final PromotionService promotionService;
     private final PaymentService paymentService;
     private final CheckoutLifecycleService checkoutLifecycleService;
+    private final PriceCalculationService priceCalculationService;
 
     @Value("${booking.payment.timeout.minutes:15}")
     private Integer paymentTimeoutMinutes;
@@ -194,20 +192,14 @@ public class CheckoutService {
 
         booking.setTotalPrice(totalPrice);
 
-        // Apply promotion if provided
-        if (request.getPromotionCode() != null && !request.getPromotionCode().trim().isEmpty()) {
-            Promotion promotion = promotionRepo.findByCode(request.getPromotionCode())
-                    .orElseThrow(() -> new ResourceNotFoundException("Promotion", "code",
-                            request.getPromotionCode()));
+        // Calculate discounts using shared logic
+        UUID userId = session.isAuthenticated() ? session.getUserId() : null;
+        DiscountResult discountResult = priceCalculationService.calculateDiscounts(
+                totalPrice, userId, request.getPromotionCode());
 
-            BigDecimal discount = promotionService.calculateDiscount(promotion, totalPrice);
-            booking.setDiscountValue(discount);
-            booking.setDiscountReason("Promotion: " + promotion.getName());
-            booking.setFinalPrice(totalPrice.subtract(discount));
-        } else {
-            booking.setDiscountValue(BigDecimal.ZERO);
-            booking.setFinalPrice(totalPrice);
-        }
+        booking.setDiscountValue(discountResult.getTotalDiscount());
+        booking.setDiscountReason(discountResult.getDiscountReason());
+        booking.setFinalPrice(totalPrice.subtract(discountResult.getTotalDiscount()));
 
         // Save booking
         bookingRepo.save(booking);
@@ -226,10 +218,14 @@ public class CheckoutService {
 
         // Check if email already exists
         User existing = userRepo.findByEmail(guestInfo.getEmail()).orElse(null);
-        if (existing != null && existing.getRole() != UserRole.GUEST) {
-            throw new CustomException(
-                    "Email already has an account. Please login.",
-                    HttpStatus.CONFLICT);
+        if (existing != null) {
+            if (existing.getRole() != UserRole.GUEST) {
+                throw new CustomException(
+                        "Email already has an account. Please login.",
+                        HttpStatus.CONFLICT);
+            } else {
+                return existing; // Reuse existing guest user
+            }
         }
 
         User guestUser = new User();

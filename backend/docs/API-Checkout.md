@@ -108,9 +108,18 @@ Atomically validates seat locks, creates a pending booking, and initiates paymen
 ### 2. Booking Creation Phase
 - For guests: Creates User account with role=GUEST using guestInfo
 - Creates booking with status `PENDING_PAYMENT`
-- Calculates total amount with any discounts
+- **Applies membership tier discount** (for authenticated users with a membership tier)
+- Applies promotion code discount (if provided, registered users only)
+- Calculates total amount with combined discounts
 - Transitions seats from `LOCKED` to `BOOKED`
 - Associates promotion code with booking (if applicable)
+
+#### Discount Calculation
+Discounts are calculated using the same shared logic as the price preview endpoint, ensuring consistency between preview and actual charges:
+1. **Membership Tier Discount**: Automatically applied for authenticated users based on their membership tier (e.g., Silver 5%, Gold 10%, Platinum 15%)
+2. **Promotion Code Discount**: Applied if a valid promotion code is provided
+
+Both discounts are calculated on the subtotal and combined for the final discount amount.
 
 ### 3. Payment Initiation Phase
 - Creates payment record with status `PENDING`
