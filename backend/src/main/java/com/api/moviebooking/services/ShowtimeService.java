@@ -17,6 +17,7 @@ import com.api.moviebooking.models.dtos.showtime.UpdateShowtimeRequest;
 import com.api.moviebooking.models.entities.Movie;
 import com.api.moviebooking.models.entities.Room;
 import com.api.moviebooking.models.entities.Showtime;
+import com.api.moviebooking.models.enums.SeatStatus;
 import com.api.moviebooking.repositories.MovieRepo;
 import com.api.moviebooking.repositories.RoomRepo;
 import com.api.moviebooking.repositories.ShowtimeRepo;
@@ -164,25 +165,35 @@ public class ShowtimeService {
     /**
      * Delete a showtime (API: DELETE /showtimes/{showtimeId})
      * Predicate nodes (d): 4 -> V(G) = d + 1 = 5
-     * Nodes: findShowtimeById, !isEmpty(seatLocks), !isEmpty(showtimeSeats),
-     * !isEmpty(bookings)
+     * Nodes: findShowtimeById, !isEmpty(seatLocks), !isEmpty(bookings),
+     * anyMatch(seat -> seat.getStatus() != AVAILABLE)
      */
     @Transactional
     public void deleteShowtime(UUID showtimeId) {
         Showtime showtime = findShowtimeById(showtimeId);
 
+        // Cannot delete if there are active seat locks
         if (!showtime.getSeatLocks().isEmpty()) {
-            throw new EntityDeletionForbiddenException();
+            throw new EntityDeletionForbiddenException("Cannot delete showtime with active seat locks");
         }
 
-        if (!showtime.getShowtimeSeats().isEmpty()) {
-            throw new EntityDeletionForbiddenException();
-        }
-
+        // Cannot delete if there are any bookings
         if (!showtime.getBookings().isEmpty()) {
-            throw new EntityDeletionForbiddenException();
+            throw new EntityDeletionForbiddenException("Cannot delete showtime with existing bookings");
         }
 
+        // Check if any showtime seat is not AVAILABLE (LOCKED, BOOKED, etc.)
+        boolean hasNonAvailableSeats = showtime.getShowtimeSeats().stream()
+                .anyMatch(seat -> seat.getStatus() != SeatStatus.AVAILABLE);
+
+        if (hasNonAvailableSeats) {
+            throw new EntityDeletionForbiddenException("Cannot delete showtime with non-available seats");
+        }
+
+        // Delete all showtime seats first (cascade should handle this, but explicit is safer)
+        showtimeSeatService.deleteShowtimeSeats(showtimeId);
+
+        // Then delete the showtime
         showtimeRepo.delete(showtime);
     }
 
