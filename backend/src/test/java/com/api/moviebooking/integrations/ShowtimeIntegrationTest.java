@@ -38,6 +38,9 @@ import com.api.moviebooking.repositories.MovieRepo;
 import com.api.moviebooking.repositories.RoomRepo;
 import com.api.moviebooking.repositories.ShowtimeRepo;
 import com.api.moviebooking.repositories.ShowtimeSeatRepo;
+import com.api.moviebooking.tags.RegressionTest;
+import com.api.moviebooking.tags.SanityTest;
+import com.api.moviebooking.tags.SmokeTest;
 
 import io.restassured.http.ContentType;
 import io.restassured.module.mockmvc.RestAssuredMockMvc;
@@ -137,6 +140,9 @@ class ShowtimeIntegrationTest {
         // ==================== Showtime CRUD Tests ====================
 
         @Test
+        @SmokeTest
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should create showtime successfully when authenticated as admin")
         @WithMockUser(roles = "ADMIN")
         @org.junit.jupiter.api.Disabled("Skipping due to testcontainer data persistence issue causing 409 conflicts")
@@ -172,6 +178,7 @@ class ShowtimeIntegrationTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should fail to create showtime when not authenticated")
         void testAddShowtime_Unauthorized() {
                 LocalDateTime startTime = LocalDateTime.of(2025, 10, 25, 10, 0); // Different time
@@ -193,6 +200,7 @@ class ShowtimeIntegrationTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should fail to create showtime with invalid data")
         @WithMockUser(roles = "ADMIN")
         void testAddShowtime_InvalidData() {
@@ -213,6 +221,7 @@ class ShowtimeIntegrationTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should fail to create overlapping showtime")
         @WithMockUser(roles = "ADMIN")
         void testAddShowtime_Overlapping() {
@@ -245,6 +254,9 @@ class ShowtimeIntegrationTest {
         }
 
         @Test
+        @SmokeTest
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should get showtime by ID successfully")
         void testGetShowtime_Success() {
                 LocalDateTime startTime = LocalDateTime.of(2025, 10, 25, 11, 0); // Different time
@@ -268,6 +280,7 @@ class ShowtimeIntegrationTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should return 500 when showtime not found")
         void testGetShowtime_NotFound() {
                 UUID randomId = UUID.randomUUID();
@@ -280,6 +293,8 @@ class ShowtimeIntegrationTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should update showtime successfully")
         @WithMockUser(roles = "ADMIN")
         void testUpdateShowtime_Success() {
@@ -310,6 +325,7 @@ class ShowtimeIntegrationTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should fail to update showtime when not authenticated as admin")
         @WithMockUser(roles = "USER")
         void testUpdateShowtime_Forbidden() {
@@ -336,6 +352,8 @@ class ShowtimeIntegrationTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should delete showtime successfully")
         @WithMockUser(roles = "ADMIN")
         void testDeleteShowtime_Success() {
@@ -361,6 +379,7 @@ class ShowtimeIntegrationTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should fail to delete showtime when not authenticated as admin")
         @WithMockUser(roles = "USER")
         void testDeleteShowtime_Forbidden() {
@@ -381,6 +400,8 @@ class ShowtimeIntegrationTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should get all showtimes successfully")
         void testGetAllShowtimes_Success() {
                 LocalDateTime startTime1 = LocalDateTime.of(2025, 10, 25, 18, 0);
@@ -409,6 +430,8 @@ class ShowtimeIntegrationTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should get showtimes by movie successfully")
         void testGetShowtimesByMovie_Success() {
                 LocalDateTime startTime1 = LocalDateTime.of(2025, 10, 25, 18, 0);
@@ -460,6 +483,8 @@ class ShowtimeIntegrationTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should get upcoming showtimes by movie successfully")
         void testGetUpcomingShowtimesByMovie_Success() {
                 // Create past showtime
@@ -490,6 +515,8 @@ class ShowtimeIntegrationTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should get showtimes by room successfully")
         void testGetShowtimesByRoom_Success() {
                 LocalDateTime startTime = LocalDateTime.of(2025, 10, 25, 18, 0);
@@ -511,6 +538,8 @@ class ShowtimeIntegrationTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should get showtimes by movie and date range successfully")
         void testGetShowtimesByMovieAndDateRange_Success() {
                 LocalDateTime startTime1 = LocalDateTime.of(2025, 10, 25, 18, 0);

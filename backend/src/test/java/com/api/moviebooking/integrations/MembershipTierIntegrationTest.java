@@ -30,6 +30,9 @@ import com.api.moviebooking.models.dtos.membershipTier.UpdateMembershipTierReque
 import com.api.moviebooking.models.entities.MembershipTier;
 import com.api.moviebooking.models.enums.DiscountType;
 import com.api.moviebooking.repositories.MembershipTierRepo;
+import com.api.moviebooking.tags.RegressionTest;
+import com.api.moviebooking.tags.SanityTest;
+import com.api.moviebooking.tags.SmokeTest;
 
 import io.restassured.http.ContentType;
 import io.restassured.module.mockmvc.RestAssuredMockMvc;
@@ -76,6 +79,9 @@ class MembershipTierIntegrationTest {
         class CRUDTests {
 
                 @Test
+                @SmokeTest
+                @SanityTest
+                @RegressionTest
                 @WithMockUser(roles = "ADMIN")
                 @DisplayName("Should create membership tier successfully")
                 void testAddMembershipTier_Success() {
@@ -105,6 +111,9 @@ class MembershipTierIntegrationTest {
                 }
 
                 @Test
+                @SmokeTest
+                @SanityTest
+                @RegressionTest
                 @WithMockUser(roles = "ADMIN")
                 @DisplayName("Should create tier with fixed discount")
                 void testAddMembershipTier_FixedDiscount() {
@@ -125,10 +134,11 @@ class MembershipTierIntegrationTest {
                                         .then()
                                         .statusCode(HttpStatus.CREATED.value())
                                         .body("discountType", equalTo("FIXED_AMOUNT"))
-                                        .body("discountValue", equalTo(20000.0f));
+                                        .body("discountValue", equalTo(20000));
                 }
 
                 @Test
+                @RegressionTest
                 @DisplayName("Should fail to create tier without authentication")
                 void testAddMembershipTier_Unauthorized() {
                         AddMembershipTierRequest request = AddMembershipTierRequest.builder()
@@ -148,6 +158,7 @@ class MembershipTierIntegrationTest {
                 }
 
                 @Test
+                @RegressionTest
                 @WithMockUser(roles = "USER")
                 @DisplayName("Should fail to create tier with USER role")
                 void testAddMembershipTier_Forbidden() {
@@ -168,6 +179,7 @@ class MembershipTierIntegrationTest {
                 }
 
                 @Test
+                @RegressionTest
                 @WithMockUser(roles = "ADMIN")
                 @DisplayName("Should fail to create tier with invalid data")
                 void testAddMembershipTier_InvalidData() {
@@ -188,6 +200,9 @@ class MembershipTierIntegrationTest {
                 }
 
                 @Test
+                @SmokeTest
+                @SanityTest
+                @RegressionTest
                 @WithMockUser(roles = "ADMIN")
                 @DisplayName("Should get membership tier by ID")
                 void testGetMembershipTier_Success() {
@@ -211,6 +226,7 @@ class MembershipTierIntegrationTest {
                 }
 
                 @Test
+                @RegressionTest
                 @WithMockUser(roles = "ADMIN")
                 @DisplayName("Should return 404 for non-existent tier")
                 void testGetMembershipTier_NotFound() {
@@ -224,6 +240,8 @@ class MembershipTierIntegrationTest {
                 }
 
                 @Test
+                @SanityTest
+                @RegressionTest
                 @WithMockUser(roles = "ADMIN")
                 @DisplayName("Should update membership tier successfully")
                 void testUpdateMembershipTier_Success() {
@@ -257,6 +275,8 @@ class MembershipTierIntegrationTest {
                 }
 
                 @Test
+                @SanityTest
+                @RegressionTest
                 @WithMockUser(roles = "ADMIN")
                 @DisplayName("Should deactivate membership tier")
                 void testUpdateMembershipTier_Deactivate() {
@@ -287,6 +307,8 @@ class MembershipTierIntegrationTest {
                 }
 
                 @Test
+                @SanityTest
+                @RegressionTest
                 @WithMockUser(roles = "ADMIN")
                 @DisplayName("Should delete membership tier")
                 void testDeleteMembershipTier_Success() {
@@ -309,6 +331,8 @@ class MembershipTierIntegrationTest {
                 }
 
                 @Test
+                @SanityTest
+                @RegressionTest
                 @WithMockUser(roles = "ADMIN")
                 @DisplayName("Should get all membership tiers")
                 void testGetAllMembershipTiers_Success() {
@@ -345,6 +369,8 @@ class MembershipTierIntegrationTest {
         class BusinessLogicTests {
 
                 @Test
+                @SanityTest
+                @RegressionTest
                 @WithMockUser(roles = "ADMIN")
                 @DisplayName("Should get active tiers only")
                 void testGetActiveTiers_Success() {
@@ -375,6 +401,8 @@ class MembershipTierIntegrationTest {
                 }
 
                 @Test
+                @SanityTest
+                @RegressionTest
                 @WithMockUser(roles = "ADMIN")
                 @DisplayName("Should get tier by minimum points")
                 void testGetTierByPoints_Success() {
@@ -414,6 +442,7 @@ class MembershipTierIntegrationTest {
                 }
 
                 @Test
+                @RegressionTest
                 @WithMockUser(roles = "ADMIN")
                 @DisplayName("Should return lowest tier for low points")
                 void testGetTierByPoints_LowestTier() {
@@ -444,6 +473,7 @@ class MembershipTierIntegrationTest {
                 }
 
                 @Test
+                @RegressionTest
                 @WithMockUser(roles = "ADMIN")
                 @DisplayName("Should return highest tier for maximum points")
                 void testGetTierByPoints_HighestTier() {
@@ -474,6 +504,7 @@ class MembershipTierIntegrationTest {
                 }
 
                 @Test
+                @RegressionTest
                 @WithMockUser(roles = "ADMIN")
                 @DisplayName("Should validate tier hierarchy with unique minPoints")
                 void testTierHierarchy_UniqueMinPoints() {
@@ -514,6 +545,8 @@ class MembershipTierIntegrationTest {
         class DiscountCalculationTests {
 
                 @Test
+                @SanityTest
+                @RegressionTest
                 @WithMockUser(roles = "ADMIN")
                 @DisplayName("Should create tier with percentage discount")
                 void testPercentageDiscount_Creation() {
@@ -536,6 +569,8 @@ class MembershipTierIntegrationTest {
                 }
 
                 @Test
+                @SanityTest
+                @RegressionTest
                 @WithMockUser(roles = "ADMIN")
                 @DisplayName("Should create tier with fixed discount")
                 void testFixedDiscount_Creation() {
@@ -555,10 +590,11 @@ class MembershipTierIntegrationTest {
                                         .then()
                                         .statusCode(HttpStatus.CREATED.value())
                                         .body("discountType", equalTo("FIXED_AMOUNT"))
-                                        .body("discountValue", equalTo(50000.0f));
+                                        .body("discountValue", equalTo(50000));
                 }
 
                 @Test
+                @RegressionTest
                 @WithMockUser(roles = "ADMIN")
                 @DisplayName("Should reject invalid percentage discount")
                 void testInvalidPercentageDiscount() {
@@ -582,6 +618,7 @@ class MembershipTierIntegrationTest {
                 }
 
                 @Test
+                @RegressionTest
                 @WithMockUser(roles = "ADMIN")
                 @DisplayName("Should reject negative discount value")
                 void testNegativeDiscountValue() {

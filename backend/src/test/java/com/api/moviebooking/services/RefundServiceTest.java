@@ -16,7 +16,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpStatus;
+//import org.springframework.http.HttpStatus;
 
 import com.api.moviebooking.helpers.exceptions.CustomException;
 import com.api.moviebooking.helpers.exceptions.ResourceNotFoundException;
@@ -29,6 +29,9 @@ import com.api.moviebooking.models.enums.PaymentStatus;
 import com.api.moviebooking.repositories.BookingRepo;
 import com.api.moviebooking.repositories.PaymentRepo;
 import com.api.moviebooking.repositories.RefundRepo;
+import com.api.moviebooking.tags.RegressionTest;
+import com.api.moviebooking.tags.SanityTest;
+import com.api.moviebooking.tags.SmokeTest;
 
 /**
  * Unit tests for RefundService.
@@ -90,6 +93,9 @@ class RefundServiceTest {
     class ManualRefundTests {
 
         @Test
+        @SmokeTest
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should process PayPal refund successfully")
         void testProcessRefund_PayPal_Success() throws Exception {
             String reason = "Customer request";
@@ -110,6 +116,8 @@ class RefundServiceTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should process Momo refund successfully")
         void testProcessRefund_Momo_Success() throws Exception {
             payment.setMethod(PaymentMethod.MOMO);
@@ -130,6 +138,7 @@ class RefundServiceTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should throw exception when payment not found")
         void testProcessRefund_PaymentNotFound() {
             when(paymentRepo.findById(paymentId)).thenReturn(Optional.empty());
@@ -143,6 +152,7 @@ class RefundServiceTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should throw exception when booking not confirmed")
         void testProcessRefund_BookingNotConfirmed() {
             booking.setStatus(BookingStatus.PENDING_PAYMENT);
@@ -158,6 +168,7 @@ class RefundServiceTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should throw exception when payment not successful")
         void testProcessRefund_PaymentNotSuccess() {
             payment.setStatus(PaymentStatus.PENDING);
@@ -173,6 +184,7 @@ class RefundServiceTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should throw exception when already refunded")
         void testProcessRefund_AlreadyRefunded() {
             booking.setRefunded(true);
@@ -188,6 +200,7 @@ class RefundServiceTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should throw exception when payment method unavailable")
         void testProcessRefund_NoPaymentMethod() {
             payment.setMethod(null);
@@ -202,6 +215,8 @@ class RefundServiceTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should rollback on refund failure")
         void testProcessRefund_RollbackOnFailure() throws Exception {
             String reason = "Test rollback";
@@ -230,6 +245,9 @@ class RefundServiceTest {
     class AutomaticRefundTests {
 
         @Test
+        @SmokeTest
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should process automatic refund for failed payment")
         void testProcessAutomaticRefund_FailedPayment() throws Exception {
             payment.setStatus(PaymentStatus.FAILED);
@@ -249,6 +267,8 @@ class RefundServiceTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should process automatic refund for success payment")
         void testProcessAutomaticRefund_SuccessPayment() throws Exception {
             // payment status is SUCCESS by default
@@ -267,6 +287,7 @@ class RefundServiceTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should reject automatic refund for pending payment")
         void testProcessAutomaticRefund_PendingPayment() {
             payment.setStatus(PaymentStatus.PENDING);
@@ -281,6 +302,8 @@ class RefundServiceTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should use Momo for automatic refund")
         void testProcessAutomaticRefund_Momo() throws Exception {
             payment.setMethod(PaymentMethod.MOMO);
@@ -308,6 +331,8 @@ class RefundServiceTest {
     class RefundAmountTests {
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should refund correct amount from booking")
         void testProcessRefund_CorrectAmount() throws Exception {
             BigDecimal expectedAmount = new BigDecimal("123456.78");
@@ -328,6 +353,7 @@ class RefundServiceTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should set refund method from payment method")
         void testProcessRefund_RefundMethod() throws Exception {
             when(paymentRepo.findById(paymentId)).thenReturn(Optional.of(payment));
@@ -353,6 +379,8 @@ class RefundServiceTest {
     class StatusTransitionTests {
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should set status to REFUND_PENDING before gateway call")
         void testProcessRefund_PendingStatus() throws Exception {
             when(paymentRepo.findById(paymentId)).thenReturn(Optional.of(payment));
@@ -371,6 +399,8 @@ class RefundServiceTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should restore original status on failure")
         void testProcessRefund_RestoreStatusOnFailure() throws Exception {
             PaymentStatus originalPaymentStatus = payment.getStatus();

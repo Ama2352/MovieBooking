@@ -11,15 +11,19 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Execution;
+import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -32,6 +36,9 @@ import com.api.moviebooking.models.dtos.promotion.UpdatePromotionRequest;
 import com.api.moviebooking.models.entities.Promotion;
 import com.api.moviebooking.models.enums.DiscountType;
 import com.api.moviebooking.repositories.PromotionRepo;
+import com.api.moviebooking.tags.RegressionTest;
+import com.api.moviebooking.tags.SanityTest;
+import com.api.moviebooking.tags.SmokeTest;
 
 import io.restassured.http.ContentType;
 import io.restassured.module.mockmvc.RestAssuredMockMvc;
@@ -44,6 +51,8 @@ import io.restassured.module.mockmvc.RestAssuredMockMvc;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Testcontainers
 @ActiveProfiles("test")
+@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_CLASS)
+@Transactional
 class PromotionIntegrationTest {
 
         @Container
@@ -56,16 +65,16 @@ class PromotionIntegrationTest {
         @Autowired
         private PromotionRepo promotionRepo;
 
-        @Container
-        @SuppressWarnings("resource")
-        static GenericContainer<?> redis = new GenericContainer<>(DockerImageName.parse("redis:7-alpine"))
-                        .withExposedPorts(6379);
+        // @Container
+        // @SuppressWarnings("resource")
+        // static GenericContainer<?> redis = new GenericContainer<>(DockerImageName.parse("redis:7-alpine"))
+        //                 .withExposedPorts(6379);
 
-        @DynamicPropertySource
-        static void configureProperties(DynamicPropertyRegistry registry) {
-                registry.add("spring.data.redis.host", redis::getHost);
-                registry.add("spring.data.redis.port", redis::getFirstMappedPort);
-        }
+        // @DynamicPropertySource
+        // static void configureProperties(DynamicPropertyRegistry registry) {
+        //         registry.add("spring.data.redis.host", redis::getHost);
+        //         registry.add("spring.data.redis.port", redis::getFirstMappedPort);
+        // }
 
         @BeforeEach
         void setUp() {
@@ -74,13 +83,16 @@ class PromotionIntegrationTest {
                                 .apply(springSecurity())
                                 .build());
 
-                // Clean up test data
+                // Clean up test data before each test
                 promotionRepo.deleteAll();
         }
 
         // ==================== Promotion CRUD Tests ====================
 
         @Test
+        @SmokeTest
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should create promotion successfully when authenticated as admin")
         @WithMockUser(roles = "ADMIN")
         void testCreatePromotion_Success() {
@@ -115,6 +127,7 @@ class PromotionIntegrationTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should fail to create promotion when not authenticated")
         void testCreatePromotion_Unauthorized() {
                 AddPromotionRequest request = AddPromotionRequest.builder()
@@ -140,6 +153,7 @@ class PromotionIntegrationTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should fail to create promotion with invalid data")
         @WithMockUser(roles = "ADMIN")
         void testCreatePromotion_InvalidData() {
@@ -166,6 +180,7 @@ class PromotionIntegrationTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should fail to create promotion with duplicate code")
         @WithMockUser(roles = "ADMIN")
         void testCreatePromotion_DuplicateCode() {
@@ -207,7 +222,8 @@ class PromotionIntegrationTest {
         }
 
         @Test
-        @DisplayName("Should fail to create promotion with percentage > 100")
+        @RegressionTest
+        @DisplayName("Should fail to create promotion with invalid percentage")
         @WithMockUser(roles = "ADMIN")
         void testCreatePromotion_InvalidPercentage() {
                 AddPromotionRequest request = AddPromotionRequest.builder()
@@ -233,7 +249,8 @@ class PromotionIntegrationTest {
         }
 
         @Test
-        @DisplayName("Should fail to create promotion when per user limit exceeds usage limit")
+        @RegressionTest
+        @DisplayName("Should fail when per-user limit exceeds usage limit")
         @WithMockUser(roles = "ADMIN")
         void testCreatePromotion_PerUserLimitExceedsUsageLimit() {
                 AddPromotionRequest request = AddPromotionRequest.builder()
@@ -258,6 +275,9 @@ class PromotionIntegrationTest {
         }
 
         @Test
+        @SmokeTest
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should get promotion by ID successfully")
         void testGetPromotion_Success() {
                 Promotion promotion = new Promotion();
@@ -285,6 +305,9 @@ class PromotionIntegrationTest {
         }
 
         @Test
+        @SmokeTest
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should get promotion by code successfully")
         void testGetPromotionByCode_Success() {
                 Promotion promotion = new Promotion();
@@ -311,6 +334,7 @@ class PromotionIntegrationTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should return 404 when promotion not found")
         void testGetPromotion_NotFound() {
                 UUID randomId = UUID.randomUUID();
@@ -323,6 +347,8 @@ class PromotionIntegrationTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should update promotion successfully")
         @WithMockUser(roles = "ADMIN")
         void testUpdatePromotion_Success() {
@@ -362,6 +388,7 @@ class PromotionIntegrationTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should fail to update promotion when not authenticated as admin")
         @WithMockUser(roles = "USER")
         void testUpdatePromotion_Forbidden() {
@@ -394,6 +421,7 @@ class PromotionIntegrationTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should fail to update promotion with duplicate code")
         @WithMockUser(roles = "ADMIN")
         void testUpdatePromotion_DuplicateCode() {
@@ -440,7 +468,8 @@ class PromotionIntegrationTest {
         }
 
         @Test
-        @DisplayName("Should fail to update promotion with percentage > 100")
+        @RegressionTest
+        @DisplayName("Should fail to update promotion with invalid percentage")
         @WithMockUser(roles = "ADMIN")
         void testUpdatePromotion_InvalidPercentage() {
                 Promotion promotion = new Promotion();
@@ -470,6 +499,7 @@ class PromotionIntegrationTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should fail to update promotion when per user limit exceeds usage limit")
         @WithMockUser(roles = "ADMIN")
         void testUpdatePromotion_PerUserLimitExceedsUsageLimit() {
@@ -501,6 +531,7 @@ class PromotionIntegrationTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should fail to update promotion with end date before start date")
         @WithMockUser(roles = "ADMIN")
         void testUpdatePromotion_InvalidDateRange() {
@@ -532,6 +563,8 @@ class PromotionIntegrationTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should deactivate promotion successfully")
         @WithMockUser(roles = "ADMIN")
         void testDeactivatePromotion_Success() {
@@ -562,6 +595,8 @@ class PromotionIntegrationTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should delete promotion successfully")
         @WithMockUser(roles = "ADMIN")
         void testDeletePromotion_Success() {
@@ -591,6 +626,7 @@ class PromotionIntegrationTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should fail to delete promotion when not authenticated as admin")
         @WithMockUser(roles = "USER")
         void testDeletePromotion_Forbidden() {
@@ -615,6 +651,8 @@ class PromotionIntegrationTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should get all promotions successfully")
         void testGetAllPromotions_Success() {
                 Promotion promo1 = new Promotion();
@@ -654,6 +692,8 @@ class PromotionIntegrationTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should get active promotions successfully")
         void testGetActivePromotions_Success() {
                 Promotion activePromo = new Promotion();
@@ -693,6 +733,8 @@ class PromotionIntegrationTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should get valid promotions successfully")
         void testGetValidPromotions_Success() {
                 // Valid: active and within date range
@@ -748,6 +790,7 @@ class PromotionIntegrationTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should filter promotions by active status")
         void testFilterPromotionsByActive_Success() {
                 Promotion activePromo = new Promotion();

@@ -29,6 +29,9 @@ import com.api.moviebooking.models.entities.Showtime;
 import com.api.moviebooking.repositories.MovieRepo;
 import com.api.moviebooking.repositories.RoomRepo;
 import com.api.moviebooking.repositories.ShowtimeRepo;
+import com.api.moviebooking.tags.RegressionTest;
+import com.api.moviebooking.tags.SanityTest;
+import com.api.moviebooking.tags.SmokeTest;
 
 @ExtendWith(MockitoExtension.class)
 class ShowtimeServiceTest {
@@ -52,6 +55,9 @@ class ShowtimeServiceTest {
         private ShowtimeService showtimeService;
 
         @Test
+        @SmokeTest
+        @SanityTest
+        @RegressionTest
         void addShowtime_mapsSavesAndReturnsResponse() {
                 UUID roomId = UUID.randomUUID();
                 UUID movieId = UUID.randomUUID();
@@ -97,6 +103,7 @@ class ShowtimeServiceTest {
         }
 
         @Test
+        @RegressionTest
         void addShowtime_throwsWhenOverlapping() {
                 UUID roomId = UUID.randomUUID();
                 UUID movieId = UUID.randomUUID();
@@ -126,6 +133,8 @@ class ShowtimeServiceTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         void updateShowtime_updatesNonNullFieldsAndSaves() {
                 UUID showtimeId = UUID.randomUUID();
                 UUID oldRoomId = UUID.randomUUID();
@@ -180,6 +189,7 @@ class ShowtimeServiceTest {
         }
 
         @Test
+        @RegressionTest
         void updateShowtime_throwsWhenOverlapping() {
                 UUID showtimeId = UUID.randomUUID();
                 UUID roomId = UUID.randomUUID();
@@ -213,6 +223,8 @@ class ShowtimeServiceTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         void deleteShowtime_findsAndDeletes() {
                 UUID showtimeId = UUID.randomUUID();
                 Showtime existing = new Showtime();
@@ -226,6 +238,9 @@ class ShowtimeServiceTest {
         }
 
         @Test
+        @SmokeTest
+        @SanityTest
+        @RegressionTest
         void getShowtime_returnsMappedResponse() {
                 UUID showtimeId = UUID.randomUUID();
                 Showtime existing = new Showtime();
@@ -244,6 +259,8 @@ class ShowtimeServiceTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         void getAllShowtimes_returnsMappedList() {
                 Showtime showtime1 = new Showtime();
                 showtime1.setFormat("2D");
@@ -270,6 +287,9 @@ class ShowtimeServiceTest {
         }
 
         @Test
+        @SmokeTest
+        @SanityTest
+        @RegressionTest
         void getShowtimesByMovie_returnsMappedList() {
                 UUID movieId = UUID.randomUUID();
                 Movie movie = new Movie();
@@ -293,6 +313,8 @@ class ShowtimeServiceTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         void getUpcomingShowtimesByMovie_returnsMappedList() {
                 UUID movieId = UUID.randomUUID();
                 Movie movie = new Movie();
@@ -317,6 +339,8 @@ class ShowtimeServiceTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         void getShowtimesByRoom_returnsMappedList() {
                 UUID roomId = UUID.randomUUID();
                 Room room = new Room();
@@ -340,6 +364,8 @@ class ShowtimeServiceTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         void getShowtimesByMovieAndDateRange_returnsMappedList() {
                 UUID movieId = UUID.randomUUID();
                 Movie movie = new Movie();
@@ -368,6 +394,7 @@ class ShowtimeServiceTest {
         }
 
         @Test
+        @RegressionTest
         void operations_throwWhenShowtimeNotFound() {
                 UUID id = UUID.randomUUID();
                 when(showtimeRepo.findById(id)).thenReturn(Optional.empty());
@@ -379,6 +406,7 @@ class ShowtimeServiceTest {
         }
 
         @Test
+        @RegressionTest
         void operations_throwWhenRoomNotFound() {
                 UUID roomId = UUID.randomUUID();
                 UUID movieId = UUID.randomUUID();
@@ -400,6 +428,7 @@ class ShowtimeServiceTest {
         }
 
         @Test
+        @RegressionTest
         void operations_throwWhenMovieNotFound() {
                 UUID roomId = UUID.randomUUID();
                 UUID movieId = UUID.randomUUID();

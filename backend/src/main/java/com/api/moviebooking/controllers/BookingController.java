@@ -17,6 +17,8 @@ import com.api.moviebooking.helpers.utils.SessionHelper;
 import com.api.moviebooking.models.dtos.SessionContext;
 import com.api.moviebooking.models.dtos.booking.BookingResponse;
 import com.api.moviebooking.models.dtos.booking.ConfirmBookingRequest;
+import com.api.moviebooking.models.dtos.booking.PricePreviewRequest;
+import com.api.moviebooking.models.dtos.booking.PricePreviewResponse;
 import com.api.moviebooking.models.dtos.booking.UpdateQrCodeRequest;
 import com.api.moviebooking.services.BookingService;
 import com.api.moviebooking.services.CheckoutService;
@@ -39,6 +41,21 @@ public class BookingController {
     private final CheckoutService checkoutService;
     private final BookingService bookingService;
     private final SessionHelper sessionHelper;
+
+    @PostMapping("/price-preview")
+    @Operation(summary = "Preview booking price", description = """
+            Calculate and return a cost overview for a booking transaction.
+            Uses the seat lock to get locked prices, then adds snacks and applies discounts.
+            """, parameters = {
+            @Parameter(name = "X-Session-Id", description = "Guest session ID (required for guests, ignored if JWT present)", example = "550e8400-e29b-41d4-a716-446655440000", required = false, schema = @Schema(type = "string", format = "uuid"))
+    })
+    public ResponseEntity<PricePreviewResponse> pricePreview(
+            @Valid @RequestBody PricePreviewRequest request,
+            HttpServletRequest httpRequest) {
+        SessionContext session = sessionHelper.extractSessionContext(httpRequest);
+        PricePreviewResponse response = bookingService.calculatePricePreview(request, session);
+        return ResponseEntity.ok(response);
+    }
 
     @PostMapping("/confirm")
     @Operation(summary = "Confirm booking with guest support", description = """

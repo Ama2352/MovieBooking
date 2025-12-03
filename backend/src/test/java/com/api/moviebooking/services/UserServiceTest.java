@@ -28,6 +28,9 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.api.moviebooking.models.dtos.auth.LoginRequest;
+import com.api.moviebooking.tags.RegressionTest;
+import com.api.moviebooking.tags.SanityTest;
+import com.api.moviebooking.tags.SmokeTest;
 import com.api.moviebooking.models.dtos.auth.RegisterRequest;
 import com.api.moviebooking.models.entities.MembershipTier;
 import com.api.moviebooking.models.entities.User;
@@ -94,6 +97,9 @@ class UserServiceTest {
     class RegisterTests {
 
         @Test
+        @SmokeTest
+        @SanityTest
+        @RegressionTest
         @DisplayName("TC-1: Should successfully register new user with valid data")
         void testRegister_Success() {
             RegisterRequest request = RegisterRequest.builder()
@@ -124,6 +130,7 @@ class UserServiceTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("TC-2: Should throw exception when email already exists")
         void testRegister_EmailAlreadyExists() {
             RegisterRequest request = RegisterRequest.builder()
@@ -177,6 +184,9 @@ class UserServiceTest {
     class LoginTests {
 
         @Test
+        @SmokeTest
+        @SanityTest
+        @RegressionTest
         @DisplayName("TC-1: Should return access and refresh tokens with valid credentials")
         void testLogin_Success() {
             LoginRequest request = LoginRequest.builder()
@@ -295,6 +305,9 @@ class UserServiceTest {
     class RefreshAccessTokenTests {
 
         @Test
+        @SmokeTest
+        @SanityTest
+        @RegressionTest
         @DisplayName("TC-1: Should return new access token with valid refresh token")
         void testRefreshAccessToken_Success() {
             String refreshToken = "valid-refresh-token";

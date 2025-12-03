@@ -190,4 +190,17 @@ public class ShowtimeSeatService {
                 .map(showtimeSeatMapper::toDataResponse)
                 .collect(Collectors.toList());
     }
+
+    /**
+     * Delete all showtime seats for a showtime
+     * Used internally when deleting a showtime
+     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
+     * Nodes: none
+     */
+    @Transactional
+    public void deleteShowtimeSeats(UUID showtimeId) {
+        List<ShowtimeSeat> showtimeSeats = showtimeSeatRepo.findByShowtimeId(showtimeId);
+        showtimeSeatRepo.deleteAll(showtimeSeats);
+        log.info("Deleted {} showtime seats for showtime {}", showtimeSeats.size(), showtimeId);
+    }
 }

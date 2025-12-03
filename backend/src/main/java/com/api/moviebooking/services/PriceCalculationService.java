@@ -7,17 +7,25 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 
+import com.api.moviebooking.models.dtos.booking.DiscountResult;
 import com.api.moviebooking.models.dtos.showtimeSeat.PriceBreakdown;
+import com.api.moviebooking.models.entities.MembershipTier;
 import com.api.moviebooking.models.entities.PriceBase;
 import com.api.moviebooking.models.entities.PriceModifier;
+import com.api.moviebooking.models.entities.Promotion;
 import com.api.moviebooking.models.entities.Seat;
 import com.api.moviebooking.models.entities.Showtime;
+import com.api.moviebooking.models.entities.User;
+import com.api.moviebooking.models.enums.DiscountType;
 import com.api.moviebooking.models.enums.ModifierType;
 import com.api.moviebooking.repositories.PriceBaseRepo;
 import com.api.moviebooking.repositories.PriceModifierRepo;
+import com.api.moviebooking.repositories.PromotionRepo;
+import com.api.moviebooking.repositories.UserRepo;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -32,6 +40,8 @@ public class PriceCalculationService {
     private final PriceBaseRepo priceBaseRepo;
     private final PriceModifierRepo priceModifierRepo;
     private final ObjectMapper objectMapper;
+    private final UserRepo userRepo;
+    private final PromotionRepo promotionRepo;
 
     /**
      * Calculate final price and generate price breakdown for a showtime seat
@@ -210,5 +220,97 @@ public class PriceCalculationService {
      */
     private boolean checkSeatType(String conditionValue, String seatType) {
         return seatType.equalsIgnoreCase(conditionValue);
+    }
+
+    /**
+     * Calculate discounts (membership tier + promotion code) for a given subtotal.
+     * This is the single source of truth for discount calculation logic.
+     * Used by both price preview and booking confirmation.
+     *
+     * @param subtotal      The base amount before discounts
+     * @param userId        Optional user ID to apply membership discount (null for
+     *                      guests)
+     * @param promotionCode Optional promotion code to apply
+     * @return DiscountResult containing total discount, breakdown, and reason
+     */
+    public DiscountResult calculateDiscounts(BigDecimal subtotal, UUID userId, String promotionCode) {
+        BigDecimal totalDiscount = BigDecimal.ZERO;
+        BigDecimal membershipDiscount = BigDecimal.ZERO;
+        BigDecimal promotionDiscount = BigDecimal.ZERO;
+        StringBuilder discountReason = new StringBuilder();
+
+        // Apply membership tier discount if userId is provided
+        if (userId != null) {
+            User user = userRepo.findById(userId).orElse(null);
+            if (user != null && user.getMembershipTier() != null) {
+                membershipDiscount = calculateMembershipDiscount(user.getMembershipTier(), subtotal);
+                if (membershipDiscount.compareTo(BigDecimal.ZERO) > 0) {
+                    totalDiscount = totalDiscount.add(membershipDiscount);
+                    MembershipTier tier = user.getMembershipTier();
+                    discountReason.append("Membership ").append(tier.getName())
+                            .append(" (-").append(tier.getDiscountValue())
+                            .append(tier.getDiscountType() == DiscountType.PERCENTAGE ? "%" : " VND")
+                            .append(")");
+                    log.debug("Applied membership discount: {} for tier {}", membershipDiscount, tier.getName());
+                }
+            }
+        }
+
+        // Apply promotion code discount if provided
+        if (promotionCode != null && !promotionCode.trim().isEmpty()) {
+            var promotionOpt = promotionRepo.findByCode(promotionCode);
+            if (promotionOpt.isPresent()) {
+                Promotion promotion = promotionOpt.get();
+                promotionDiscount = calculatePromotionDiscount(promotion, subtotal);
+                totalDiscount = totalDiscount.add(promotionDiscount);
+                if (discountReason.length() > 0) {
+                    discountReason.append(", ");
+                }
+                discountReason.append("Promotion: ").append(promotion.getName());
+                log.debug("Applied promotion discount: {} for code {}", promotionDiscount, promotionCode);
+            }
+        }
+
+        return DiscountResult.builder()
+                .totalDiscount(totalDiscount)
+                .membershipDiscount(membershipDiscount)
+                .promotionDiscount(promotionDiscount)
+                .discountReason(discountReason.length() > 0 ? discountReason.toString() : null)
+                .build();
+    }
+
+    /**
+     * Calculate membership tier discount for a given amount
+     */
+    private BigDecimal calculateMembershipDiscount(MembershipTier membershipTier, BigDecimal amount) {
+        if (membershipTier == null || !membershipTier.getIsActive()) {
+            return BigDecimal.ZERO;
+        }
+
+        if (membershipTier.getDiscountType() == null || membershipTier.getDiscountValue() == null) {
+            return BigDecimal.ZERO;
+        }
+
+        if (membershipTier.getDiscountValue().compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO;
+        }
+
+        return switch (membershipTier.getDiscountType()) {
+            case PERCENTAGE -> amount.multiply(membershipTier.getDiscountValue())
+                    .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+            case FIXED_AMOUNT -> membershipTier.getDiscountValue().min(amount);
+        };
+    }
+
+    /**
+     * Calculate promotion discount for a given amount
+     */
+    private BigDecimal calculatePromotionDiscount(Promotion promotion, BigDecimal amount) {
+        if (promotion.getDiscountType() == DiscountType.PERCENTAGE) {
+            return amount.multiply(promotion.getDiscountValue())
+                    .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+        } else {
+            return promotion.getDiscountValue().min(amount);
+        }
     }
 }

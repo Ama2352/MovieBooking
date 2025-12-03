@@ -62,37 +62,32 @@ public class SecurityConfig {
 
     @Bean
     @Order(2)
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtFilter filter) throws Exception {
-        http
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .csrf(AbstractHttpConfigurer::disable)
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-
-                .requestMatchers(PublicEndpointConfig.DOCS).permitAll()
-                .requestMatchers(PublicEndpointConfig.SEAT_LOCKS).permitAll()
-                .requestMatchers(PublicEndpointConfig.MAKE_PAYMENT).permitAll()
-                .requestMatchers(PublicEndpointConfig.CHECKOUT).permitAll()
-                .requestMatchers(PublicEndpointConfig.TESTS).permitAll()
-                .requestMatchers(PublicEndpointConfig.REFUNDS).permitAll()
-                .requestMatchers(HttpMethod.POST, PublicEndpointConfig.AUTH).permitAll()
-                .requestMatchers(HttpMethod.GET, PublicEndpointConfig.MOVIES).permitAll()
-                .requestMatchers(HttpMethod.GET, PublicEndpointConfig.SHOWTIMES).permitAll()
-                .requestMatchers(HttpMethod.GET, PublicEndpointConfig.PROMOTIONS).permitAll()
-                .requestMatchers(HttpMethod.GET, PublicEndpointConfig.MEMBERSHIP_TIERS).permitAll()
-                .requestMatchers(HttpMethod.GET, PublicEndpointConfig.SEATS).permitAll()
-                .requestMatchers(HttpMethod.GET, PublicEndpointConfig.SHOWTIME_SEATS).permitAll()
-                .requestMatchers(HttpMethod.GET, PublicEndpointConfig.PRICE_BASE).permitAll()
-                .requestMatchers(HttpMethod.GET, PublicEndpointConfig.PRICE_MODIFIERS).permitAll()
-                .requestMatchers(HttpMethod.GET, PublicEndpointConfig.CINEMAS).permitAll()
-                .requestMatchers(HttpMethod.GET, PublicEndpointConfig.PAYMENTS).permitAll()
-                .requestMatchers(HttpMethod.GET, PublicEndpointConfig.TICKET_TYPES).permitAll()
-                .anyRequest().authenticated()
-            )
-            .addFilterBefore(filter, UsernamePasswordAuthenticationFilter.class);
-
-        return http.build();
+    public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity, JwtFilter filter) throws Exception {
+        return httpSecurity
+                .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(PublicEndpointConfig.DOCS).permitAll()
+                        .requestMatchers(PublicEndpointConfig.SEAT_LOCKS).permitAll()
+                        .requestMatchers(PublicEndpointConfig.MAKE_PAYMENT).permitAll()
+                        .requestMatchers(PublicEndpointConfig.CHECKOUT).permitAll()
+                        .requestMatchers(PublicEndpointConfig.TESTS).permitAll()
+                        .requestMatchers(PublicEndpointConfig.REFUNDS).permitAll()
+                        .requestMatchers(HttpMethod.POST, PublicEndpointConfig.AUTH).permitAll()
+                        .requestMatchers(HttpMethod.GET, PublicEndpointConfig.MOVIES).permitAll()
+                        .requestMatchers(HttpMethod.GET, PublicEndpointConfig.SHOWTIMES).permitAll()
+                        .requestMatchers(HttpMethod.GET, PublicEndpointConfig.PROMOTIONS).permitAll()
+                        .requestMatchers(HttpMethod.GET, PublicEndpointConfig.MEMBERSHIP_TIERS).permitAll()
+                        .requestMatchers(HttpMethod.GET, PublicEndpointConfig.SEATS).permitAll()
+                        .requestMatchers(HttpMethod.GET, PublicEndpointConfig.SHOWTIME_SEATS).permitAll()
+                        .requestMatchers(HttpMethod.GET, PublicEndpointConfig.PRICE_BASE).permitAll()
+                        .requestMatchers(HttpMethod.GET, PublicEndpointConfig.PRICE_MODIFIERS).permitAll()
+                        .requestMatchers(HttpMethod.GET, PublicEndpointConfig.CINEMAS).permitAll()
+                        .requestMatchers(HttpMethod.GET, PublicEndpointConfig.PAYMENTS).permitAll()
+                        .requestMatchers(HttpMethod.GET, PublicEndpointConfig.TICKET_TYPES).permitAll()
+                        .anyRequest().authenticated())
+                .addFilterBefore(filter, UsernamePasswordAuthenticationFilter.class)
+                .build();
     }
 
     @Bean

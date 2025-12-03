@@ -38,6 +38,9 @@ import com.api.moviebooking.repositories.RoomRepo;
 import com.api.moviebooking.repositories.SeatRepo;
 import com.api.moviebooking.repositories.SnackRepo;
 import com.api.moviebooking.services.CinemaService;
+import com.api.moviebooking.tags.RegressionTest;
+import com.api.moviebooking.tags.SanityTest;
+import com.api.moviebooking.tags.SmokeTest;
 
 import io.restassured.http.ContentType;
 import io.restassured.module.mockmvc.RestAssuredMockMvc;
@@ -116,6 +119,9 @@ class CinemaIntegrationTest {
         // ==================== Cinema CRUD Tests ====================
 
         @Test
+        @SmokeTest
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should create cinema successfully when authenticated as admin")
         @WithMockUser(roles = "ADMIN")
         void testAddCinema_Success() {
@@ -139,6 +145,7 @@ class CinemaIntegrationTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should fail to create cinema when not authenticated")
         void testAddCinema_Unauthorized() {
                 AddCinemaRequest request = AddCinemaRequest.builder()
@@ -157,6 +164,7 @@ class CinemaIntegrationTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should fail to create cinema with invalid data")
         @WithMockUser(roles = "ADMIN")
         void testAddCinema_InvalidData() {
@@ -178,6 +186,9 @@ class CinemaIntegrationTest {
         }
 
         @Test
+        @SmokeTest
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should get cinema by ID successfully")
         @WithMockUser(roles = "ADMIN")
         void testGetCinema_Success() {
@@ -199,6 +210,7 @@ class CinemaIntegrationTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should return 404 when cinema not found")
         @WithMockUser(roles = "ADMIN")
         void testGetCinema_NotFound() {
@@ -213,6 +225,8 @@ class CinemaIntegrationTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should update cinema successfully")
         @WithMockUser(roles = "ADMIN")
         void testUpdateCinema_Success() {
@@ -242,6 +256,8 @@ class CinemaIntegrationTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should delete cinema successfully when no rooms or snacks exist")
         @WithMockUser(roles = "ADMIN")
         void testDeleteCinema_Success() {
@@ -265,6 +281,9 @@ class CinemaIntegrationTest {
         // ==================== Room CRUD Tests ====================
 
         @Test
+        @SmokeTest
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should create room successfully")
         @WithMockUser(roles = "ADMIN")
         void testAddRoom_Success() {
@@ -294,6 +313,7 @@ class CinemaIntegrationTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should fail to create room with non-existent cinema")
         @WithMockUser(roles = "ADMIN")
         void testAddRoom_CinemaNotFound() {
@@ -314,6 +334,9 @@ class CinemaIntegrationTest {
         }
 
         @Test
+        @SmokeTest
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should get room by ID successfully")
         @WithMockUser(roles = "ADMIN")
         void testGetRoom_Success() {
@@ -349,6 +372,8 @@ class CinemaIntegrationTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should update room successfully")
         @WithMockUser(roles = "ADMIN")
         void testUpdateRoom_Success() {
@@ -391,6 +416,8 @@ class CinemaIntegrationTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should delete room successfully")
         @WithMockUser(roles = "ADMIN")
         void testDeleteRoom_Success() {
@@ -429,6 +456,9 @@ class CinemaIntegrationTest {
         // ==================== Snack CRUD Tests ====================
 
         @Test
+        @SmokeTest
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should create snack successfully")
         @WithMockUser(roles = "ADMIN")
         void testAddSnack_Success() {
@@ -464,6 +494,7 @@ class CinemaIntegrationTest {
         }
 
         @Test
+        @RegressionTest
         @DisplayName("Should fail to create snack with non-existent cinema")
         @WithMockUser(roles = "ADMIN")
         void testAddSnack_CinemaNotFound() {
@@ -488,6 +519,9 @@ class CinemaIntegrationTest {
         }
 
         @Test
+        @SmokeTest
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should get snack by ID successfully")
         @WithMockUser(roles = "ADMIN")
         void testGetSnack_Success() {
@@ -529,6 +563,8 @@ class CinemaIntegrationTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should update snack successfully")
         @WithMockUser(roles = "ADMIN")
         void testUpdateSnack_Success() {
@@ -579,6 +615,8 @@ class CinemaIntegrationTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should delete snack successfully")
         @WithMockUser(roles = "ADMIN")
         void testDeleteSnack_Success() {
@@ -619,6 +657,8 @@ class CinemaIntegrationTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should get all cinemas successfully")
         @WithMockUser(roles = "ADMIN")
         void testGetAllCinemas_Success() {
@@ -645,6 +685,8 @@ class CinemaIntegrationTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should get all rooms successfully")
         @WithMockUser(roles = "ADMIN")
         void testGetAllRooms_Success() {
@@ -681,6 +723,8 @@ class CinemaIntegrationTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @DisplayName("Should get all snacks successfully")
         @WithMockUser(roles = "ADMIN")
         void testGetAllSnacks_Success() {
@@ -727,6 +771,7 @@ class CinemaIntegrationTest {
         // ==================== Authorization Tests ====================
 
         @Test
+        @RegressionTest
         @DisplayName("Should deny access to user without ADMIN role")
         @WithMockUser(roles = "USER")
         void testCinemaOperations_Forbidden() {

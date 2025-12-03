@@ -2,7 +2,7 @@ package com.api.moviebooking.integrations;
 
 import static io.restassured.module.mockmvc.RestAssuredMockMvc.*;
 import static org.hamcrest.Matchers.*;
-import static org.junit.jupiter.api.Assertions.*;
+//import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
 import java.math.BigDecimal;
@@ -31,6 +31,9 @@ import com.api.moviebooking.models.dtos.payment.RefundRequest;
 import com.api.moviebooking.models.entities.*;
 import com.api.moviebooking.models.enums.*;
 import com.api.moviebooking.repositories.*;
+import com.api.moviebooking.tags.RegressionTest;
+import com.api.moviebooking.tags.SanityTest;
+import com.api.moviebooking.tags.SmokeTest;
 
 import io.restassured.http.ContentType;
 import io.restassured.module.mockmvc.RestAssuredMockMvc;
@@ -220,6 +223,9 @@ class RefundIntegrationTest {
     class SuccessfulRefundTests {
 
         @Test
+        @SmokeTest
+        @SanityTest
+        @RegressionTest
         @WithMockUser(username = "admin@test.com", roles = "ADMIN")
         @DisplayName("Should successfully refund MOMO payment")
         void testRefundPayment_Success() {
@@ -242,6 +248,8 @@ class RefundIntegrationTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @WithMockUser(username = "admin@test.com", roles = "ADMIN")
         @DisplayName("Should handle refund for PayPal payment with currency conversion")
         void testRefundPayment_PayPal() {
@@ -277,6 +285,7 @@ class RefundIntegrationTest {
     class AuthorizationTests {
 
         @Test
+        @RegressionTest
         @DisplayName("Should reject refund without authentication")
         void testRefundPayment_Unauthorized() {
             RefundRequest request = new RefundRequest("Unauthorized refund attempt");
@@ -291,6 +300,7 @@ class RefundIntegrationTest {
         }
 
         @Test
+        @RegressionTest
         @WithMockUser(username = "user@test.com", roles = "USER")
         @DisplayName("Should reject refund from non-admin user")
         void testRefundPayment_Forbidden() {
@@ -315,6 +325,7 @@ class RefundIntegrationTest {
     class RefundValidationTests {
 
         @Test
+        @RegressionTest
         @WithMockUser(username = "admin@test.com", roles = "ADMIN")
         @DisplayName("Should reject refund for non-existent payment")
         void testRefundPayment_NotFound() {
@@ -331,6 +342,7 @@ class RefundIntegrationTest {
         }
 
         @Test
+        @RegressionTest
         @WithMockUser(username = "admin@test.com", roles = "ADMIN")
         @DisplayName("Should reject refund for already refunded payment")
         void testRefundPayment_AlreadyRefunded() {
@@ -352,6 +364,7 @@ class RefundIntegrationTest {
         }
 
         @Test
+        @RegressionTest
         @WithMockUser(username = "admin@test.com", roles = "ADMIN")
         @DisplayName("Should reject refund for pending payment")
         void testRefundPayment_PendingPayment() {
@@ -374,6 +387,7 @@ class RefundIntegrationTest {
         }
 
         @Test
+        @RegressionTest
         @WithMockUser(username = "admin@test.com", roles = "ADMIN")
         @DisplayName("Should reject refund without reason")
         void testRefundPayment_NoReason() {
@@ -389,6 +403,8 @@ class RefundIntegrationTest {
         }
 
         @Test
+        @SanityTest
+        @RegressionTest
         @WithMockUser(username = "admin@test.com", roles = "ADMIN")
         @DisplayName("Should release all booked seats after successful refund")
         void testRefundPayment_AllSeatsReleased() {

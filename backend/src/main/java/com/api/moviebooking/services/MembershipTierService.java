@@ -276,4 +276,31 @@ public class MembershipTierService {
                 .orElseThrow(() -> new IllegalStateException(
                         "No default membership tier configured. Please create at least one tier."));
     }
+
+    /**
+     * Calculate membership tier discount for a given amount
+     * 
+     * @param membershipTier The user's membership tier (can be null)
+     * @param amount         The amount to apply discount on
+     * @return The discount amount (0 if no tier or no discount configured)
+     */
+    public BigDecimal calculateMembershipDiscount(MembershipTier membershipTier, BigDecimal amount) {
+        if (membershipTier == null || !membershipTier.getIsActive()) {
+            return BigDecimal.ZERO;
+        }
+
+        if (membershipTier.getDiscountType() == null || membershipTier.getDiscountValue() == null) {
+            return BigDecimal.ZERO;
+        }
+
+        if (membershipTier.getDiscountValue().compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO;
+        }
+
+        return switch (membershipTier.getDiscountType()) {
+            case PERCENTAGE -> amount.multiply(membershipTier.getDiscountValue())
+                    .divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+            case FIXED_AMOUNT -> membershipTier.getDiscountValue().min(amount); // Don't exceed the amount
+        };
+    }
 }

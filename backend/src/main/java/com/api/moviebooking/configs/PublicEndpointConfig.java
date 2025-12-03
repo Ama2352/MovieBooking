@@ -26,6 +26,8 @@ public final class PublicEndpointConfig {
 
         public static final String[] REFUNDS = { "/payments/*/refund" };
 
+        public static final String[] PRICE_PREVIEW = { "/bookings/price-preview" };
+
         // Public read-only resources (GET only)
         public static final String[] MOVIES = { "/movies/**" };
         public static final String[] SHOWTIMES = { "/showtimes/**" };

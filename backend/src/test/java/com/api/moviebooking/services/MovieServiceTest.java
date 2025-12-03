@@ -24,6 +24,9 @@ import com.api.moviebooking.models.dtos.movie.UpdateMovieRequest;
 import com.api.moviebooking.models.entities.Movie;
 import com.api.moviebooking.models.enums.MovieStatus;
 import com.api.moviebooking.repositories.MovieRepo;
+import com.api.moviebooking.tags.RegressionTest;
+import com.api.moviebooking.tags.SanityTest;
+import com.api.moviebooking.tags.SmokeTest;
 
 @ExtendWith(MockitoExtension.class)
 class MovieServiceTest {
@@ -38,6 +41,9 @@ class MovieServiceTest {
     private MovieService movieService;
 
     @Test
+    @SmokeTest
+    @SanityTest
+    @RegressionTest
     void addMovie_mapsSavesAndReturnsResponse() {
         AddMovieRequest req = AddMovieRequest.builder()
                 .title("Inception")
@@ -77,6 +83,7 @@ class MovieServiceTest {
     }
 
     @Test
+    @RegressionTest
     void addMovie_throwsWhenTitleAlreadyExists() {
         AddMovieRequest req = AddMovieRequest.builder()
                 .title("Inception")
@@ -89,6 +96,8 @@ class MovieServiceTest {
     }
 
     @Test
+    @SanityTest
+    @RegressionTest
     void updateMovie_updatesNonNullFieldsAndSaves() {
         UUID id = UUID.randomUUID();
         Movie existing = new Movie();
@@ -131,6 +140,7 @@ class MovieServiceTest {
     }
 
     @Test
+    @RegressionTest
     void updateMovie_throwsWhenNewTitleConflicts() {
         UUID id = UUID.randomUUID();
         Movie existing = new Movie();
@@ -148,6 +158,8 @@ class MovieServiceTest {
     }
 
     @Test
+    @SanityTest
+    @RegressionTest
     void deleteMovie_findsAndDeletes() {
         UUID id = UUID.randomUUID();
         Movie existing = new Movie();
@@ -162,6 +174,8 @@ class MovieServiceTest {
     }
 
     @Test
+    @SanityTest
+    @RegressionTest
     void deleteMovie_throwsWhenHasShowtimes() {
         UUID id = UUID.randomUUID();
         Movie existing = new Movie();
@@ -174,6 +188,9 @@ class MovieServiceTest {
     }
 
     @Test
+    @SmokeTest
+    @SanityTest
+    @RegressionTest
     void getMovie_returnsMappedResponse() {
         UUID id = UUID.randomUUID();
         Movie existing = new Movie();
@@ -194,6 +211,8 @@ class MovieServiceTest {
     }
 
     @Test
+    @SanityTest
+    @RegressionTest
     void getAllMovies_returnsMappedList() {
         Movie movie1 = new Movie();
         movie1.setTitle("Movie 1");
@@ -220,6 +239,8 @@ class MovieServiceTest {
     }
 
     @Test
+    @SanityTest
+    @RegressionTest
     void searchMoviesByTitle_returnsMappedList() {
         Movie movie = new Movie();
         movie.setTitle("Inception");
@@ -238,6 +259,8 @@ class MovieServiceTest {
     }
 
     @Test
+    @SanityTest
+    @RegressionTest
     void getMoviesByStatus_returnsMappedList() {
         Movie movie = new Movie();
         movie.setTitle("Showing Movie");
@@ -257,6 +280,7 @@ class MovieServiceTest {
     }
 
     @Test
+    @RegressionTest
     void getMoviesByGenre_returnsMappedList() {
         Movie movie = new Movie();
         movie.setTitle("Action Movie");
@@ -276,6 +300,7 @@ class MovieServiceTest {
     }
 
     @Test
+    @RegressionTest
     void searchMovies_returnsMappedList() {
         Movie movie = new Movie();
         movie.setTitle("Advanced Search Movie");
@@ -297,6 +322,7 @@ class MovieServiceTest {
     }
 
     @Test
+    @RegressionTest
     void operations_throwWhenMovieNotFound() {
         UUID id = UUID.randomUUID();
         when(movieRepo.findById(id)).thenReturn(Optional.empty());
