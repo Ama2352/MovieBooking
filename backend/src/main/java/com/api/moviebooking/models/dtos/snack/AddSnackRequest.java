@@ -34,6 +34,6 @@ public class AddSnackRequest {
     @NotBlank
     private String imageUrl;
 
-    @NotBlank
+    //@NotBlank
     private String imageCloudinaryId;
 }
