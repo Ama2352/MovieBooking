@@ -40,7 +40,6 @@ debug/
 
 testing/
 
-
 # Terraform
 *.tfstate
 *.tfstate.*

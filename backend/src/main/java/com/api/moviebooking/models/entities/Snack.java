@@ -47,7 +47,10 @@ public class Snack {
     private BigDecimal price;
 
     private String type; // e.g., Popcorn, Pepsi, Combo 1, etc.
+
+    @Column(columnDefinition = "TEXT")
     private String imageUrl;
+
     private String imageCloudinaryId;
 
     @OneToMany(mappedBy = "snack", cascade = { CascadeType.PERSIST, CascadeType.MERGE })
