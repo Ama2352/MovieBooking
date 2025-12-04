@@ -32,10 +32,19 @@ build/
 ### VS Code ###
 .vscode/
 
-.env
+*.env
 
 md/
 
 debug/
 
 testing/
+
+
+# Terraform
+*.tfstate
+*.tfstate.*
+*.tfvars
+.terraform/
+terraform.tfvars
+tfplan
