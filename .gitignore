@@ -39,3 +39,11 @@ md/
 debug/
 
 testing/
+
+# Terraform
+*.tfstate
+*.tfstate.*
+*.tfvars
+.terraform/
+terraform.tfvars
+tfplan

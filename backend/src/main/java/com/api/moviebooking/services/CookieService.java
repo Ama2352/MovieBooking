@@ -29,7 +29,7 @@ public class CookieService {
         return ResponseCookie.from(REFRESH_TOKEN_COOKIE, token)
                 .httpOnly(true)
                 // .secure(true) -> for https only
-                .path("/auth/refresh")
+                .path("/auth")
                 .maxAge(REFRESH_TOKEN_EXPIRY)
                 .sameSite("Strict")
                 .build();
@@ -71,7 +71,7 @@ public class CookieService {
         return ResponseCookie.from(REFRESH_TOKEN_COOKIE, "")
                 .httpOnly(true)
                 // .secure(true) -> for https only
-                .path("/auth/refresh")
+                .path("/auth")
                 .maxAge(0)
                 .sameSite("Strict")
                 .build();

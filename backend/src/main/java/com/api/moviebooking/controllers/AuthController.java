@@ -55,14 +55,20 @@ public class AuthController {
     public ResponseEntity<Void> logout(HttpServletRequest request) {
         String refreshToken = cookieService.extractRefreshTokenFromCookie(request);
         userService.logout(refreshToken);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, cookieService.clearAccessTokenCookie().toString())
+                .header(HttpHeaders.SET_COOKIE, cookieService.clearRefreshTokenCookie().toString())
+                .build();
     }
 
     @SecurityRequirement(name = "bearerToken")
     @PostMapping("/logout-all")
     public ResponseEntity<?> logoutAllSessions(@RequestParam(required = true) String email) {
         userService.logoutAllSessions(email);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, cookieService.clearAccessTokenCookie().toString())
+                .header(HttpHeaders.SET_COOKIE, cookieService.clearRefreshTokenCookie().toString())
+                .build();
     }
 
     @SecurityRequirement(name = "bearerToken")

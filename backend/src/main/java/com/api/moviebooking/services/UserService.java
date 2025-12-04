@@ -20,7 +20,6 @@ import com.api.moviebooking.helpers.exceptions.EntityDeletionForbiddenException;
 import com.api.moviebooking.helpers.mapstructs.UserMapper;
 import com.api.moviebooking.models.dtos.auth.LoginRequest;
 import com.api.moviebooking.models.dtos.auth.RegisterRequest;
-import com.api.moviebooking.models.dtos.user.CreateGuestRequest;
 import com.api.moviebooking.models.dtos.user.UpdatePasswordRequest;
 import com.api.moviebooking.models.dtos.user.UpdateProfileRequest;
 import com.api.moviebooking.models.dtos.user.UserProfileResponse;
@@ -132,6 +131,7 @@ public class UserService {
         newToken.setToken(refreshToken);
         newToken.setUser(user);
         user.getRefreshTokens().add(newToken);
+        userRepo.save(user);
     }
 
     /**
