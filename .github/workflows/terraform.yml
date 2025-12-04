@@ -233,7 +233,7 @@ jobs:
           gh secret set AZURE_VM_SSH_KEY -b"${{ env.SSH_PRIVATE_KEY }}"
           echo "✅ GitHub secrets updated"
         env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+          GH_TOKEN: ${{ secrets.GH_PAT_MOVIEBOOKING }}
 
       - name: Show Deployment Info
         run: |
@@ -329,7 +329,7 @@ jobs:
           gh secret delete AZURE_VM_SSH_KEY || true
           echo "✅ Secrets cleared"
         env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+          GH_TOKEN: ${{ secrets.GH_PAT_MOVIEBOOKING }}
 
       - name: Destroy Complete
         run: |
