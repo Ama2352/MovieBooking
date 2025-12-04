@@ -193,9 +193,19 @@ resource "azurerm_linux_virtual_machine" "main" {
   size                = var.vm_size
   admin_username      = var.admin_username
 
+  # Primary SSH key (from CI/CD)
   admin_ssh_key {
     username   = var.admin_username
     public_key = file(pathexpand(var.ssh_public_key_path))
+  }
+
+  # Additional SSH keys (for local machine access)
+  dynamic "admin_ssh_key" {
+    for_each = var.additional_ssh_keys
+    content {
+      username   = var.admin_username
+      public_key = admin_ssh_key.value
+    }
   }
 
   network_interface_ids = [azurerm_network_interface.main.id]

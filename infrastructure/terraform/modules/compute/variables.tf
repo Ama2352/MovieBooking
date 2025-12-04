@@ -60,3 +60,9 @@ variable "allowed_ssh_cidr" {
   type        = string
   default     = "0.0.0.0/0"
 }
+
+variable "additional_ssh_keys" {
+  description = "Additional SSH public keys to add to the VM"
+  type        = list(string)
+  default     = []
+}

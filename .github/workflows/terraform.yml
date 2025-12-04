@@ -189,11 +189,18 @@ jobs:
       - name: Terraform Apply
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: |
+          # Build additional SSH keys argument if LOCAL_SSH_PUBLIC_KEY is set
+          ADDITIONAL_KEYS_VAR=""
+          if [ -n "${{ secrets.LOCAL_SSH_PUBLIC_KEY }}" ]; then
+            ADDITIONAL_KEYS_VAR='-var=additional_ssh_keys=["${{ secrets.LOCAL_SSH_PUBLIC_KEY }}"]'
+          fi
+          
           terraform apply \
             -var="azure_subscription_id=${{ secrets.AZURE_SUBSCRIPTION_ID }}" \
             -var="azure_client_id=${{ secrets.AZURE_CLIENT_ID }}" \
             -var="azure_client_secret=${{ secrets.AZURE_CLIENT_SECRET }}" \
             -var="azure_tenant_id=${{ secrets.AZURE_TENANT_ID }}" \
+            $ADDITIONAL_KEYS_VAR \
             -auto-approve
 
       - name: Get Outputs

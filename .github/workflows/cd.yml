@@ -70,16 +70,14 @@ jobs:
             
             # Create .env if not exists
             if [ ! -f ".env" ]; then
-              cat > .env << 'EOF'
-            SPRING_PROFILES_ACTIVE=dev
-            DB_HOST=db
-            DB_PORT=5432
-            DB_NAME=moviebooking
-            DB_USERNAME=postgres
-            DB_PASSWORD=postgres
-            REDIS_HOST=redis
-            REDIS_PORT=6379
-            EOF
+              echo "SPRING_PROFILES_ACTIVE=dev" > .env
+              echo "DB_HOST=db" >> .env
+              echo "DB_PORT=5432" >> .env
+              echo "DB_NAME=moviebooking" >> .env
+              echo "DB_USERNAME=postgres" >> .env
+              echo "DB_PASSWORD=postgres" >> .env
+              echo "REDIS_HOST=redis" >> .env
+              echo "REDIS_PORT=6379" >> .env
             fi
             
             # Start services

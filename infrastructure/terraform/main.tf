@@ -32,6 +32,7 @@ module "compute" {
   os_disk_size_gb     = var.os_disk_size_gb
   data_disk_size_gb   = var.data_disk_size_gb
   allowed_ssh_cidr    = var.allowed_ssh_cidr
+  additional_ssh_keys = var.additional_ssh_keys
 }
 
 # -----------------------------------------------------------------------------
