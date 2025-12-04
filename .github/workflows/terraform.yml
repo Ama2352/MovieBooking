@@ -173,6 +173,9 @@ jobs:
         run: |
           mkdir -p ~/.ssh
           ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_rsa -N "" -C "github-actions@moviebooking"
+          echo "SSH_PUBLIC_KEY<<EOF" >> $GITHUB_ENV
+          cat ~/.ssh/id_rsa.pub >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
           echo "SSH_PRIVATE_KEY<<EOF" >> $GITHUB_ENV
           cat ~/.ssh/id_rsa >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV

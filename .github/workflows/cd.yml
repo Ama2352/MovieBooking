@@ -36,28 +36,37 @@ jobs:
             echo "Starting MovieBooking deployment..."
             echo "=========================================="
             
-            # Wait for cloud-init
+            # Ensure Docker is in PATH and running
+            export PATH=$PATH:/usr/bin:/usr/local/bin
+            
+            # Wait for cloud-init to complete (in case VM just started)
+            echo "Waiting for cloud-init to complete..."
             sudo cloud-init status --wait || true
             
             # Ensure Docker is running
+            echo "Ensuring Docker is running..."
             sudo systemctl start docker || true
             sudo systemctl enable docker || true
             
             # Install Docker if missing
             if ! command -v docker &> /dev/null; then
-              curl -fsSL https://get.docker.com | sudo sh
+              echo "Docker not found. Installing Docker..."
+              curl -fsSL https://get.docker.com -o get-docker.sh
+              sudo sh get-docker.sh
               sudo usermod -aG docker $USER
+              sudo systemctl start docker
+              rm get-docker.sh
             fi
             
-            # Clone or update repo
+            # Check if app directory exists and is a valid git repo
             if [ -d "/opt/moviebooking/.git" ]; then
-              echo "Updating repository..."
+              echo "Repository already exists. Pulling latest code..."
               cd /opt/moviebooking
               git fetch origin
               git checkout ${{ github.ref_name }} || git checkout main
               git pull
             else
-              echo "Cloning repository..."
+              echo "Cloning repository for the first time..."
               sudo rm -rf /opt/moviebooking
               sudo mkdir -p /opt/moviebooking
               sudo chown $USER:$USER /opt/moviebooking
@@ -68,38 +77,52 @@ jobs:
             
             cd /opt/moviebooking/backend
             
-            # Create .env if not exists
-            if [ ! -f ".env" ]; then
-              echo "SPRING_PROFILES_ACTIVE=dev" > .env
-              echo "DB_HOST=db" >> .env
-              echo "DB_PORT=5432" >> .env
-              echo "DB_NAME=moviebooking" >> .env
-              echo "DB_USERNAME=postgres" >> .env
-              echo "DB_PASSWORD=postgres" >> .env
-              echo "REDIS_HOST=redis" >> .env
-              echo "REDIS_PORT=6379" >> .env
+            # Verify we're in the right directory with docker-compose.yml
+            if [ ! -f "docker-compose.yml" ]; then
+              echo "❌ ERROR: docker-compose.yml not found in $(pwd)"
+              echo "Contents of current directory:"
+              ls -la
+              exit 1
             fi
             
-            # Start services
-            echo "Starting Docker services..."
+            echo "✅ Repository ready at $(pwd)"
+            
+            # Create .env file if it doesn't exist
+            if [ ! -f ".env" ]; then
+              echo "Creating .env file..."
+              cat > .env << 'ENVEOF'
+            SPRING_PROFILES_ACTIVE=dev
+            DB_HOST=db
+            DB_PORT=5432
+            DB_NAME=moviebooking
+            DB_USERNAME=postgres
+            DB_PASSWORD=postgres
+            REDIS_HOST=redis
+            REDIS_PORT=6379
+            ENVEOF
+            fi
+            
+            # Build and start services
+            echo "Starting Docker Compose services..."
             sudo docker compose down --remove-orphans || true
             sudo docker compose up -d --build
             
-            # Wait for startup
-            echo "Waiting for services..."
+            # Wait for services to start
+            echo "Waiting for services to start..."
             sleep 60
             
-            # Show status
+            # Show current status
             echo "=========================================="
-            echo "Service Status:"
+            echo "Current service status:"
             echo "=========================================="
             sudo docker compose ps
             
+            # Show logs for main service
             echo ""
             echo "=========================================="
-            echo "Recent logs:"
+            echo "Service Logs (last 30 lines):"
             echo "=========================================="
-            sudo docker compose logs --tail=20 moviebooking 2>/dev/null || true
+            sudo docker compose logs --tail=30 moviebooking 2>/dev/null || echo "No logs yet"
             
             echo ""
             echo "✅ Deployment complete!"
