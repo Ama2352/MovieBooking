@@ -129,8 +129,14 @@ jobs:
         id: plan
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: |
-          terraform plan -out=tfplan -detailed-exitcode || exit_code=$?
-          
+          terraform plan \
+            -var="azure_subscription_id=${{ secrets.AZURE_SUBSCRIPTION_ID }}" \
+            -var="azure_client_id=${{ secrets.AZURE_CLIENT_ID }}" \
+            -var="azure_client_secret=${{ secrets.AZURE_CLIENT_SECRET }}" \
+            -var="azure_tenant_id=${{ secrets.AZURE_TENANT_ID }}" \
+            -out=tfplan \
+            -detailed-exitcode || exit_code=$?
+
           if [ "$exit_code" == "2" ]; then
             echo "has_changes=true" >> $GITHUB_OUTPUT
           else
@@ -188,7 +194,13 @@ jobs:
 
       - name: Terraform Apply
         working-directory: ${{ env.TF_WORKING_DIR }}
-        run: terraform apply -auto-approve tfplan
+        run: |
+          terraform apply \
+            -var="azure_subscription_id=${{ secrets.AZURE_SUBSCRIPTION_ID }}" \
+            -var="azure_client_id=${{ secrets.AZURE_CLIENT_ID }}" \
+            -var="azure_client_secret=${{ secrets.AZURE_CLIENT_SECRET }}" \
+            -var="azure_tenant_id=${{ secrets.AZURE_TENANT_ID }}" \
+            -auto-approve tfplan
 
       - name: Get Outputs
         id: outputs
@@ -249,11 +261,6 @@ jobs:
           mkdir -p ~/.ssh
           ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_rsa -N "" -C "github-actions@moviebooking"
 
-      - name: Azure Login
-        uses: azure/login@v2
-        with:
-          creds: '{"clientId":"${{ secrets.AZURE_CLIENT_ID }}","clientSecret":"${{ secrets.AZURE_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AZURE_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AZURE_TENANT_ID }}"}'
-
       - name: Terraform Init
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: |
@@ -265,7 +272,13 @@ jobs:
 
       - name: Terraform Destroy
         working-directory: ${{ env.TF_WORKING_DIR }}
-        run: terraform destroy -auto-approve || true
+        run: |
+          terraform destroy \
+            -var="azure_subscription_id=${{ secrets.AZURE_SUBSCRIPTION_ID }}" \
+            -var="azure_client_id=${{ secrets.AZURE_CLIENT_ID }}" \
+            -var="azure_client_secret=${{ secrets.AZURE_CLIENT_SECRET }}" \
+            -var="azure_tenant_id=${{ secrets.AZURE_TENANT_ID }}" \
+            -auto-approve || true
 
       - name: Destroy Backend Storage
         uses: azure/cli@v2
