@@ -2,9 +2,9 @@ name: CI Pipeline
 
 on:
   push:
-    branches: [ main, develop, integrateSystemTests/** ]
+    branches: [ "**" ] # all branches
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main ]  # run CI when merging into main
   workflow_dispatch:
 
 # Permissions required for test-reporter to create check runs
