@@ -6,10 +6,9 @@
 
 terraform {
   backend "azurerm" {
-    # These values are set dynamically by CI/CD via -backend-config flags:
-    # resource_group_name  = "moviebooking-tfstate-rg"
-    # storage_account_name = "moviebookingtfstate"
-    # container_name       = "tfstate"
-    # key                  = "terraform.tfstate"
+    resource_group_name  = "moviebooking-tfstate-rg"
+    storage_account_name = "moviebookingtfstate"
+    container_name       = "tfstate"
+    key                  = "terraform.tfstate"
   }
 }
