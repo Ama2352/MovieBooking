@@ -109,15 +109,19 @@ jobs:
 
       - name: Generate SSH Key
         run: |
-          mkdir -p ~/.ssh
-          ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_rsa -N "" -C "github-actions@moviebooking"
+          mkdir -p $HOME/.ssh
+          ssh-keygen -t rsa -b 4096 -f $HOME/.ssh/id_rsa -N "" -C "github-actions@moviebooking"
+          echo "SSH_DIR=$HOME/.ssh" >> $GITHUB_ENV
+          ls -la $HOME/.ssh/
       
       # Save the SSH key so Apply can reuse the SAME ONE
       - name: Upload SSH Keys
         uses: actions/upload-artifact@v4
         with:
           name: ssh-keys
-          path: /home/runner/.ssh/id_rsa*
+          path: |
+            ~/.ssh/id_rsa
+            ~/.ssh/id_rsa.pub
 
       - name: Terraform Init
         working-directory: ${{ env.TF_WORKING_DIR }}
@@ -180,19 +184,20 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: ssh-keys
-          path: /home/runner/.ssh
+          path: ~/.ssh
 
       # Fix file permissions (VERY important for SSH)
       - name: Fix SSH Permissions
         run: |
-          chmod 600 /home/runner/.ssh/id_rsa
-          chmod 644 /home/runner/.ssh/id_rsa.pub
+          chmod 600 ~/.ssh/id_rsa
+          chmod 644 ~/.ssh/id_rsa.pub
+          ls -la ~/.ssh/
 
       # Export private key to environment so we can save it as GitHub Secret later
       - name: Load SSH Private Key into Environment
         run: |
           echo "SSH_PRIVATE_KEY<<EOF" >> $GITHUB_ENV
-          cat /home/runner/.ssh/id_rsa >> $GITHUB_ENV
+          cat ~/.ssh/id_rsa >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
       - name: Terraform Init
@@ -268,25 +273,16 @@ jobs:
           terraform_version: 1.6.0
           terraform_wrapper: false
 
-      # Download SSH key generated in PLAN
-      - name: Download SSH Keys
-        uses: actions/download-artifact@v4
+      # Generate SSH key for destroy (artifact may not exist from previous runs)
+      - name: Generate SSH Key
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_rsa -N "" -C "github-actions@moviebooking"
+
+      - name: Azure Login
+        uses: azure/login@v2
         with:
-          name: ssh-keys
-          path: /home/runner/.ssh
-
-      # Fix file permissions (VERY important for SSH)
-      - name: Fix SSH Permissions
-        run: |
-          chmod 600 /home/runner/.ssh/id_rsa
-          chmod 644 /home/runner/.ssh/id_rsa.pub
-
-      # Export private key to environment so we can save it as GitHub Secret later
-      - name: Load SSH Private Key into Environment
-        run: |
-          echo "SSH_PRIVATE_KEY<<EOF" >> $GITHUB_ENV
-          cat /home/runner/.ssh/id_rsa >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
+          creds: '{"clientId":"${{ secrets.AZURE_CLIENT_ID }}","clientSecret":"${{ secrets.AZURE_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AZURE_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AZURE_TENANT_ID }}"}'
 
       - name: Terraform Init
         working-directory: ${{ env.TF_WORKING_DIR }}
