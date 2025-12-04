@@ -1,0 +1,134 @@
+# =============================================================================
+# CD Workflow - Deploy MovieBooking to Azure VM
+# =============================================================================
+# Runs: After Terraform Apply, or manually
+# =============================================================================
+
+name: CD - Deploy to Azure
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to Azure VM
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Wait for VM
+        run: |
+          echo "Waiting 60s for VM cloud-init..."
+          sleep 60
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.AZURE_VM_HOST }}
+          username: ${{ secrets.AZURE_VM_USERNAME }}
+          key: ${{ secrets.AZURE_VM_SSH_KEY }}
+          command_timeout: 15m
+          script: |
+            echo "=========================================="
+            echo "Starting MovieBooking deployment..."
+            echo "=========================================="
+            
+            # Wait for cloud-init
+            sudo cloud-init status --wait || true
+            
+            # Ensure Docker is running
+            sudo systemctl start docker || true
+            sudo systemctl enable docker || true
+            
+            # Install Docker if missing
+            if ! command -v docker &> /dev/null; then
+              curl -fsSL https://get.docker.com | sudo sh
+              sudo usermod -aG docker $USER
+            fi
+            
+            # Clone or update repo
+            if [ -d "/opt/moviebooking/.git" ]; then
+              echo "Updating repository..."
+              cd /opt/moviebooking
+              git fetch origin
+              git checkout ${{ github.ref_name }} || git checkout main
+              git pull
+            else
+              echo "Cloning repository..."
+              sudo rm -rf /opt/moviebooking
+              sudo mkdir -p /opt/moviebooking
+              sudo chown $USER:$USER /opt/moviebooking
+              git clone https://github.com/${{ github.repository }}.git /opt/moviebooking
+              cd /opt/moviebooking
+              git checkout ${{ github.ref_name }} || git checkout main
+            fi
+            
+            cd /opt/moviebooking/backend
+            
+            # Create .env if not exists
+            if [ ! -f ".env" ]; then
+              cat > .env << 'EOF'
+            SPRING_PROFILES_ACTIVE=dev
+            DB_HOST=db
+            DB_PORT=5432
+            DB_NAME=moviebooking
+            DB_USERNAME=postgres
+            DB_PASSWORD=postgres
+            REDIS_HOST=redis
+            REDIS_PORT=6379
+            EOF
+            fi
+            
+            # Start services
+            echo "Starting Docker services..."
+            sudo docker compose down --remove-orphans || true
+            sudo docker compose up -d --build
+            
+            # Wait for startup
+            echo "Waiting for services..."
+            sleep 60
+            
+            # Show status
+            echo "=========================================="
+            echo "Service Status:"
+            echo "=========================================="
+            sudo docker compose ps
+            
+            echo ""
+            echo "=========================================="
+            echo "Recent logs:"
+            echo "=========================================="
+            sudo docker compose logs --tail=20 moviebooking 2>/dev/null || true
+            
+            echo ""
+            echo "✅ Deployment complete!"
+
+      - name: Health Check
+        run: |
+          VM_HOST="${{ secrets.AZURE_VM_HOST }}"
+          API_URL="http://${VM_HOST}:8080"
+          
+          echo "Waiting 30s for services..."
+          sleep 30
+          
+          echo "Checking API health..."
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "${API_URL}/api/v1/movies" 2>/dev/null || echo "000")
+          
+          if [ "$HTTP_STATUS" = "000" ]; then
+            echo "⚠️ API not responding yet - may still be starting"
+          elif [ "$HTTP_STATUS" = "200" ]; then
+            echo "✅ API is healthy!"
+          else
+            echo "API responded with status $HTTP_STATUS"
+          fi
+          
+          echo ""
+          echo "=========================================="
+          echo "Deployment Complete!"
+          echo "=========================================="
+          echo "API: ${API_URL}"
+          echo "Swagger: ${API_URL}/swagger-ui.html"
+          echo "=========================================="

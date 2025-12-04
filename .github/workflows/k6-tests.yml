@@ -1,0 +1,172 @@
+# =============================================================================
+# k6 Load Testing Workflow
+# =============================================================================
+# Manual trigger to run k6 performance tests against Azure VM
+# =============================================================================
+
+name: k6 Load Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_scenario:
+        description: 'Test scenario to run'
+        required: true
+        default: 'browsing-load'
+        type: choice
+        options:
+          - seat-lock-concurrency
+          - browsing-load
+          - booking-workflow
+          - spike-test
+          - soak-test
+          - all
+      
+      target_url:
+        description: 'Target API URL (leave empty to use Azure VM)'
+        required: false
+        default: ''
+        type: string
+      
+      vus:
+        description: 'Virtual Users (overrides scenario default)'
+        required: false
+        default: ''
+        type: string
+      
+      duration:
+        description: 'Test duration (e.g., 30s, 5m)'
+        required: false
+        default: ''
+        type: string
+
+env:
+  K6_WORKING_DIR: k6-tests
+
+jobs:
+  # ============================================
+  # Run k6 Tests
+  # ============================================
+  k6-test:
+    name: Run k6 - ${{ github.event.inputs.test_scenario }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install k6
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install k6
+
+      - name: Determine Target URL
+        id: target
+        run: |
+          if [ -n "${{ github.event.inputs.target_url }}" ]; then
+            echo "url=${{ github.event.inputs.target_url }}" >> $GITHUB_OUTPUT
+          elif [ -n "${{ secrets.AZURE_VM_HOST }}" ]; then
+            echo "url=http://${{ secrets.AZURE_VM_HOST }}:8080" >> $GITHUB_OUTPUT
+          else
+            echo "url=http://localhost:8080" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Show Test Configuration
+        run: |
+          echo "=========================================="
+          echo "k6 Test Configuration"
+          echo "=========================================="
+          echo "Scenario: ${{ github.event.inputs.test_scenario }}"
+          echo "Target URL: ${{ steps.target.outputs.url }}"
+          echo "Custom VUs: ${{ github.event.inputs.vus || 'default' }}"
+          echo "Custom Duration: ${{ github.event.inputs.duration || 'default' }}"
+          echo "=========================================="
+
+      - name: Health Check
+        continue-on-error: true
+        run: |
+          echo "Checking API availability..."
+          curl -sf "${{ steps.target.outputs.url }}/api/v1/movies" --max-time 30 && echo "✅ API is reachable" || echo "⚠️ API may not be ready"
+
+      - name: Run k6 Test - Seat Lock Concurrency
+        if: ${{ github.event.inputs.test_scenario == 'seat-lock-concurrency' || github.event.inputs.test_scenario == 'all' }}
+        working-directory: ${{ env.K6_WORKING_DIR }}
+        run: |
+          k6 run \
+            -e API_URL=${{ steps.target.outputs.url }} \
+            ${{ github.event.inputs.vus && format('--vus {0}', github.event.inputs.vus) || '' }} \
+            ${{ github.event.inputs.duration && format('--duration {0}', github.event.inputs.duration) || '' }} \
+            --out json=results-seat-lock.json \
+            --summary-export=summary-seat-lock.json \
+            scenarios/01-seat-lock-concurrency.js
+
+      - name: Run k6 Test - Browsing Load
+        if: ${{ github.event.inputs.test_scenario == 'browsing-load' || github.event.inputs.test_scenario == 'all' }}
+        working-directory: ${{ env.K6_WORKING_DIR }}
+        run: |
+          k6 run \
+            -e API_URL=${{ steps.target.outputs.url }} \
+            ${{ github.event.inputs.vus && format('--vus {0}', github.event.inputs.vus) || '' }} \
+            ${{ github.event.inputs.duration && format('--duration {0}', github.event.inputs.duration) || '' }} \
+            --out json=results-browsing.json \
+            --summary-export=summary-browsing.json \
+            scenarios/02-browsing-load.js
+
+      - name: Run k6 Test - Booking Workflow
+        if: ${{ github.event.inputs.test_scenario == 'booking-workflow' || github.event.inputs.test_scenario == 'all' }}
+        working-directory: ${{ env.K6_WORKING_DIR }}
+        run: |
+          k6 run \
+            -e API_URL=${{ steps.target.outputs.url }} \
+            ${{ github.event.inputs.vus && format('--vus {0}', github.event.inputs.vus) || '' }} \
+            ${{ github.event.inputs.duration && format('--duration {0}', github.event.inputs.duration) || '' }} \
+            --out json=results-booking.json \
+            --summary-export=summary-booking.json \
+            scenarios/03-booking-workflow.js
+
+      - name: Run k6 Test - Spike Test
+        if: ${{ github.event.inputs.test_scenario == 'spike-test' || github.event.inputs.test_scenario == 'all' }}
+        working-directory: ${{ env.K6_WORKING_DIR }}
+        run: |
+          k6 run \
+            -e API_URL=${{ steps.target.outputs.url }} \
+            --out json=results-spike.json \
+            --summary-export=summary-spike.json \
+            scenarios/04-spike-test.js
+
+      - name: Run k6 Test - Soak Test
+        if: ${{ github.event.inputs.test_scenario == 'soak-test' }}
+        working-directory: ${{ env.K6_WORKING_DIR }}
+        run: |
+          k6 run \
+            -e API_URL=${{ steps.target.outputs.url }} \
+            --out json=results-soak.json \
+            --summary-export=summary-soak.json \
+            scenarios/05-soak-test.js
+
+      - name: Upload Test Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: k6-results-${{ github.event.inputs.test_scenario }}-${{ github.run_number }}
+          path: |
+            ${{ env.K6_WORKING_DIR }}/results-*.json
+            ${{ env.K6_WORKING_DIR }}/summary-*.json
+          retention-days: 30
+
+      - name: Test Summary
+        if: always()
+        run: |
+          echo ""
+          echo "=========================================="
+          echo "📊 k6 Test Complete!"
+          echo "=========================================="
+          echo "Scenario: ${{ github.event.inputs.test_scenario }}"
+          echo "Target: ${{ steps.target.outputs.url }}"
+          echo ""
+          echo "Results uploaded as artifact:"
+          echo "  k6-results-${{ github.event.inputs.test_scenario }}-${{ github.run_number }}"
+          echo "=========================================="
