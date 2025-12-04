@@ -5,6 +5,7 @@ on:
     branches: [ main, develop, integrateSystemTests/** ]
   pull_request:
     branches: [ main, develop ]
+  workflow_dispatch:
 
 # Permissions required for test-reporter to create check runs
 permissions:
