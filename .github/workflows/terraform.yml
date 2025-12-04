@@ -109,19 +109,8 @@ jobs:
 
       - name: Generate SSH Key
         run: |
-          mkdir -p $HOME/.ssh
-          ssh-keygen -t rsa -b 4096 -f $HOME/.ssh/id_rsa -N "" -C "github-actions@moviebooking"
-          echo "SSH_DIR=$HOME/.ssh" >> $GITHUB_ENV
-          ls -la $HOME/.ssh/
-      
-      # Save the SSH key so Apply can reuse the SAME ONE
-      - name: Upload SSH Keys
-        uses: actions/upload-artifact@v4
-        with:
-          name: ssh-keys
-          path: |
-            ~/.ssh/id_rsa
-            ~/.ssh/id_rsa.pub
+          mkdir -p ~/.ssh
+          ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_rsa -N "" -C "github-actions@moviebooking"
 
       - name: Terraform Init
         working-directory: ${{ env.TF_WORKING_DIR }}
@@ -179,23 +168,11 @@ jobs:
           terraform_version: 1.6.0
           terraform_wrapper: false
 
-      # Download SSH key generated in PLAN
-      - name: Download SSH Keys
-        uses: actions/download-artifact@v4
-        with:
-          name: ssh-keys
-          path: ~/.ssh
-
-      # Fix file permissions (VERY important for SSH)
-      - name: Fix SSH Permissions
+      # Generate fresh SSH key for the VM
+      - name: Generate SSH Key
         run: |
-          chmod 600 ~/.ssh/id_rsa
-          chmod 644 ~/.ssh/id_rsa.pub
-          ls -la ~/.ssh/
-
-      # Export private key to environment so we can save it as GitHub Secret later
-      - name: Load SSH Private Key into Environment
-        run: |
+          mkdir -p ~/.ssh
+          ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_rsa -N "" -C "github-actions@moviebooking"
           echo "SSH_PRIVATE_KEY<<EOF" >> $GITHUB_ENV
           cat ~/.ssh/id_rsa >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
@@ -209,15 +186,15 @@ jobs:
             -backend-config="container_name=${{ env.TF_STATE_CONTAINER }}" \
             -backend-config="key=terraform.tfstate"
 
-      - name: Download Plan
-        uses: actions/download-artifact@v4
-        with:
-          name: tfplan
-          path: ${{ env.TF_WORKING_DIR }}
-
       - name: Terraform Apply
         working-directory: ${{ env.TF_WORKING_DIR }}
-        run: terraform apply -auto-approve tfplan
+        run: |
+          terraform apply \
+            -var="azure_subscription_id=${{ secrets.AZURE_SUBSCRIPTION_ID }}" \
+            -var="azure_client_id=${{ secrets.AZURE_CLIENT_ID }}" \
+            -var="azure_client_secret=${{ secrets.AZURE_CLIENT_SECRET }}" \
+            -var="azure_tenant_id=${{ secrets.AZURE_TENANT_ID }}" \
+            -auto-approve
 
       - name: Get Outputs
         id: outputs
