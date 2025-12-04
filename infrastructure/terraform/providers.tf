@@ -27,13 +27,8 @@ provider "azurerm" {
     }
   }
 
-  # Credentials can be provided via:
-  # 1. Environment variables (TF_VAR_azure_*)
-  # 2. terraform.tfvars
-  # 3. Azure CLI login (az login)
-
-  subscription_id = var.azure_subscription_id != "" ? var.azure_subscription_id : null
-  client_id       = var.azure_client_id != "" ? var.azure_client_id : null
-  client_secret   = var.azure_client_secret != "" ? var.azure_client_secret : null
-  tenant_id       = var.azure_tenant_id != "" ? var.azure_tenant_id : null
+  subscription_id = var.azure_subscription_id
+  client_id       = var.azure_client_id
+  client_secret   = var.azure_client_secret
+  tenant_id       = var.azure_tenant_id
 }
