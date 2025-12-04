@@ -117,7 +117,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ssh-keys
-          path: ~/.ssh/id_rsa*
+          path: /home/runner/.ssh/id_rsa*
 
       - name: Terraform Init
         working-directory: ${{ env.TF_WORKING_DIR }}
@@ -180,19 +180,19 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: ssh-keys
-          path: ~/.ssh
+          path: /home/runner/.ssh
 
       # Fix file permissions (VERY important for SSH)
       - name: Fix SSH Permissions
         run: |
-          chmod 600 ~/.ssh/id_rsa
-          chmod 644 ~/.ssh/id_rsa.pub
+          chmod 600 /home/runner/.ssh/id_rsa
+          chmod 644 /home/runner/.ssh/id_rsa.pub
 
       # Export private key to environment so we can save it as GitHub Secret later
       - name: Load SSH Private Key into Environment
         run: |
           echo "SSH_PRIVATE_KEY<<EOF" >> $GITHUB_ENV
-          cat ~/.ssh/id_rsa >> $GITHUB_ENV
+          cat /home/runner/.ssh/id_rsa >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
       - name: Terraform Init
@@ -273,19 +273,19 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: ssh-keys
-          path: ~/.ssh
+          path: /home/runner/.ssh
 
       # Fix file permissions (VERY important for SSH)
       - name: Fix SSH Permissions
         run: |
-          chmod 600 ~/.ssh/id_rsa
-          chmod 644 ~/.ssh/id_rsa.pub
+          chmod 600 /home/runner/.ssh/id_rsa
+          chmod 644 /home/runner/.ssh/id_rsa.pub
 
       # Export private key to environment so we can save it as GitHub Secret later
       - name: Load SSH Private Key into Environment
         run: |
           echo "SSH_PRIVATE_KEY<<EOF" >> $GITHUB_ENV
-          cat ~/.ssh/id_rsa >> $GITHUB_ENV
+          cat /home/runner/.ssh/id_rsa >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
       - name: Terraform Init
