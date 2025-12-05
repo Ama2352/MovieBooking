@@ -183,8 +183,8 @@ jobs:
     needs: init-backend
     if: ${{ github.event.inputs.action == 'apply' }}
 
-  steps:
-    - uses: actions/checkout@v4
+    steps:
+      - uses: actions/checkout@v4
 
       # Download plan bundle (must already exist)
       - name: Download Plan Bundle
