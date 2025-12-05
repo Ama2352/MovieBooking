@@ -137,16 +137,13 @@ jobs:
       - name: Terraform Plan
         id: check
         working-directory: ${{ env.TF_WORKING_DIR }}
+        env:
+          # Local SSH key loaded safely through environment variable (NO space splitting)
+          TF_VAR_additional_ssh_keys: |
+            ["${{ secrets.LOCAL_SSH_PUBLIC_KEY }}"]
         run: |
-          # Build additional_ssh_keys array if LOCAL_SSH_PUBLIC_KEY is set
-          ADDITIONAL_KEYS_VAR=""
-          if [ -n "${{ secrets.LOCAL_SSH_PUBLIC_KEY }}" ]; then
-            ADDITIONAL_KEYS_VAR='-var=additional_ssh_keys=["${{ secrets.LOCAL_SSH_PUBLIC_KEY }}"]'
-          fi
-
           terraform plan \
             -var="ssh_public_key=$(cat $GITHUB_WORKSPACE/ssh-artifacts/id_rsa.pub)" \
-            $ADDITIONAL_KEYS_VAR \
             -out=tfplan \
             -detailed-exitcode || EXIT=$?
 
