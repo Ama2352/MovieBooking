@@ -13,14 +13,8 @@ on:
       action:
         description: "Terraform action to run"
         type: choice
-        default: plan
-        options: [plan, apply, destroy]
-
-  push:
-    branches: [ main ]
-    paths:
-      - "infrastructure/terraform/**"
-      - ".github/workflows/terraform.yml"
+        default: apply
+        options: [apply, destroy]
 
 env:
   TF_WORKING_DIR: infrastructure/terraform
@@ -46,7 +40,7 @@ jobs:
   init-backend:
     name: Prepare Remote Backend
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.action != 'destroy' }}
+    if: ${{ github.event.inputs.action == 'apply' }}
 
     steps:
       # Login to Azure to run CLI commands
@@ -101,7 +95,7 @@ jobs:
     name: Terraform Plan
     runs-on: ubuntu-latest
     needs: init-backend
-    if: ${{ github.event.inputs.action == 'plan' }}
+    if: ${{ github.event.inputs.action == 'apply' }}
 
     outputs:
       has_changes: ${{ steps.check.outputs.has_changes }}
@@ -180,7 +174,7 @@ jobs:
   apply:
     name: Terraform Apply
     runs-on: ubuntu-latest
-    needs: init-backend
+    needs: plan
     if: ${{ github.event.inputs.action == 'apply' }}
 
     steps:
@@ -195,9 +189,9 @@ jobs:
       # Validate that tfplan exists (important!)
       - name: Verify Plan Exists
         run: |
-          if [ ! -f tfplan ]; then
+          if [ ! -f ${{ env.TF_WORKING_DIR }}/tfplan ]; then
             echo "❌ ERROR: No tfplan file found."
-            echo "You MUST run the Terraform Plan workflow BEFORE running Apply."
+            echo "Plan must run before apply in the same workflow."
             exit 1
           fi
           echo "✅ tfplan found"
@@ -246,7 +240,7 @@ jobs:
         run: |
           gh secret set AZURE_VM_HOST -b"${{ steps.out.outputs.vm_ip }}"
           gh secret set AZURE_VM_USERNAME -b"${{ steps.out.outputs.vm_user }}"
-          gh secret set AZURE_VM_SSH_KEY -b"$(cat id_rsa)"
+          gh secret set AZURE_VM_SSH_KEY -b"$(cat ssh-artifacts/id_rsa)"
           echo "✅ Updated GitHub secrets with VM info"
         env:
           GH_TOKEN: ${{ secrets.GH_PAT_MOVIEBOOKING }}
