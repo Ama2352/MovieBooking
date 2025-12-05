@@ -75,7 +75,7 @@ jobs:
               git checkout ${{ github.ref_name }} || git checkout main
             fi
             
-            cd /opt/moviebooking/backend
+            cd /opt/moviebooking
             
             # Verify we're in the right directory with docker-compose.yml
             if [ ! -f "docker-compose.yml" ]; then

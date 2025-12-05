@@ -245,6 +245,18 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_PAT_MOVIEBOOKING }}
 
+
+# =============================================================================
+# Deploy Application (after successful apply)
+# =============================================================================
+  deploy:
+    name: Deploy Application
+    needs: apply
+    if: ${{ github.event.inputs.action == 'apply' }}
+    uses: ./.github/workflows/cd.yml
+    secrets: inherit
+
+
 # =============================================================================
 # Terraform DESTROY (cleaned)
 # - No plan used (terraform destroy does not require plan)
