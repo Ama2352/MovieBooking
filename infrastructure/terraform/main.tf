@@ -28,7 +28,7 @@ module "compute" {
 
   vm_size             = var.vm_size
   admin_username      = var.admin_username
-  ssh_public_key_path = var.ssh_public_key_path
+  ssh_public_key      = var.ssh_public_key
   os_disk_size_gb     = var.os_disk_size_gb
   data_disk_size_gb   = var.data_disk_size_gb
   allowed_ssh_cidr    = var.allowed_ssh_cidr

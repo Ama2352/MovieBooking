@@ -37,10 +37,9 @@ variable "admin_username" {
   default     = "azureuser"
 }
 
-variable "ssh_public_key_path" {
-  description = "Path to SSH public key file"
+variable "ssh_public_key" {
+  description = "SSH public key content for VM access"
   type        = string
-  default     = "~/.ssh/id_rsa.pub"
 }
 
 variable "os_disk_size_gb" {
