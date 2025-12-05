@@ -180,23 +180,45 @@ jobs:
   apply:
     name: Terraform Apply
     runs-on: ubuntu-latest
-    needs: plan
+    needs: init-backend
     if: ${{ github.event.inputs.action == 'apply' }}
 
     steps:
       - uses: actions/checkout@v4
 
+      # Download plan bundle (must already exist)
       - name: Download Plan Bundle
         uses: actions/download-artifact@v4
         with:
           name: tfplan-bundle
 
+      # Validate that tfplan exists (important!)
+      - name: Verify Plan Exists
+        run: |
+          if [ ! -f tfplan ]; then
+            echo "❌ ERROR: No tfplan file found."
+            echo "You MUST run the Terraform Plan workflow BEFORE running Apply."
+            exit 1
+          fi
+          echo "✅ tfplan found"
+
+      # Install Terraform
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.6.0
 
-      # Re-initialize backend
+      # Azure Login required for apply
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: |
+            {"clientId":"${{ secrets.AZURE_CLIENT_ID }}",
+             "clientSecret":"${{ secrets.AZURE_CLIENT_SECRET }}",
+             "subscriptionId":"${{ secrets.AZURE_SUBSCRIPTION_ID }}",
+             "tenantId":"${{ secrets.AZURE_TENANT_ID }}"}
+
+      # Re-initialize backend (uses remote state)
       - name: Terraform Init
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: |
@@ -207,12 +229,11 @@ jobs:
             -backend-config="key=terraform.tfstate"
 
       # APPLY EXACT PLAN → deterministic infra
-      # Note: Variables are embedded in tfplan, no need to pass them again
       - name: Terraform Apply
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: terraform apply -auto-approve tfplan
 
-      # Get outputs
+      # Get outputs after apply
       - name: Extract Outputs
         id: out
         working-directory: ${{ env.TF_WORKING_DIR }}
@@ -220,15 +241,15 @@ jobs:
           echo "vm_ip=$(terraform output -raw vm_public_ip)" >> $GITHUB_OUTPUT
           echo "vm_user=$(terraform output -raw admin_username)" >> $GITHUB_OUTPUT
 
-      # Update GitHub secrets (used by CD pipeline)
+      # Update GitHub secrets for CD workflow
       - name: Update GitHub Secrets
         run: |
           gh secret set AZURE_VM_HOST -b"${{ steps.out.outputs.vm_ip }}"
           gh secret set AZURE_VM_USERNAME -b"${{ steps.out.outputs.vm_user }}"
           gh secret set AZURE_VM_SSH_KEY -b"$(cat id_rsa)"
+          echo "✅ Updated GitHub secrets with VM info"
         env:
           GH_TOKEN: ${{ secrets.GH_PAT_MOVIEBOOKING }}
-
 
 # =============================================================================
 # Terraform DESTROY (cleaned)
