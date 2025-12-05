@@ -45,7 +45,10 @@ public class User {
     private String password; // can be null for OAuth2 users
     private String phoneNumber;
     private String provider; // e.g., "google", "facebook"
+
+    @Column(columnDefinition = "TEXT")
     private String avatarUrl;
+
     private String avatarCloudinaryId;
 
     @Column(nullable = false)

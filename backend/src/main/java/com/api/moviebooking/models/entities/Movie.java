@@ -52,8 +52,12 @@ public class Movie {
     @Column(columnDefinition = "TEXT")
     private String actors;
 
+    @Column(columnDefinition = "TEXT")
     private String posterUrl;
+
     private String posterCloudinaryId;
+
+    @Column(columnDefinition = "TEXT")
     private String trailerUrl;
 
     @Enumerated(EnumType.STRING)
