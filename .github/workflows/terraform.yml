@@ -46,7 +46,7 @@ jobs:
   init-backend:
     name: Prepare Remote Backend
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.action != 'destroy' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.action != 'destroy' }}
 
     steps:
       # Login to Azure to run CLI commands
