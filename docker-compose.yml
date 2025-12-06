@@ -43,6 +43,10 @@ services:
   prometheus:
     image: prom/prometheus
     container_name: prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-remote-write-receiver'
     volumes:
     - ./k6-tests/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
     ports:

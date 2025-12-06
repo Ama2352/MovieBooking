@@ -10,24 +10,7 @@
 import http from 'k6/http';
 import { check, sleep, group } from 'k6';
 import { Counter, Trend, Rate } from 'k6/metrics';
-
-// Import shared config
-const CONFIG = {
-    BASE_URL: __ENV.API_URL || 'http://localhost:8080',
-    TEST_SHOWTIME_ID: __ENV.SHOWTIME_ID || 'd1000000-0000-0000-0000-000000000001',
-};
-
-const HEADERS = {
-    'Content-Type': 'application/json',
-};
-
-function generateSessionId() {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-        const r = Math.random() * 16 | 0;
-        const v = c === 'x' ? r : (r & 0x3 | 0x8);
-        return v.toString(16);
-    });
-}
+import { CONFIG, HEADERS, fetchK6TestData, generateSessionId } from '../config/config.js';
 
 // =============================================================================
 // CUSTOM METRICS
@@ -37,6 +20,11 @@ const lockConflictCounter = new Counter('seat_lock_conflict');
 const lockErrorCounter = new Counter('seat_lock_error');
 const lockDuration = new Trend('seat_lock_duration_ms');
 const lockSuccessRate = new Rate('seat_lock_success_rate');
+
+// =============================================================================
+// COMMAND TO RUN TEST WITH PROMETHEUS OUTPUT
+// =============================================================================
+// $env:K6_PROMETHEUS_REMOTE_WRITE_URL="http://localhost:9090/api/v1/write"; k6 run --out experimental-prometheus-rw 01-seat-lock-concurrency.js
 
 // =============================================================================
 // TEST OPTIONS
@@ -71,23 +59,32 @@ export const options = {
 };
 
 // =============================================================================
-// SETUP - Fetch test data
+// SETUP - Fetch test data dynamically
 // =============================================================================
 export function setup() {
     console.log(`🎬 Starting Seat Lock Concurrency Test`);
     console.log(`📍 Target: ${CONFIG.BASE_URL}`);
-    console.log(`🎫 Showtime: ${CONFIG.TEST_SHOWTIME_ID}`);
+    
+    // Fetch K6 test data (movie, showtime) dynamically
+    const testData = fetchK6TestData();
+    if (!testData) {
+        console.error('❌ Failed to fetch K6 test data. Ensure K6_SEED_ENABLED=true');
+        return { availableSeats: [], ticketTypes: [], showtimeId: null };
+    }
+    
+    const showtimeId = testData.showtimeId;
+    console.log(`🎫 Showtime: ${showtimeId}`);
     
     // Fetch available seats
     const seatsRes = http.get(
-        `${CONFIG.BASE_URL}/showtime-seats/showtime/${CONFIG.TEST_SHOWTIME_ID}/available`,
+        `${CONFIG.BASE_URL}/showtime-seats/showtime/${showtimeId}/available`,
         { headers: HEADERS }
     );
     
     if (seatsRes.status !== 200) {
         console.error(`❌ Failed to fetch seats: ${seatsRes.status}`);
         console.error(seatsRes.body);
-        return { availableSeats: [], ticketTypes: [] };
+        return { availableSeats: [], ticketTypes: [], showtimeId };
     }
     
     const availableSeats = JSON.parse(seatsRes.body);
@@ -95,13 +92,13 @@ export function setup() {
     
     // Fetch ticket types
     const ticketTypesRes = http.get(
-        `${CONFIG.BASE_URL}/ticket-types?showtimeId=${CONFIG.TEST_SHOWTIME_ID}`,
+        `${CONFIG.BASE_URL}/ticket-types?showtimeId=${showtimeId}`,
         { headers: HEADERS }
     );
     
     if (ticketTypesRes.status !== 200) {
         console.error(`❌ Failed to fetch ticket types: ${ticketTypesRes.status}`);
-        return { availableSeats, ticketTypes: [] };
+        return { availableSeats, ticketTypes: [], showtimeId };
     }
     
     const ticketTypes = JSON.parse(ticketTypesRes.body);
@@ -110,6 +107,7 @@ export function setup() {
     return { 
         availableSeats,
         ticketTypes,
+        showtimeId,
     };
 }
 
@@ -157,13 +155,13 @@ export default function(data) {
             
             selectedSeats.push({
                 showtimeSeatId: seat.showtimeSeatId,
-                ticketTypeId: ticketType.id
+                ticketTypeId: ticketType.ticketTypeId
             });
         }
         
         // === STEP 2: Attempt to lock seats ===
         const lockPayload = JSON.stringify({
-            showtimeId: CONFIG.TEST_SHOWTIME_ID,
+            showtimeId: data.showtimeId,
             seats: selectedSeats
         });
         
@@ -201,7 +199,7 @@ export default function(data) {
             
             // === STEP 4: Release lock (cleanup for other VUs) ===
             const releaseRes = http.del(
-                `${CONFIG.BASE_URL}/seat-locks/showtime/${CONFIG.TEST_SHOWTIME_ID}`,
+                `${CONFIG.BASE_URL}/seat-locks/showtime/${data.showtimeId}`,
                 null,
                 { 
                     headers, 
@@ -244,7 +242,7 @@ export function teardown(data) {
     console.log('🏁 SEAT LOCK CONCURRENCY TEST COMPLETED');
     console.log('='.repeat(60));
     console.log(`📍 Target: ${CONFIG.BASE_URL}`);
-    console.log(`🎫 Showtime: ${CONFIG.TEST_SHOWTIME_ID}`);
+    console.log(`🎫 Showtime: ${data.showtimeId}`);
     console.log(`📊 Available seats at start: ${data.availableSeats?.length || 0}`);
     console.log('');
     console.log('📈 Check k6 output above for:');

@@ -356,6 +356,7 @@ jobs:
             MOMO_PARTNER_CODE=${{ secrets.MOMO_PARTNER_CODE }}
             MOMO_ACCESS_KEY=${{ secrets.MOMO_ACCESS_KEY }}
             MOMO_SECRET_KEY=${{ secrets.MOMO_SECRET_KEY }}
+            K6_SEED_ENABLED=true
             EOF
             
             sed -i 's/^[[:space:]]*//' backend/.env
