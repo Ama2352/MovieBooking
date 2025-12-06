@@ -299,9 +299,13 @@ jobs:
             -backend-config="key=terraform.tfstate"
 
       # Destroy infra
+      # Pass dummy ssh_public_key to satisfy required variable (not used during destroy)
       - name: Terraform Destroy
         working-directory: ${{ env.TF_WORKING_DIR }}
-        run: terraform destroy -auto-approve || true
+        run: |
+          terraform destroy -auto-approve \
+            -var="ssh_public_key=dummy-key-not-used-for-destroy" \
+            || true
 
       # Cleanup backend resource group
       - name: Cleanup Backend + Infra Resource Groups
