@@ -58,30 +58,24 @@ jobs:
               rm get-docker.sh
             fi
             
-            # Check if app directory exists and is a valid git repo
-            if [ -d "/opt/moviebooking/.git" ]; then
-              echo "Repository already exists. Pulling latest code..."
-              cd /opt/moviebooking
-              git fetch origin
-              git checkout ${{ github.ref_name }} || git checkout main
-              git pull
-            else
-              echo "Cloning repository for the first time..."
-              sudo rm -rf /opt/moviebooking
-              sudo mkdir -p /opt/moviebooking
-              sudo chown $USER:$USER /opt/moviebooking
-              git clone https://github.com/${{ github.repository }}.git /opt/moviebooking
-              cd /opt/moviebooking
-              git checkout ${{ github.ref_name }} || git checkout main
-            fi
+            # Force fresh clone to ensure correct structure
+            echo "Removing old deployment directory..."
+            sudo rm -rf /opt/moviebooking
             
+            echo "Cloning repository fresh..."
+            sudo mkdir -p /opt/moviebooking
+            sudo chown $USER:$USER /opt/moviebooking
+            git clone https://github.com/${{ github.repository }}.git /opt/moviebooking
             cd /opt/moviebooking
+            git checkout ${{ github.ref_name }} || git checkout main
             
             # Verify we're in the right directory with docker-compose.yml
+            echo "Current directory: $(pwd)"
+            echo "Contents:"
+            ls -la
+            
             if [ ! -f "docker-compose.yml" ]; then
               echo "❌ ERROR: docker-compose.yml not found in $(pwd)"
-              echo "Contents of current directory:"
-              ls -la
               exit 1
             fi
             
