@@ -52,6 +52,7 @@ public class SecurityConfig {
                         .requestMatchers(PublicEndpointConfig.TESTS).permitAll()
                         .requestMatchers(PublicEndpointConfig.REFUNDS).permitAll()
                         .requestMatchers(PublicEndpointConfig.PRICE_PREVIEW).permitAll()
+                        .requestMatchers(PublicEndpointConfig.ACTUATORS).permitAll()
                         .requestMatchers(HttpMethod.POST, PublicEndpointConfig.AUTH).permitAll()
                         .requestMatchers(HttpMethod.GET, PublicEndpointConfig.MOVIES).permitAll()
                         .requestMatchers(HttpMethod.GET, PublicEndpointConfig.SHOWTIMES).permitAll()
