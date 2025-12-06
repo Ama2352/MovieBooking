@@ -28,6 +28,11 @@ public final class PublicEndpointConfig {
 
         public static final String[] PRICE_PREVIEW = { "/bookings/price-preview" };
 
+        public static final String[] ACTUATORS = {
+                        "/actuator/health",
+                        "/actuator/prometheus"
+        };
+
         // Public read-only resources (GET only)
         public static final String[] MOVIES = { "/movies/**" };
         public static final String[] SHOWTIMES = { "/showtimes/**" };
