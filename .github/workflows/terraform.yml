@@ -176,6 +176,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: plan
     if: ${{ github.event.inputs.action == 'apply' }}
+    outputs:
+      ran_apply: "true"
 
     steps:
       - uses: actions/checkout@v4
