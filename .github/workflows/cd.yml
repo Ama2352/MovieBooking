@@ -81,20 +81,55 @@ jobs:
             
             echo "✅ Repository ready at $(pwd)"
             
-            # Create .env file if it doesn't exist
-            if [ ! -f ".env" ]; then
-              echo "Creating .env file..."
-              cat > .env << 'ENVEOF'
-            SPRING_PROFILES_ACTIVE=dev
-            DB_HOST=db
-            DB_PORT=5432
-            DB_NAME=moviebooking
-            DB_USERNAME=postgres
-            DB_PASSWORD=postgres
-            REDIS_HOST=redis
-            REDIS_PORT=6379
-            ENVEOF
-            fi
+            # Create backend/.env file (required by docker-compose.yml)
+            # This activates the prod profile and provides all required secrets
+            echo "Creating backend/.env file..."
+            mkdir -p backend
+            cat > backend/.env << EOF
+            # Spring Profile - activates application-prod.properties
+            SPRING_PROFILES_ACTIVE=prod
+            
+            # Database (PostgreSQL) - used by both postgres container and Spring
+            POSTGRES_DB=moviebooking
+            POSTGRES_USER=postgres
+            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+            
+            # Spring datasource (connects to 'db' service in docker network)
+            SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/moviebooking
+            
+            # JWT Secret
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            
+            # Google OAuth2
+            GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+            GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
+            
+            # Redis (connects to 'redis' service in docker network)
+            SPRING_DATA_REDIS_HOST=redis
+            SPRING_DATA_REDIS_PORT=6379
+            SPRING_DATA_REDIS_TIMEOUT=60000
+            
+            # Seat Lock Config
+            SEAT_LOCK_DURATION_MINUTES=10
+            SEAT_LOCK_MAX_SEATS_PER_BOOKING=10
+            
+            # PayPal
+            PAYPAL_CLIENT_ID=${{ secrets.PAYPAL_CLIENT_ID }}
+            PAYPAL_CLIENT_SECRET=${{ secrets.PAYPAL_CLIENT_SECRET }}
+            PAYPAL_MODE=sandbox
+            
+            # MoMo
+            MOMO_PARTNER_CODE=${{ secrets.MOMO_PARTNER_CODE }}
+            MOMO_ACCESS_KEY=${{ secrets.MOMO_ACCESS_KEY }}
+            MOMO_SECRET_KEY=${{ secrets.MOMO_SECRET_KEY }}
+            EOF
+            
+            # Remove leading whitespace from .env file (heredoc issue)
+            sed -i 's/^[[:space:]]*//' backend/.env
+            
+            echo "✅ backend/.env created with prod profile"
+            echo "Contents:"
+            cat backend/.env | grep -v SECRET | grep -v PASSWORD | grep -v KEY
             
             # Build and start services
             echo "Starting Docker Compose services..."
