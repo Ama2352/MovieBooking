@@ -177,10 +177,14 @@ jobs:
     needs: plan
     if: ${{ github.event.inputs.action == 'apply' }}
     outputs:
-      ran_apply: "true"
+      ran_apply: ${{ steps.apply_flag.outputs.ran_apply }}
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Mark apply ran
+        id: apply_flag
+        run: echo "ran_apply=true" >> $GITHUB_OUTPUT
 
       # Download plan bundle (must already exist)
       - name: Download Plan Bundle
