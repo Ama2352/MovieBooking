@@ -409,7 +409,7 @@ jobs:
           echo "Deployment Complete!"
           echo "=========================================="
           echo "API: ${API_URL}"
-          echo "Swagger: ${API_URL}/swagger-ui.html"
+          echo "Swagger: ${API_URL}/swagger-ui/index.html"
           echo "=========================================="
 
 # =============================================================================
