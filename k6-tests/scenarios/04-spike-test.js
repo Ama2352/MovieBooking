@@ -6,21 +6,12 @@
 // Scenario: Flash sale - many users rush to book at the same time
 // Expected: System should handle spike gracefully, recover quickly
 // =============================================================================
+// $env:K6_PROMETHEUS_REMOTE_WRITE_URL="http://localhost:9090/api/v1/write"; k6 run --out experimental-prometheus-rw 04-spike-test.js
 
 import http from 'k6/http';
 import { check, sleep, group } from 'k6';
 import { Counter, Trend, Rate } from 'k6/metrics';
-
-// Configuration
-const CONFIG = {
-    BASE_URL: __ENV.API_URL || 'http://localhost:8080',
-    TEST_SHOWTIME_ID: __ENV.SHOWTIME_ID || 'd1000000-0000-0000-0000-000000000001',
-};
-
-const HEADERS = {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
-};
+import { CONFIG, HEADERS, fetchK6TestData } from '../config/config.js';
 
 function generateSessionId() {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -89,7 +80,17 @@ export const options = {
 export function setup() {
     console.log(`🚀 Starting SPIKE TEST`);
     console.log(`📍 Target: ${CONFIG.BASE_URL}`);
-    console.log(`🎫 Showtime: ${CONFIG.TEST_SHOWTIME_ID}`);
+    
+    // Fetch K6 test data (movie, showtime) dynamically
+    const testData = fetchK6TestData();
+    if (!testData) {
+        console.error('❌ Failed to fetch K6 test data. Ensure K6_SEED_ENABLED=true');
+        return { availableSeats: [], ticketTypes: [], showtimeId: null };
+    }
+    
+    const showtimeId = testData.showtimeId;
+    console.log(`🎫 Showtime: ${showtimeId}`);
+    
     console.log('');
     console.log('⚠️  SPIKE PATTERN:');
     console.log('   0-30s:  Baseline (10 VUs)');
@@ -101,7 +102,7 @@ export function setup() {
     
     // Fetch test data
     const seatsRes = http.get(
-        `${CONFIG.BASE_URL}/showtime-seats/showtime/${CONFIG.TEST_SHOWTIME_ID}/available`,
+        `${CONFIG.BASE_URL}/showtime-seats/showtime/${showtimeId}/available`,
         { headers: HEADERS }
     );
     
@@ -109,14 +110,14 @@ export function setup() {
     console.log(`✅ Found ${availableSeats.length} available seats`);
     
     const ticketTypesRes = http.get(
-        `${CONFIG.BASE_URL}/ticket-types?showtimeId=${CONFIG.TEST_SHOWTIME_ID}`,
+        `${CONFIG.BASE_URL}/ticket-types?showtimeId=${showtimeId}`,
         { headers: HEADERS }
     );
     
     const ticketTypes = ticketTypesRes.status === 200 ? JSON.parse(ticketTypesRes.body) : [];
     console.log(`✅ Found ${ticketTypes.length} ticket types`);
     
-    return { availableSeats, ticketTypes };
+    return { availableSeats, ticketTypes, showtimeId };
 }
 
 // =============================================================================
@@ -148,7 +149,7 @@ export default function(data) {
         // STEP 1: Get Available Seats (fast read)
         // =============================================
         const seatsRes = http.get(
-            `${CONFIG.BASE_URL}/showtime-seats/showtime/${CONFIG.TEST_SHOWTIME_ID}/available`,
+            `${CONFIG.BASE_URL}/showtime-seats/showtime/${data.showtimeId}/available`,
             { 
                 headers, 
                 tags: { name: 'spike_get_seats' },
@@ -181,10 +182,10 @@ export default function(data) {
         const ticketType = data.ticketTypes[0];
         
         const lockPayload = JSON.stringify({
-            showtimeId: CONFIG.TEST_SHOWTIME_ID,
+            showtimeId: data.showtimeId,
             seats: [{
                 showtimeSeatId: selectedSeat.showtimeSeatId,
-                ticketTypeId: ticketType.id
+                ticketTypeId: ticketType.ticketTypeId
             }]
         });
         
@@ -219,7 +220,7 @@ export default function(data) {
             
             // Release the lock
             http.del(
-                `${CONFIG.BASE_URL}/seat-locks/showtime/${CONFIG.TEST_SHOWTIME_ID}`,
+                `${CONFIG.BASE_URL}/seat-locks/showtime/${data.showtimeId}`,
                 null,
                 { 
                     headers, 

@@ -9,6 +9,13 @@ services:
       - ./backend/.env
     volumes:
       - db_data:/var/lib/postgresql/data
+    healthcheck:
+      # Command to check if the PostgreSQL server is ready
+      test: ["CMD", "pg_isready", "-U", "postgres"] 
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   redis:
     image: redis:7-alpine
@@ -22,6 +29,13 @@ services:
       --maxmemory-policy allkeys-lru
       --save ""
       --appendonly no
+    healthcheck:
+      # Command to check if the Redis server is ready using redis-cli
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
 
   moviebooking:
     image: moviebooking-app
@@ -32,9 +46,19 @@ services:
       - "5005:5005"
     env_file:
       - ./backend/.env
+    # Use condition: service_healthy to wait for dependencies to be healthy
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      # Command to check if the application's health endpoint is reachable (adjust endpoint as needed)
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
 
   # -----------------------------
   # Monitoring Stack
@@ -80,7 +104,8 @@ services:
     ports:
       - "9187:9187"
     depends_on:
-      - db
+      db:
+        condition: service_healthy # Wait for the DB to be healthy before starting the exporter
 
 volumes:
   db_data:
