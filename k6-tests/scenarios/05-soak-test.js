@@ -137,7 +137,7 @@ export function setup() {
 // MAIN TEST - Mixed Operations
 // =============================================================================
 export default function(data) {
-    if (!data.availableSeats?.length || !data.ticketTypes?.length) {
+    if (!data.ticketTypes?.length) {
         sleep(1);
         return;
     }

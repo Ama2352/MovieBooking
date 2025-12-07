@@ -75,21 +75,6 @@ export function setup() {
     const showtimeId = testData.showtimeId;
     console.log(`🎫 Showtime: ${showtimeId}`);
     
-    // Fetch available seats
-    const seatsRes = http.get(
-        `${CONFIG.BASE_URL}/showtime-seats/showtime/${showtimeId}/available`,
-        { headers: HEADERS }
-    );
-    
-    if (seatsRes.status !== 200) {
-        console.error(`❌ Failed to fetch seats: ${seatsRes.status}`);
-        console.error(seatsRes.body);
-        return { availableSeats: [], ticketTypes: [], showtimeId };
-    }
-    
-    const availableSeats = JSON.parse(seatsRes.body);
-    console.log(`✅ Found ${availableSeats.length} available seats`);
-    
     // Fetch ticket types
     const ticketTypesRes = http.get(
         `${CONFIG.BASE_URL}/ticket-types?showtimeId=${showtimeId}`,
@@ -98,14 +83,13 @@ export function setup() {
     
     if (ticketTypesRes.status !== 200) {
         console.error(`❌ Failed to fetch ticket types: ${ticketTypesRes.status}`);
-        return { availableSeats, ticketTypes: [], showtimeId };
+        return { ticketTypes: [], showtimeId };
     }
     
     const ticketTypes = JSON.parse(ticketTypesRes.body);
     console.log(`✅ Found ${ticketTypes.length} ticket types`);
     
     return { 
-        availableSeats,
         ticketTypes,
         showtimeId,
     };
@@ -116,12 +100,6 @@ export function setup() {
 // =============================================================================
 export default function(data) {
     // Skip if no test data
-    if (!data.availableSeats || data.availableSeats.length === 0) {
-        console.error('No available seats - skipping iteration');
-        sleep(1);
-        return;
-    }
-    
     if (!data.ticketTypes || data.ticketTypes.length === 0) {
         console.error('No ticket types - skipping iteration');
         sleep(1);
@@ -137,20 +115,42 @@ export default function(data) {
     
     group('Seat Lock Concurrency Test', function() {
         
-        // === STEP 1: Select random seats ===
+        // === STEP 1: Fetch Fresh Available Seats ===
+        const seatsRes = http.get(
+            `${CONFIG.BASE_URL}/showtime-seats/showtime/${data.showtimeId}/available`,
+            { 
+                headers,
+                tags: { name: 'get_available_seats' }
+            }
+        );
+
+        if (seatsRes.status !== 200) {
+            lockErrorCounter.add(1);
+            return;
+        }
+
+        const availableSeats = JSON.parse(seatsRes.body);
+        
+        if (availableSeats.length === 0) {
+            // No seats available - this is a valid "conflict" state in a concurrency test
+            lockConflictCounter.add(1);
+            return;
+        }
+
+        // === STEP 2: Select random seats ===
         // Pick 1-3 random seats (simulates real user behavior)
-        const numSeats = Math.floor(Math.random() * 3) + 1;
+        const numSeats = Math.min(Math.floor(Math.random() * 3) + 1, availableSeats.length);
         const selectedSeats = [];
         const usedIndexes = new Set();
         
-        for (let i = 0; i < numSeats && usedIndexes.size < data.availableSeats.length; i++) {
+        for (let i = 0; i < numSeats; i++) {
             let idx;
             do {
-                idx = Math.floor(Math.random() * data.availableSeats.length);
+                idx = Math.floor(Math.random() * availableSeats.length);
             } while (usedIndexes.has(idx));
             
             usedIndexes.add(idx);
-            const seat = data.availableSeats[idx];
+            const seat = availableSeats[idx];
             const ticketType = data.ticketTypes[Math.floor(Math.random() * data.ticketTypes.length)];
             
             selectedSeats.push({
@@ -159,7 +159,7 @@ export default function(data) {
             });
         }
         
-        // === STEP 2: Attempt to lock seats ===
+        // === STEP 3: Attempt to lock seats ===
         const lockPayload = JSON.stringify({
             showtimeId: data.showtimeId,
             seats: selectedSeats
@@ -180,7 +180,7 @@ export default function(data) {
         const duration = Date.now() - startTime;
         lockDuration.add(duration);
         
-        // === STEP 3: Process result ===
+        // === STEP 4: Process result ===
         if (lockRes.status === 201) {
             // SUCCESS: Lock acquired
             lockSuccessCounter.add(1);
@@ -197,7 +197,7 @@ export default function(data) {
             // Simulate user thinking time before next action
             sleep(Math.random() * 3 + 1);
             
-            // === STEP 4: Release lock (cleanup for other VUs) ===
+            // === STEP 5: Release lock (cleanup for other VUs) ===
             const releaseRes = http.del(
                 `${CONFIG.BASE_URL}/seat-locks/showtime/${data.showtimeId}`,
                 null,

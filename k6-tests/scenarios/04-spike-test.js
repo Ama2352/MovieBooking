@@ -117,14 +117,14 @@ export function setup() {
     const ticketTypes = ticketTypesRes.status === 200 ? JSON.parse(ticketTypesRes.body) : [];
     console.log(`✅ Found ${ticketTypes.length} ticket types`);
     
-    return { availableSeats, ticketTypes, showtimeId };
+    return { ticketTypes, showtimeId };
 }
 
 // =============================================================================
 // MAIN TEST - Spike Scenario
 // =============================================================================
 export default function(data) {
-    if (!data.availableSeats?.length || !data.ticketTypes?.length) {
+    if (!data.ticketTypes?.length) {
         sleep(1);
         return;
     }
