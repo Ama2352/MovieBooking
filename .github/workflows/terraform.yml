@@ -342,6 +342,7 @@ jobs:
             POSTGRES_USER=postgres
             POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
             SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/moviebooking
+            SPRING_JPA_HIBERNATE_DDL_AUTO=create
             JWT_SECRET=${{ secrets.JWT_SECRET }}
             GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
             GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
@@ -356,6 +357,8 @@ jobs:
             MOMO_PARTNER_CODE=${{ secrets.MOMO_PARTNER_CODE }}
             MOMO_ACCESS_KEY=${{ secrets.MOMO_ACCESS_KEY }}
             MOMO_SECRET_KEY=${{ secrets.MOMO_SECRET_KEY }}
+            K6_SEED_ENABLED=true
+            DATA_SOURCE_NAME=postgresql://postgres:${{ secrets.POSTGRES_PASSWORD }}@db:5432/moviebooking?sslmode=disable
             EOF
             
             sed -i 's/^[[:space:]]*//' backend/.env

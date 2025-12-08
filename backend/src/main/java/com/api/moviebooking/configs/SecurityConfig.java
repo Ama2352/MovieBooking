@@ -51,7 +51,7 @@ public class SecurityConfig {
                         .requestMatchers(PublicEndpointConfig.CHECKOUT).permitAll()
                         .requestMatchers(PublicEndpointConfig.TESTS).permitAll()
                         .requestMatchers(PublicEndpointConfig.REFUNDS).permitAll()
-                        .requestMatchers(PublicEndpointConfig.PRICE_PREVIEW).permitAll()
+                        .requestMatchers(PublicEndpointConfig.BOOKING_PUBLIC).permitAll()
                         .requestMatchers(PublicEndpointConfig.ACTUATORS).permitAll()
                         .requestMatchers(HttpMethod.POST, PublicEndpointConfig.AUTH).permitAll()
                         .requestMatchers(HttpMethod.GET, PublicEndpointConfig.MOVIES).permitAll()

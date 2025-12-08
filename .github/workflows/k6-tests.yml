@@ -65,13 +65,18 @@ jobs:
 
       - name: Determine Target URL
         id: target
+        env:
+          AZURE_VM_HOST: ${{ secrets.AZURE_VM_HOST }}
         run: |
           if [ -n "${{ github.event.inputs.target_url }}" ]; then
             echo "url=${{ github.event.inputs.target_url }}" >> $GITHUB_OUTPUT
-          elif [ -n "${{ secrets.AZURE_VM_HOST }}" ]; then
-            echo "url=http://${{ secrets.AZURE_VM_HOST }}:8080" >> $GITHUB_OUTPUT
+            echo "is_azure=false" >> $GITHUB_OUTPUT
+          elif [ -n "$AZURE_VM_HOST" ]; then
+            echo "url=http://$AZURE_VM_HOST:8080" >> $GITHUB_OUTPUT
+            echo "is_azure=true" >> $GITHUB_OUTPUT
           else
             echo "url=http://localhost:8080" >> $GITHUB_OUTPUT
+            echo "is_azure=false" >> $GITHUB_OUTPUT
           fi
 
       - name: Show Test Configuration
@@ -88,8 +93,69 @@ jobs:
       - name: Health Check
         continue-on-error: true
         run: |
-          echo "Checking API availability..."
-          curl -sf "${{ steps.target.outputs.url }}/api/v1/movies" --max-time 30 && echo "✅ API is reachable" || echo "⚠️ API may not be ready"
+          echo "Checking API availability at ${{ steps.target.outputs.url }}..."
+          if curl -sf "${{ steps.target.outputs.url }}/api/v1/movies" --max-time 30 > /dev/null 2>&1; then
+            echo "✅ API is reachable"
+          else
+            echo "⚠️ API not ready yet (this is normal before DB reset)"
+          fi
+
+      - name: Setup SSH for VM Access
+        if: steps.target.outputs.is_azure == 'true'
+        env:
+          AZURE_VM_HOST: ${{ secrets.AZURE_VM_HOST }}
+          AZURE_VM_SSH_KEY: ${{ secrets.AZURE_VM_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$AZURE_VM_SSH_KEY" > ~/.ssh/azure_vm_key
+          chmod 600 ~/.ssh/azure_vm_key
+          ssh-keyscan -H $AZURE_VM_HOST >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Reset Database Before Test
+        if: steps.target.outputs.is_azure == 'true'
+        env:
+          AZURE_VM_HOST: ${{ secrets.AZURE_VM_HOST }}
+          AZURE_VM_USERNAME: ${{ secrets.AZURE_VM_USERNAME }}
+        run: |
+          echo "=========================================="
+          echo "🔄 Resetting Database for Clean Test State"
+          echo "=========================================="
+          
+          ssh -i ~/.ssh/azure_vm_key -o StrictHostKeyChecking=no \
+            $AZURE_VM_USERNAME@$AZURE_VM_HOST << 'ENDSSH'
+            cd /opt/moviebooking
+            
+            echo "Stopping application container..."
+            sudo docker compose stop moviebooking-app
+            
+            echo "Dropping and recreating database..."
+            sudo docker compose exec -T db psql -U postgres -c "DROP DATABASE IF EXISTS moviebooking;"
+            sudo docker compose exec -T db psql -U postgres -c "CREATE DATABASE moviebooking;"
+            
+            echo "Restarting application with ddl-auto=create..."
+            sudo docker compose up -d moviebooking-app
+            
+            echo "Waiting for application to initialize (60s)..."
+            sleep 60
+            
+            echo "✅ Database reset complete"
+          ENDSSH
+          
+          echo "Verifying API is ready..."
+          for i in {1..20}; do
+            if curl -sf "${{ steps.target.outputs.url }}/api/v1/movies" --max-time 10 > /dev/null 2>&1; then
+              echo "✅ API is ready"
+              exit 0
+            fi
+            echo "Waiting for API to initialize... (attempt $i/20)"
+            sleep 10
+          done
+          
+          echo "❌ API failed to become ready after 200 seconds"
+          echo "Checking Docker container status..."
+          ssh -i ~/.ssh/azure_vm_key -o StrictHostKeyChecking=no \
+            $AZURE_VM_USERNAME@$AZURE_VM_HOST "cd /opt/moviebooking && sudo docker compose ps && sudo docker compose logs --tail=50 moviebooking-app"
+          exit 1
 
       - name: Run k6 Test - Seat Lock Concurrency
         if: ${{ github.event.inputs.test_scenario == 'seat-lock-concurrency' || github.event.inputs.test_scenario == 'all' }}
@@ -97,8 +163,10 @@ jobs:
         run: |
           k6 run \
             -e API_URL=${{ steps.target.outputs.url }} \
+            -e K6_PROMETHEUS_REMOTE_WRITE_URL=${{ steps.target.outputs.url }}:9090/api/v1/write \
             ${{ github.event.inputs.vus && format('--vus {0}', github.event.inputs.vus) || '' }} \
             ${{ github.event.inputs.duration && format('--duration {0}', github.event.inputs.duration) || '' }} \
+            --out experimental-prometheus-rw \
             --out json=results-seat-lock.json \
             --summary-export=summary-seat-lock.json \
             scenarios/01-seat-lock-concurrency.js
@@ -109,8 +177,10 @@ jobs:
         run: |
           k6 run \
             -e API_URL=${{ steps.target.outputs.url }} \
+            -e K6_PROMETHEUS_REMOTE_WRITE_URL=${{ steps.target.outputs.url }}:9090/api/v1/write \
             ${{ github.event.inputs.vus && format('--vus {0}', github.event.inputs.vus) || '' }} \
             ${{ github.event.inputs.duration && format('--duration {0}', github.event.inputs.duration) || '' }} \
+            --out experimental-prometheus-rw \
             --out json=results-browsing.json \
             --summary-export=summary-browsing.json \
             scenarios/02-browsing-load.js
@@ -121,8 +191,10 @@ jobs:
         run: |
           k6 run \
             -e API_URL=${{ steps.target.outputs.url }} \
+            -e K6_PROMETHEUS_REMOTE_WRITE_URL=${{ steps.target.outputs.url }}:9090/api/v1/write \
             ${{ github.event.inputs.vus && format('--vus {0}', github.event.inputs.vus) || '' }} \
             ${{ github.event.inputs.duration && format('--duration {0}', github.event.inputs.duration) || '' }} \
+            --out experimental-prometheus-rw \
             --out json=results-booking.json \
             --summary-export=summary-booking.json \
             scenarios/03-booking-workflow.js
@@ -133,6 +205,8 @@ jobs:
         run: |
           k6 run \
             -e API_URL=${{ steps.target.outputs.url }} \
+            -e K6_PROMETHEUS_REMOTE_WRITE_URL=${{ steps.target.outputs.url }}:9090/api/v1/write \
+            --out experimental-prometheus-rw \
             --out json=results-spike.json \
             --summary-export=summary-spike.json \
             scenarios/04-spike-test.js
@@ -143,6 +217,8 @@ jobs:
         run: |
           k6 run \
             -e API_URL=${{ steps.target.outputs.url }} \
+            -e K6_PROMETHEUS_REMOTE_WRITE_URL=${{ steps.target.outputs.url }}:9090/api/v1/write \
+            --out experimental-prometheus-rw \
             --out json=results-soak.json \
             --summary-export=summary-soak.json \
             scenarios/05-soak-test.js

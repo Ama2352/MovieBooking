@@ -26,7 +26,10 @@ public final class PublicEndpointConfig {
 
         public static final String[] REFUNDS = { "/payments/*/refund" };
 
-        public static final String[] PRICE_PREVIEW = { "/bookings/price-preview" };
+        public static final String[] BOOKING_PUBLIC = {
+                        "/bookings/price-preview",
+                        "/bookings/confirm"
+        };
 
         public static final String[] ACTUATORS = {
                         "/actuator/health",
