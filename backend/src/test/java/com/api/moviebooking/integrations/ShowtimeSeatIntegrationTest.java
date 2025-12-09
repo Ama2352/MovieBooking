@@ -99,8 +99,8 @@ class ShowtimeSeatIntegrationTest {
 
                 // Create base price for price calculation
                 PriceBase priceBase = new PriceBase();
-                priceBase.setName("Test Base Price");
-                priceBase.setBasePrice(new BigDecimal("80000"));
+                priceBase.setName("Standard Base Price");
+                priceBase.setBasePrice(new BigDecimal("50000"));
                 priceBase.setIsActive(true);
                 priceBaseRepo.save(priceBase);
 
@@ -171,13 +171,6 @@ class ShowtimeSeatIntegrationTest {
                 seat3.setStatus(SeatStatus.BOOKED);
                 seat3.setPrice(new BigDecimal("150000"));
                 seat3 = showtimeSeatRepo.save(seat3);
-
-                priceBaseRepo.deleteAll();
-                PriceBase priceBase = new PriceBase();
-                priceBase.setName("Standard Base Price");
-                priceBase.setBasePrice(new BigDecimal("50000"));
-                priceBase.setIsActive(true);
-                priceBaseRepo.save(priceBase);
         }
 
         // ========================================================================
