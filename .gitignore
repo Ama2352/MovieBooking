@@ -47,3 +47,5 @@ testing/
 .terraform/
 terraform.tfvars
 tfplan
+
+/frontend

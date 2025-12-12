@@ -15,23 +15,26 @@ public class CookieService {
     private static final Duration ACCESS_TOKEN_EXPIRY = Duration.ofHours(1);
     private static final Duration REFRESH_TOKEN_EXPIRY = Duration.ofDays(7);
 
+    private static final String SAME_SITE_POLICY = "Strict";
+    private static final boolean SECURE = false; // true in prod (HTTPS)
+
     public ResponseCookie createAccessTokenCookie(String token) {
         return ResponseCookie.from(ACCESS_TOKEN_COOKIE, token)
                 .httpOnly(true)
-                // .secure(true) -> for https only
+                .secure(SECURE)
                 .path("/")
                 .maxAge(ACCESS_TOKEN_EXPIRY)
-                .sameSite("Strict")
+                .sameSite(SAME_SITE_POLICY)
                 .build();
     }
 
     public ResponseCookie createRefreshTokenCookie(String token) {
         return ResponseCookie.from(REFRESH_TOKEN_COOKIE, token)
                 .httpOnly(true)
-                // .secure(true) -> for https only
+                .secure(SECURE)
                 .path("/auth")
                 .maxAge(REFRESH_TOKEN_EXPIRY)
-                .sameSite("Strict")
+                .sameSite(SAME_SITE_POLICY)
                 .build();
     }
 
@@ -60,20 +63,20 @@ public class CookieService {
     public ResponseCookie clearAccessTokenCookie() {
         return ResponseCookie.from(ACCESS_TOKEN_COOKIE, "")
                 .httpOnly(true)
-                // .secure(true) -> for https only
+                .secure(SECURE)
                 .path("/")
                 .maxAge(0)
-                .sameSite("Strict")
+                .sameSite(SAME_SITE_POLICY)
                 .build();
     }
 
     public ResponseCookie clearRefreshTokenCookie() {
         return ResponseCookie.from(REFRESH_TOKEN_COOKIE, "")
                 .httpOnly(true)
-                // .secure(true) -> for https only
+                .secure(SECURE)
                 .path("/auth")
                 .maxAge(0)
-                .sameSite("Strict")
+                .sameSite(SAME_SITE_POLICY)
                 .build();
     }
 }

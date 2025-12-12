@@ -40,10 +40,10 @@ public class SecurityConfig {
 
         return httpSecurity
                 .securityMatcher("/oauth2/**", "/login/**")
-                .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
                 .oauth2Login(oauth2 -> oauth2.successHandler(oAuth2LoginSuccessHandler))
+                .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .build();
     }
 
@@ -52,7 +52,6 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity, JwtFilter filter) throws Exception {
         return httpSecurity
                 .csrf(AbstractHttpConfigurer::disable)
-                .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(PublicEndpointConfig.DOCS).permitAll()
@@ -77,6 +76,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, PublicEndpointConfig.TICKET_TYPES).permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(filter, UsernamePasswordAuthenticationFilter.class)
+                .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .build();
     }
 

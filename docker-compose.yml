@@ -66,7 +66,7 @@ services:
 
   prometheus:
     image: prom/prometheus
-    container_name: prometheus
+    container_name: prometheus_moviebooking
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
@@ -82,7 +82,7 @@ services:
 
   grafana:
     image: grafana/grafana
-    container_name: grafana
+    container_name: grafana_moviebooking
     ports:
       - "3000:3000"
     volumes:
