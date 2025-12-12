@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -16,6 +18,7 @@ import com.api.moviebooking.models.entities.CustomUserDetails;
 import com.api.moviebooking.models.entities.User;
 import com.api.moviebooking.models.enums.UserRole;
 import com.api.moviebooking.repositories.UserRepo;
+import com.api.moviebooking.services.CookieService;
 import com.api.moviebooking.services.JwtService;
 import com.api.moviebooking.services.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -32,7 +35,10 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
     private final JwtService jwtService;
     private final UserRepo userRepo;
     private final UserService userService;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final CookieService cookieService;
+
+    @Value("${frontend.redirect.url:http://localhost:5173/oauth2/success}")
+    private String frontendRedirectUrl;
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
@@ -64,12 +70,13 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
         userService.addUserRefreshToken(refreshToken, user.getEmail());
 
-        Map<String, String> apiResponse = new HashMap<>();
-        apiResponse.put("accessToken", accessToken);
-        apiResponse.put("refreshToken", refreshToken);
+        response.addHeader(HttpHeaders.SET_COOKIE,
+                cookieService.createAccessTokenCookie(accessToken).toString());
 
-        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        objectMapper.writeValue(response.getWriter(), apiResponse);
+        response.addHeader(HttpHeaders.SET_COOKIE,
+                cookieService.createRefreshTokenCookie(refreshToken).toString());
+
+        response.sendRedirect(frontendRedirectUrl);
     }
 
     private User createNewUser(String email, String username) {

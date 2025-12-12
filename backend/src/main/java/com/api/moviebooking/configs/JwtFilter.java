@@ -14,6 +14,7 @@ import com.api.moviebooking.services.JwtService;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -55,21 +56,16 @@ public class JwtFilter extends OncePerRequestFilter {
     // }
 
     @Override
-protected void doFilterInternal(HttpServletRequest request,
-                                HttpServletResponse response,
-                                FilterChain filterChain)
-        throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
+        String authHeader = request.getHeader("Authorization");
+        String token = null;
+        String email = null;
 
-    String token = null;
-
-    // 1️⃣ Ưu tiên lấy từ header Authorization
-    String authHeader = request.getHeader("Authorization");
-    if (authHeader != null && authHeader.startsWith("Bearer ")) {
-        token = authHeader.substring(7);
-    } else {
-        // 2️⃣ Nếu không có header thì lấy từ cookie access_token
-        token = cookieService.extractAccessTokenFromCookie(request);
-    }
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            token = authHeader.substring(7);
+            email = jwtService.extractEmailFromToken(token);
+        }
 
     if (token != null && SecurityContextHolder.getContext().getAuthentication() == null) {
         String email = jwtService.extractEmailFromToken(token);
