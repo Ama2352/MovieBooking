@@ -18,16 +18,17 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-
-import java.util.List;
 
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
+
+    private final CorsConfigurationSource corsConfigurationSource;
+
+    SecurityConfig(CorsConfigurationSource corsConfigurationSource) {
+        this.corsConfigurationSource = corsConfigurationSource;
+    }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
@@ -47,17 +48,15 @@ public class SecurityConfig {
     @Bean
     @Order(1)
     public SecurityFilterChain oauth2SecurityFilterChain(
-            HttpSecurity http,
+            HttpSecurity httpSecurity,
             OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler) throws Exception {
 
-        http
-            .securityMatcher("/oauth2/**", "/login/**")
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
-            .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
-            .oauth2Login(oauth2 -> oauth2.successHandler(oAuth2LoginSuccessHandler));
-
-        return http.build();
+        return httpSecurity
+                .securityMatcher("/oauth2/**", "/login/**")
+                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
+                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
+                .oauth2Login(oauth2 -> oauth2.successHandler(oAuth2LoginSuccessHandler))
+                .build();
     }
 
     @Bean
@@ -65,6 +64,7 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity, JwtFilter filter) throws Exception {
         return httpSecurity
                 .csrf(AbstractHttpConfigurer::disable)
+                .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(PublicEndpointConfig.DOCS).permitAll()
@@ -73,6 +73,8 @@ public class SecurityConfig {
                         .requestMatchers(PublicEndpointConfig.CHECKOUT).permitAll()
                         .requestMatchers(PublicEndpointConfig.TESTS).permitAll()
                         .requestMatchers(PublicEndpointConfig.REFUNDS).permitAll()
+                        .requestMatchers(PublicEndpointConfig.PRICE_PREVIEW).permitAll()
+                        .requestMatchers(PublicEndpointConfig.ACTUATORS).permitAll()
                         .requestMatchers(HttpMethod.POST, PublicEndpointConfig.AUTH).permitAll()
                         .requestMatchers(HttpMethod.GET, PublicEndpointConfig.MOVIES).permitAll()
                         .requestMatchers(HttpMethod.GET, PublicEndpointConfig.SHOWTIMES).permitAll()

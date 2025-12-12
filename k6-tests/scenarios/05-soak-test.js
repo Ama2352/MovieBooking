@@ -6,16 +6,16 @@
 // Duration: 20 minutes with constant moderate load
 // Expected: Find memory leaks, connection issues, gradual degradation
 // =============================================================================
+// $env:K6_PROMETHEUS_REMOTE_WRITE_URL="http://localhost:9090/api/v1/write"; k6 run --out experimental-prometheus-rw 05-soak-test.js
 
 import http from 'k6/http';
 import { check, sleep, group } from 'k6';
 import { Counter, Trend, Rate, Gauge } from 'k6/metrics';
+import { fetchK6TestData } from '../config/config.js';
 
 // Configuration
 const CONFIG = {
     BASE_URL: __ENV.API_URL || 'http://localhost:8080',
-    TEST_SHOWTIME_ID: __ENV.SHOWTIME_ID || 'd1000000-0000-0000-0000-000000000001',
-    TEST_MOVIE_ID: __ENV.MOVIE_ID || 'c1000000-0000-0000-0000-000000000001',
 };
 
 const HEADERS = {
@@ -79,7 +79,18 @@ export const options = {
 export function setup() {
     console.log(`⏱️  Starting SOAK TEST (20 minutes)`);
     console.log(`📍 Target: ${CONFIG.BASE_URL}`);
-    console.log(`🎫 Showtime: ${CONFIG.TEST_SHOWTIME_ID}`);
+    
+    // Fetch K6 test data (movie, showtime) dynamically
+    const testData = fetchK6TestData();
+    if (!testData) {
+        console.error('❌ Failed to fetch K6 test data. Ensure K6_SEED_ENABLED=true');
+        return { availableSeats: [], ticketTypes: [], showtimeId: null, movieId: null };
+    }
+    
+    const { showtimeId, movieId } = testData;
+    console.log(`🎫 Showtime: ${showtimeId}`);
+    console.log(`🎬 Movie: ${movieId}`);
+    
     console.log(`👥 Virtual Users: 15 (constant)`);
     console.log('');
     console.log('🔍 This test monitors for:');
@@ -102,13 +113,13 @@ export function setup() {
     
     // Get test data
     const seatsRes = http.get(
-        `${CONFIG.BASE_URL}/showtime-seats/showtime/${CONFIG.TEST_SHOWTIME_ID}/available`,
+        `${CONFIG.BASE_URL}/showtime-seats/showtime/${showtimeId}/available`,
         { headers: HEADERS }
     );
     const availableSeats = seatsRes.status === 200 ? JSON.parse(seatsRes.body) : [];
     
     const ticketTypesRes = http.get(
-        `${CONFIG.BASE_URL}/ticket-types?showtimeId=${CONFIG.TEST_SHOWTIME_ID}`,
+        `${CONFIG.BASE_URL}/ticket-types?showtimeId=${showtimeId}`,
         { headers: HEADERS }
     );
     const ticketTypes = ticketTypesRes.status === 200 ? JSON.parse(ticketTypesRes.body) : [];
@@ -119,13 +130,18 @@ export function setup() {
     console.log('🚀 SOAK TEST STARTING NOW - 20 MINUTES');
     console.log('='.repeat(60));
     
-    return { availableSeats, ticketTypes };
+    return { availableSeats, ticketTypes, showtimeId, movieId };
 }
 
 // =============================================================================
 // MAIN TEST - Mixed Operations
 // =============================================================================
 export default function(data) {
+    if (!data.ticketTypes?.length) {
+        sleep(1);
+        return;
+    }
+
     const iterationStart = Date.now();
     soakIterations.add(1);
     
@@ -149,7 +165,7 @@ export default function(data) {
             readOperations.add(1);
             
             const res = http.get(
-                `${CONFIG.BASE_URL}/showtime-seats/showtime/${CONFIG.TEST_SHOWTIME_ID}`,
+                `${CONFIG.BASE_URL}/showtime-seats/showtime/${data.showtimeId}`,
                 { 
                     headers, 
                     tags: { name: 'soak_seatmap' },
@@ -193,7 +209,7 @@ export default function(data) {
             readOperations.add(1);
             
             const res = http.get(
-                `${CONFIG.BASE_URL}/seat-locks/availability/${CONFIG.TEST_SHOWTIME_ID}`,
+                `${CONFIG.BASE_URL}/seat-locks/availability/${data.showtimeId}`,
                 { 
                     headers, 
                     tags: { name: 'soak_availability' },
@@ -219,7 +235,7 @@ export default function(data) {
                 
                 // Get fresh available seats
                 const seatsRes = http.get(
-                    `${CONFIG.BASE_URL}/showtime-seats/showtime/${CONFIG.TEST_SHOWTIME_ID}/available`,
+                    `${CONFIG.BASE_URL}/showtime-seats/showtime/${data.showtimeId}/available`,
                     { headers }
                 );
                 
@@ -231,10 +247,10 @@ export default function(data) {
                         const ticketType = data.ticketTypes[0];
                         
                         const lockPayload = JSON.stringify({
-                            showtimeId: CONFIG.TEST_SHOWTIME_ID,
+                            showtimeId: data.showtimeId,
                             seats: [{
                                 showtimeSeatId: seats[idx].showtimeSeatId,
-                                ticketTypeId: ticketType.id
+                                ticketTypeId: ticketType.ticketTypeId
                             }]
                         });
                         
@@ -251,7 +267,7 @@ export default function(data) {
                         // Release immediately
                         if (lockRes.status === 201) {
                             http.del(
-                                `${CONFIG.BASE_URL}/seat-locks/showtime/${CONFIG.TEST_SHOWTIME_ID}`,
+                                `${CONFIG.BASE_URL}/seat-locks/showtime/${data.showtimeId}`,
                                 null,
                                 { headers, tags: { name: 'soak_release' } }
                             );
@@ -276,7 +292,7 @@ export default function(data) {
             readOperations.add(1);
             
             const res = http.get(
-                `${CONFIG.BASE_URL}/showtimes/movie/${CONFIG.TEST_MOVIE_ID}/upcoming`,
+                `${CONFIG.BASE_URL}/showtimes/movie/${data.movieId}/upcoming`,
                 { 
                     headers, 
                     tags: { name: 'soak_showtimes' },

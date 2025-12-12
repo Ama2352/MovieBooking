@@ -76,6 +76,9 @@ class ShowtimeSeatIntegrationTest {
         @Autowired
         private CinemaRepo cinemaRepo;
 
+        @Autowired
+        private PriceBaseRepo priceBaseRepo;
+
         private Showtime testShowtime;
         private ShowtimeSeat seat1, seat2, seat3;
 
@@ -92,6 +95,14 @@ class ShowtimeSeatIntegrationTest {
                 roomRepo.deleteAll();
                 movieRepo.deleteAll();
                 cinemaRepo.deleteAll();
+                priceBaseRepo.deleteAll();
+
+                // Create base price for price calculation
+                PriceBase priceBase = new PriceBase();
+                priceBase.setName("Standard Base Price");
+                priceBase.setBasePrice(new BigDecimal("50000"));
+                priceBase.setIsActive(true);
+                priceBaseRepo.save(priceBase);
 
                 Cinema cinema = new Cinema();
                 cinema.setName("Test Cinema");
@@ -429,6 +440,7 @@ class ShowtimeSeatIntegrationTest {
                                         .post("/showtime-seats/showtime/" + testShowtime.getId()
                                                         + "/recalculate-prices")
                                         .then()
+                                        .log().ifValidationFails()
                                         .statusCode(HttpStatus.OK.value())
                                         .body("size()", equalTo(3))
                                         .body("[0].price", notNullValue());

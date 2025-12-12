@@ -93,6 +93,36 @@ resource "azurerm_network_security_rule" "prometheus" {
   network_security_group_name = azurerm_network_security_group.main.name
 }
 
+# Node Exporter (9100) - Debugging
+resource "azurerm_network_security_rule" "node_exporter" {
+  name                        = "NodeExporter"
+  priority                    = 140
+  direction                   = "Inbound"
+  access                      = "Allow"
+  protocol                    = "Tcp"
+  source_port_range           = "*"
+  destination_port_range      = "9100"
+  source_address_prefix       = var.allowed_ssh_cidr
+  destination_address_prefix  = "*"
+  resource_group_name         = var.resource_group_name
+  network_security_group_name = azurerm_network_security_group.main.name
+}
+
+# Postgres Exporter (9187) - Debugging
+resource "azurerm_network_security_rule" "postgres_exporter" {
+  name                        = "PostgresExporter"
+  priority                    = 150
+  direction                   = "Inbound"
+  access                      = "Allow"
+  protocol                    = "Tcp"
+  source_port_range           = "*"
+  destination_port_range      = "9187"
+  source_address_prefix       = var.allowed_ssh_cidr
+  destination_address_prefix  = "*"
+  resource_group_name         = var.resource_group_name
+  network_security_group_name = azurerm_network_security_group.main.name
+}
+
 # Outbound - Allow All
 resource "azurerm_network_security_rule" "outbound" {
   name                        = "AllowAllOutbound"

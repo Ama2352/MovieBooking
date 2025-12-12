@@ -3,14 +3,28 @@ global:
   evaluation_interval: 15s
 
 scrape_configs:
-  # MovieBooking Spring Boot metrics
+  # 1. MovieBooking Spring Boot application metrics
   - job_name: 'moviebooking'
     metrics_path: '/actuator/prometheus'
     static_configs:
+      # Targets the moviebooking container on the shared Docker network
       - targets: ['moviebooking:8080']
     scrape_interval: 5s
 
-  # Prometheus self-monitoring
+  # 2. Node Exporter (For OS/Host CPU, Memory, Disk metrics)
+  - job_name: 'node-exporter'
+    static_configs:
+      # Targets the node-exporter container on the shared Docker network
+      - targets: ['node-exporter:9100']
+    
+  # 3. Postgres Exporter (For PostgreSQL database metrics)
+  - job_name: 'postgres-exporter'
+    static_configs:
+      # Targets the postgres-exporter container on the shared Docker network
+      - targets: ['postgres-exporter:9187']
+
+  # 4. Prometheus self-monitoring
   - job_name: 'prometheus'
     static_configs:
+      # Targets the Prometheus service itself
       - targets: ['localhost:9090']
