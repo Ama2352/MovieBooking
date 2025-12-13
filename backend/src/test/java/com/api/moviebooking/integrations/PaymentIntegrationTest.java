@@ -20,6 +20,7 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 import org.testcontainers.containers.GenericContainer;
@@ -113,7 +114,7 @@ class PaymentIntegrationTest {
         @Autowired
         private CinemaRepo cinemaRepo;
 
-        @MockBean
+        @MockitoBean
         private RestTemplate restTemplate;
 
         @Autowired

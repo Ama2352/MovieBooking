@@ -242,6 +242,50 @@ Retrieves all seats for a specific room.
 
 ---
 
+### 9. Get Seat Layout for Showtime
+**GET** `/seats/layout`
+
+Returns the complete seat layout for a specific showtime, including seat details and current status (AVAILABLE, LOCKED, or BOOKED).
+
+#### Query Parameters
+- `showtime_id`: UUID of the showtime (required)
+
+#### Response
+- **Status Code**: `200 OK`
+- **Body**:
+```json
+[
+  {
+    "showtimeSeatId": "8f9a0b1c-2d3e-4f5a-6b7c-8d9e0f1a2b3c",
+    "seatId": "9f1a2b3c-4d5e-6f7a-8b9c-0d1e2f3a4b5c",
+    "rowLabel": "A",
+    "seatNumber": 1,
+    "seatType": "NORMAL",
+    "status": "AVAILABLE",
+    "price": 100000.00
+  },
+  {
+    "showtimeSeatId": "9f0b1c2d-3e4f-5a6b-7c8d-9e0f1a2b3c4d",
+    "seatId": "a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d",
+    "rowLabel": "A",
+    "seatNumber": 2,
+    "seatType": "VIP",
+    "status": "LOCKED",
+    "price": 120000.00
+  }
+]
+```
+
+#### Authentication
+- **Required**: No (Public endpoint)
+
+#### Use Case
+- Display seat map on seat selection page
+- Show real-time seat availability with status indicators
+- Alternative to `/showtime-seats/showtime/{showtimeId}` with a query parameter approach
+
+---
+
 # Showtime Seats API
 
 Base Path: `/showtime-seats`

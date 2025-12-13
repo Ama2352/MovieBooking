@@ -70,6 +70,11 @@ public class BookingService {
          * then adds snacks and applies discounts.
          * This ensures consistency with confirmBooking which uses the same SeatLock
          * data.
+         * 
+         * Predicate nodes (d): 4 -> V(G) = d + 1 = 5
+         * Nodes: seatLock.isEmpty, lockOwnership, isActive, snacks != null, (loop:
+         * seatLockSeats), (loop: snacks)
+         * Minimum test cases: 5
          */
         public PricePreviewResponse calculatePricePreview(PricePreviewRequest request, SessionContext session) {
                 // 1. Find and validate lock
@@ -124,6 +129,12 @@ public class BookingService {
         @Value("${booking.max.seats:10}")
         private Integer maxSeatsPerBooking;
 
+        /**
+         * Get booking by ID
+         * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
+         * Nodes: booking.isEmpty
+         * Minimum test cases: 2
+         */
         public Booking getBookingById(UUID bookingId) {
                 return bookingRepo.findById(bookingId)
                                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
@@ -131,6 +142,9 @@ public class BookingService {
 
         /**
          * Get all bookings for a user
+         * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
+         * Nodes: none
+         * Minimum test cases: 1
          */
         @Transactional(readOnly = true)
         public List<BookingResponse> getUserBookings(UUID userId) {
@@ -142,6 +156,9 @@ public class BookingService {
 
         /**
          * Get a specific booking by ID for a user (authorization check)
+         * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
+         * Nodes: booking.isEmpty
+         * Minimum test cases: 2
          */
         @Transactional(readOnly = true)
         public BookingResponse getBookingByIdForUser(UUID bookingId, UUID userId) {
@@ -153,6 +170,9 @@ public class BookingService {
 
         /**
          * Update QR code URL for a booking
+         * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
+         * Nodes: booking.isEmpty
+         * Minimum test cases: 2
          */
         @Transactional
         public BookingResponse updateQrCode(UUID bookingId, UUID userId, String qrCodeUrl) {
@@ -169,6 +189,14 @@ public class BookingService {
 
         /**
          * Lock seats for a session (authenticated user or guest)
+         * Predicate nodes (d): 12 -> V(G) = d + 1 = 13
+         * Nodes: seatsSize > maxSeats, existingLocks.isEmpty,
+         * sameShowtimeLock.isPresent,
+         * showtime.isEmpty, seats.size != requested, ticketTypeValidation (loop),
+         * unavailableSeats.isEmpty, redisLocked, session.isAuthenticated, ticketTypeId
+         * == null,
+         * ticketType.isEmpty, try-catch
+         * Minimum test cases: 13
          */
         @Transactional
         public LockSeatsResponse lockSeats(LockSeatsRequest request, SessionContext session) {
@@ -342,6 +370,9 @@ public class BookingService {
 
         /**
          * Release seats for a session
+         * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
+         * Nodes: seatLockOpt.isPresent
+         * Minimum test cases: 2
          */
         @Transactional
         public void releaseSeats(String lockOwnerId, UUID showtimeId) {
@@ -363,6 +394,11 @@ public class BookingService {
          * Check seat availability
          * 
          * @param session optional session context to include user's locks
+         *                Predicate nodes (d): 5 -> V(G) = d + 1 = 6
+         *                Nodes: !showtimeExists, switch(3 cases:
+         *                AVAILABLE/LOCKED/BOOKED), session != null,
+         *                activeLock.isPresent
+         *                Minimum test cases: 6
          */
         @Transactional(readOnly = true)
         public SeatAvailabilityResponse checkAvailability(UUID showtimeId, SessionContext session) {
@@ -421,6 +457,9 @@ public class BookingService {
 
         /**
          * Internal method to release seats and clean up Redis
+         * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
+         * Nodes: none
+         * Minimum test cases: 1
          */
         private void releaseSeatsInternal(SeatLock seatLock) {
                 List<UUID> seatIds = seatLock.getSeatLockSeats().stream()
@@ -469,6 +508,9 @@ public class BookingService {
 
         /**
          * Cleanup expired seat locks (called by scheduler)
+         * Predicate nodes (d): 2 -> V(G) = d + 1 = 3
+         * Nodes: expiredLocks.isEmpty, (nested loop: locks, seatLockSeats)
+         * Minimum test cases: 3
          */
         @Transactional
         public void cleanupExpiredLocks() {

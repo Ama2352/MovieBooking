@@ -352,6 +352,90 @@ Confirms booking after seat locking. For guests, creates User account with role=
 - **Required**: Yes (Bearer Token or X-Session-Id)
 - **Supports**: Both registered users and guest users (creates account for guests)
 
+---
+
+### 6. Get User's Bookings
+**GET** `/bookings/my-bookings`
+
+Retrieves all bookings for the authenticated user.
+
+#### Response
+- **Status Code**: `200 OK`
+- **Body**: Array of BookingResponse objects
+```json
+[
+  {
+    "bookingId": "5e6f7a8b-9c0d-1e2f-3a4b-5c6d7e8f9a0b",
+    "showtimeId": "3e4a8c9f-1234-5678-90ab-cdef12345678",
+    "movieTitle": "Inception",
+    "showtimeStartTime": "2024-11-17T19:30:00",
+    "cinemaName": "CGV Vincom Center",
+    "roomName": "IMAX 1",
+    "seats": [...],
+    "totalPrice": 216000.00,
+    "status": "CONFIRMED",
+    "bookedAt": "2024-11-17T19:15:00",
+    "qrCode": "https://example.com/qr/abc123",
+    "qrPayload": "BOOKING_5e6f7a8b_SHOWTIME_3e4a8c9f"
+  }
+]
+```
+
+#### Authentication
+- **Required**: Yes (Bearer Token)
+
+---
+
+### 7. Get Booking by ID
+**GET** `/bookings/{bookingId}`
+
+Retrieves a specific booking by ID. Users can only access their own bookings.
+
+#### Path Parameters
+- `bookingId`: UUID of the booking
+
+#### Response
+- **Status Code**: `200 OK`
+- **Body**: BookingResponse object
+
+#### Authentication
+- **Required**: Yes (Bearer Token)
+
+#### Error Responses
+- `404 Not Found`: Booking not found or does not belong to user
+
+---
+
+### 8. Update QR Code URL
+**PATCH** `/bookings/{bookingId}/qr`
+
+Updates the QR code URL for a booking. Users can only update their own bookings.
+
+#### Path Parameters
+- `bookingId`: UUID of the booking
+
+#### Request Body
+```json
+{
+  "qrCodeUrl": "https://example.com/qr/updated-abc123"
+}
+```
+
+#### Response
+- **Status Code**: `200 OK`
+- **Body**: Updated BookingResponse object
+
+#### Authentication
+- **Required**: Yes (Bearer Token)
+
+#### Error Responses
+- `400 Bad Request`: Invalid QR code URL
+- `404 Not Found`: Booking not found or does not belong to user
+
+---
+
+## Error Responses
+
 ### 423 Locked
 `json
 {

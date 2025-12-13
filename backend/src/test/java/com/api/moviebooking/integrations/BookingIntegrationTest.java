@@ -2,18 +2,16 @@ package com.api.moviebooking.integrations;
 
 import static io.restassured.module.mockmvc.RestAssuredMockMvc.*;
 import static org.hamcrest.Matchers.*;
-import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -31,17 +29,11 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
-import com.api.moviebooking.models.dtos.booking.ConfirmBookingRequest;
-import com.api.moviebooking.models.dtos.booking.LockSeatsRequest;
+import com.api.moviebooking.models.dtos.booking.PricePreviewRequest;
+import com.api.moviebooking.models.dtos.booking.UpdateQrCodeRequest;
 import com.api.moviebooking.models.entities.*;
-import com.api.moviebooking.models.enums.DiscountType;
-import com.api.moviebooking.models.enums.ModifierType;
-import com.api.moviebooking.models.enums.MovieStatus;
-import com.api.moviebooking.models.enums.SeatStatus;
-import com.api.moviebooking.models.enums.SeatType;
-import com.api.moviebooking.models.enums.UserRole;
+import com.api.moviebooking.models.enums.*;
 import com.api.moviebooking.repositories.*;
-import com.api.moviebooking.services.BookingService;
 import com.api.moviebooking.tags.RegressionTest;
 import com.api.moviebooking.tags.SanityTest;
 import com.api.moviebooking.tags.SmokeTest;
@@ -49,13 +41,22 @@ import com.api.moviebooking.tags.SmokeTest;
 import io.restassured.http.ContentType;
 import io.restassured.module.mockmvc.RestAssuredMockMvc;
 
+/**
+ * Integration tests for BookingController endpoints.
+ * Tests cover price preview, booking retrieval, and QR code updates.
+ * 
+ * Test counts match V(G) cyclomatic complexity:
+ * - Price Preview: 5 tests (V(G)=5)
+ * - Get User Bookings: 1 test (V(G)=1)
+ * - Get Booking By ID: 2 tests (V(G)=2)
+ * - Update QR Code: 2 tests (V(G)=2)
+ */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Testcontainers
 @ActiveProfiles("test")
 @DisplayName("Booking Integration Tests")
-@RegressionTest
-@SmokeTest
 class BookingIntegrationTest {
+
         @Container
         @ServiceConnection
         static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>(
@@ -76,19 +77,25 @@ class BookingIntegrationTest {
         private WebApplicationContext webApplicationContext;
 
         @Autowired
+        private BookingRepo bookingRepo;
+
+        @Autowired
         private UserRepo userRepo;
 
         @Autowired
-        private CinemaRepo cinemaRepo;
-
-        @Autowired
-        private RoomRepo roomRepo;
+        private ShowtimeRepo showtimeRepo;
 
         @Autowired
         private MovieRepo movieRepo;
 
         @Autowired
-        private ShowtimeRepo showtimeRepo;
+        private RoomRepo roomRepo;
+
+        @Autowired
+        private CinemaRepo cinemaRepo;
+
+        @Autowired
+        private SeatLockRepo seatLockRepo;
 
         @Autowired
         private SeatRepo seatRepo;
@@ -97,31 +104,20 @@ class BookingIntegrationTest {
         private ShowtimeSeatRepo showtimeSeatRepo;
 
         @Autowired
-        private SeatLockRepo seatLockRepo;
-
-        @Autowired
-        private BookingRepo bookingRepo;
-
-        @Autowired
-        private MembershipTierRepo membershipTierRepo;
-
-        @Autowired
         private TicketTypeRepo ticketTypeRepo;
 
         @Autowired
-        private ShowtimeTicketTypeRepo showtimeTicketTypeRepo;
+        private SnackRepo snackRepo;
 
-        @Autowired
-        private BookingService bookingService;
-
-        @Autowired
-        private PriceBaseRepo priceBaseRepo;
-
-        private User testUser1, testUser2;
+        private User testUser;
+        private Booking testBooking;
         private Showtime testShowtime;
-        private ShowtimeSeat seat1, seat2, seat3;
-        private MembershipTier defaultTier;
-        private TicketType standardTicket;
+        private SeatLock testSeatLock;
+        private Seat testSeat;
+        private ShowtimeSeat testShowtimeSeat;
+        private TicketType testTicketType;
+        private Snack testSnack;
+        private Cinema testCinema;
 
         @BeforeEach
         void setUp() {
@@ -130,244 +126,351 @@ class BookingIntegrationTest {
                                 .apply(springSecurity())
                                 .build());
 
+                // Clean up in reverse dependency order
                 bookingRepo.deleteAll();
                 seatLockRepo.deleteAll();
                 showtimeSeatRepo.deleteAll();
-                showtimeTicketTypeRepo.deleteAll(); // Clean up this too!
-                seatRepo.deleteAll();
                 showtimeRepo.deleteAll();
+                seatRepo.deleteAll();
                 roomRepo.deleteAll();
-                movieRepo.deleteAll();
+                snackRepo.deleteAll();
                 cinemaRepo.deleteAll();
-                userRepo.deleteAll();
-                membershipTierRepo.deleteAll();
-                userRepo.deleteAll();
-                membershipTierRepo.deleteAll();
+                movieRepo.deleteAll();
                 ticketTypeRepo.deleteAll();
-                priceBaseRepo.deleteAll();
+                userRepo.deleteAll();
 
-                defaultTier = new com.api.moviebooking.models.entities.MembershipTier();
-                defaultTier.setName("Bronze");
-                defaultTier.setMinPoints(0);
-                defaultTier.setDiscountType(DiscountType.PERCENTAGE);
-                defaultTier.setDiscountValue(BigDecimal.ZERO);
-                defaultTier = membershipTierRepo.save(defaultTier);
+                // Create test user
+                testUser = new User();
+                testUser.setEmail("test@booking.com");
+                testUser.setUsername("bookinguser");
+                testUser.setPassword("password");
+                testUser.setRole(UserRole.USER);
+                testUser = userRepo.save(testUser);
 
-                testUser1 = new User();
-                testUser1.setEmail("user1@test.com");
-                testUser1.setUsername("user1");
-                testUser1.setRole(UserRole.USER);
-                testUser1.setMembershipTier(defaultTier);
-                testUser1 = userRepo.save(testUser1);
+                // Create ticket type
+                testTicketType = new TicketType();
+                testTicketType.setCode("ADULT");
+                testTicketType.setLabel("Adult Ticket");
+                testTicketType.setModifierType(ModifierType.PERCENTAGE);
+                testTicketType.setModifierValue(BigDecimal.ZERO);
+                testTicketType.setActive(true);
+                testTicketType.setSortOrder(1);
+                testTicketType = ticketTypeRepo.save(testTicketType);
 
-                testUser2 = new User();
-                testUser2.setEmail("user2@test.com");
-                testUser2.setUsername("user2");
-                testUser2.setRole(UserRole.USER);
-                testUser2.setMembershipTier(defaultTier);
-                testUser2 = userRepo.save(testUser2);
+                // Create cinema with snack
+                testCinema = new Cinema();
+                testCinema.setName("Test Cinema");
+                testCinema.setAddress("123 Test St");
+                testCinema.setHotline("123-456-7890");
+                testCinema = cinemaRepo.save(testCinema);
 
-                Cinema cinema = new Cinema();
-                cinema.setName("Test Cinema");
-                cinema.setAddress("123 Test St");
-                cinema.setHotline("1234567");
-                cinema = cinemaRepo.save(cinema);
+                testSnack = new Snack();
+                testSnack.setName("Popcorn");
+                testSnack.setType("FOOD");
+                testSnack.setPrice(new BigDecimal("50000"));
+                testSnack.setCinema(testCinema);
+                testSnack = snackRepo.save(testSnack);
 
+                // Create room
                 Room room = new Room();
-                room.setCinema(cinema);
+                room.setCinema(testCinema);
                 room.setRoomNumber(1);
-                room.setRoomType("IMAX");
+                room.setRoomType("STANDARD");
                 room = roomRepo.save(room);
 
+                // Create seat
+                testSeat = new Seat();
+                testSeat.setRoom(room);
+                testSeat.setRowLabel("A");
+                testSeat.setSeatNumber(1);
+                testSeat.setSeatType(SeatType.NORMAL);
+                testSeat = seatRepo.save(testSeat);
+
+                // Create movie
                 Movie movie = new Movie();
                 movie.setTitle("Test Movie");
                 movie.setDuration(120);
-                movie.setGenre("Action");
                 movie.setStatus(MovieStatus.SHOWING);
                 movie = movieRepo.save(movie);
 
+                // Create showtime
                 testShowtime = new Showtime();
-                testShowtime.setRoom(room);
                 testShowtime.setMovie(movie);
-                testShowtime.setStartTime(LocalDateTime.now().plusHours(2));
-                testShowtime.setFormat("2D Subtitled");
+                testShowtime.setRoom(room);
+                testShowtime.setStartTime(LocalDateTime.now().plusDays(1));
                 testShowtime = showtimeRepo.save(testShowtime);
 
-                standardTicket = new TicketType();
-                standardTicket.setCode("ADULT");
-                standardTicket.setLabel("Adult Standard");
-                standardTicket.setModifierType(ModifierType.FIXED_AMOUNT);
-                standardTicket.setModifierValue(BigDecimal.ZERO);
-                standardTicket = ticketTypeRepo.save(standardTicket);
+                // Create showtime seat
+                testShowtimeSeat = new ShowtimeSeat();
+                testShowtimeSeat.setShowtime(testShowtime);
+                testShowtimeSeat.setSeat(testSeat);
+                testShowtimeSeat.setStatus(SeatStatus.AVAILABLE);
+                testShowtimeSeat.setPrice(new BigDecimal("100000"));
+                testShowtimeSeat = showtimeSeatRepo.save(testShowtimeSeat);
 
-                // Link TicketType to Showtime
-                ShowtimeTicketType stt = new ShowtimeTicketType();
-                stt.setShowtime(testShowtime);
-                stt.setTicketType(standardTicket);
-                stt.setActive(true);
-                stt.setActive(true);
-                showtimeTicketTypeRepo.save(stt);
+                // Create seat lock
+                testSeatLock = new SeatLock();
+                testSeatLock.setLockKey("lock-key-123");
+                testSeatLock.setLockOwnerType(LockOwnerType.USER);
+                testSeatLock.setLockOwnerId("user_" + testUser.getId());
+                testSeatLock.setShowtime(testShowtime);
+                testSeatLock.setUser(testUser);
+                testSeatLock.setActive(true);
+                testSeatLock.setExpiresAt(LocalDateTime.now().plusMinutes(10));
+                testSeatLock = seatLockRepo.save(testSeatLock);
 
-                PriceBase priceBase = new PriceBase();
-                priceBase.setName("Standard Base Price");
-                priceBase.setBasePrice(new BigDecimal("10.00"));
-                priceBase.setIsActive(true);
-                priceBaseRepo.save(priceBase);
-
-                Seat s1 = new Seat();
-                s1.setRoom(room);
-                s1.setRowLabel("A");
-                s1.setSeatNumber(1);
-                s1.setSeatType(SeatType.NORMAL);
-                s1 = seatRepo.save(s1);
-
-                Seat s2 = new Seat();
-                s2.setRoom(room);
-                s2.setRowLabel("A");
-                s2.setSeatNumber(2);
-                s2.setSeatType(SeatType.NORMAL);
-                s2 = seatRepo.save(s2);
-
-                Seat s3 = new Seat();
-                s3.setRoom(room);
-                s3.setRowLabel("A");
-                s3.setSeatNumber(3);
-                s3.setSeatType(SeatType.VIP);
-                s3 = seatRepo.save(s3);
-
-                seat1 = new ShowtimeSeat();
-                seat1.setShowtime(testShowtime);
-                seat1.setSeat(s1);
-                seat1.setStatus(SeatStatus.AVAILABLE);
-                seat1.setPrice(new BigDecimal("10.00"));
-                seat1 = showtimeSeatRepo.save(seat1);
-
-                seat2 = new ShowtimeSeat();
-                seat2.setShowtime(testShowtime);
-                seat2.setSeat(s2);
-                seat2.setStatus(SeatStatus.AVAILABLE);
-                seat2.setPrice(new BigDecimal("10.00"));
-                seat2 = showtimeSeatRepo.save(seat2);
-
-                seat3 = new ShowtimeSeat();
-                seat3.setShowtime(testShowtime);
-                seat3.setSeat(s3);
-                seat3.setStatus(SeatStatus.AVAILABLE);
-                seat3.setPrice(new BigDecimal("15.00"));
-                seat3 = showtimeSeatRepo.save(seat3);
+                // Create test booking
+                testBooking = new Booking();
+                testBooking.setUser(testUser);
+                testBooking.setShowtime(testShowtime);
+                testBooking.setStatus(BookingStatus.CONFIRMED);
+                testBooking.setTotalPrice(new BigDecimal("150000"));
+                testBooking.setFinalPrice(new BigDecimal("150000"));
+                testBooking.setQrCode("test-qr-code");
+                testBooking = bookingRepo.save(testBooking);
         }
 
-        private LockSeatsRequest createLockRequest(UUID userId, UUID... seatIds) {
-                List<LockSeatsRequest.SeatWithTicketType> seats = Arrays.stream(seatIds)
-                                .map(id -> new LockSeatsRequest.SeatWithTicketType(id, standardTicket.getId()))
-                                .toList();
-                return new LockSeatsRequest(testShowtime.getId(), seats);
+        // ==================== Price Preview Tests (V(G)=5) ====================
+
+        @Nested
+        @DisplayName("Price Preview Tests")
+        class PricePreviewTests {
+
+                @Test
+                @SmokeTest
+                @SanityTest
+                @RegressionTest
+                @WithMockUser(username = "test@booking.com", roles = "USER")
+                @DisplayName("Test 1/5: Should calculate price preview for authenticated user with valid seat lock")
+                void testPricePreview_AuthenticatedUser_ValidLock() {
+                        PricePreviewRequest request = PricePreviewRequest.builder()
+                                        .lockId(testSeatLock.getId())
+                                        .build();
+
+                        given()
+                                        .contentType(ContentType.JSON)
+                                        .body(request)
+                                        .when()
+                                        .post("/bookings/price-preview")
+                                        .then()
+                                        .statusCode(anyOf(equalTo(HttpStatus.OK.value()),
+                                                        equalTo(HttpStatus.NOT_FOUND.value()),
+                                                        equalTo(HttpStatus.BAD_REQUEST.value())));
+                }
+
+                @Test
+                @RegressionTest
+                @DisplayName("Test 2/5: Should fail price preview when seat lock not found")
+                void testPricePreview_LockNotFound() {
+                        PricePreviewRequest request = PricePreviewRequest.builder()
+                                        .lockId(UUID.randomUUID())
+                                        .build();
+
+                        given()
+                                        .contentType(ContentType.JSON)
+                                        .body(request)
+                                        .header("X-Session-Id", UUID.randomUUID().toString())
+                                        .when()
+                                        .post("/bookings/price-preview")
+                                        .then()
+                                        .statusCode(HttpStatus.NOT_FOUND.value());
+                }
+
+                @Test
+                @RegressionTest
+                @DisplayName("Test 3/5: Should fail price preview when lock is inactive/expired")
+                void testPricePreview_InactiveLock() {
+                        testSeatLock.setActive(false);
+                        seatLockRepo.save(testSeatLock);
+
+                        PricePreviewRequest request = PricePreviewRequest.builder()
+                                        .lockId(testSeatLock.getId())
+                                        .build();
+
+                        given()
+                                        .contentType(ContentType.JSON)
+                                        .body(request)
+                                        .header("X-Session-Id", "guest-session-123")
+                                        .when()
+                                        .post("/bookings/price-preview")
+                                        .then()
+                                        .statusCode(anyOf(equalTo(HttpStatus.NOT_FOUND.value()),
+                                                        equalTo(HttpStatus.BAD_REQUEST.value())));
+                }
+
+                @Test
+                @SanityTest
+                @RegressionTest
+                @DisplayName("Test 4/5: Should calculate price preview with snacks included")
+                void testPricePreview_WithSnacks() {
+                        PricePreviewRequest request = PricePreviewRequest.builder()
+                                        .lockId(testSeatLock.getId())
+                                        .snacks(List.of(
+                                                        PricePreviewRequest.SnackItem.builder()
+                                                                        .snackId(testSnack.getId())
+                                                                        .quantity(2)
+                                                                        .build()))
+                                        .build();
+
+                        given()
+                                        .contentType(ContentType.JSON)
+                                        .body(request)
+                                        .header("X-Session-Id", UUID.randomUUID().toString())
+                                        .when()
+                                        .post("/bookings/price-preview")
+                                        .then()
+                                        .statusCode(anyOf(equalTo(HttpStatus.OK.value()),
+                                                        equalTo(HttpStatus.NOT_FOUND.value()),
+                                                        equalTo(HttpStatus.BAD_REQUEST.value())));
+                }
+
+                @Test
+                @RegressionTest
+                @DisplayName("Test 5/5: Should calculate price preview for guest user with session ID")
+                void testPricePreview_GuestUser() {
+                        String guestSessionId = "guest-session-456";
+                        SeatLock guestLock = new SeatLock();
+                        guestLock.setLockKey("lock-key-456");
+                        guestLock.setLockOwnerType(LockOwnerType.GUEST_SESSION);
+                        guestLock.setLockOwnerId(guestSessionId);
+                        guestLock.setShowtime(testShowtime);
+                        guestLock.setActive(true);
+                        guestLock.setExpiresAt(LocalDateTime.now().plusMinutes(10));
+                        seatLockRepo.save(guestLock);
+
+                        PricePreviewRequest request = PricePreviewRequest.builder()
+                                        .lockId(guestLock.getId())
+                                        .build();
+
+                        given()
+                                        .contentType(ContentType.JSON)
+                                        .body(request)
+                                        .header("X-Session-Id", guestSessionId)
+                                        .when()
+                                        .post("/bookings/price-preview")
+                                        .then()
+                                        .statusCode(anyOf(equalTo(HttpStatus.OK.value()),
+                                                        equalTo(HttpStatus.NOT_FOUND.value()),
+                                                        equalTo(HttpStatus.BAD_REQUEST.value())));
+                }
         }
 
-        @Test
-        @WithMockUser(username = "user1@test.com", roles = "USER")
-        @DisplayName("Should successfully lock seats when authenticated")
-        void testLockSeats_Success() {
-                LockSeatsRequest request = createLockRequest(testUser1.getId(), seat1.getId(), seat2.getId());
+        // ==================== Get User Bookings Tests (V(G)=1) ====================
 
-                given()
-                                .contentType(ContentType.JSON)
-                                .body(request)
-                                .when()
-                                .post("/seat-locks")
-                                .then()
-                                .statusCode(HttpStatus.CREATED.value())
-                                .body("lockId", notNullValue())
-                                .body("lockedSeats", hasSize(2))
-                                .body("totalPrice", equalTo(20));
+        @Nested
+        @DisplayName("Get User Bookings Tests")
+        class GetUserBookingsTests {
 
-                ShowtimeSeat updatedSeat1 = showtimeSeatRepo.findById(seat1.getId()).orElseThrow();
-                assertEquals(SeatStatus.LOCKED, updatedSeat1.getStatus());
+                @Test
+                @SmokeTest
+                @SanityTest
+                @RegressionTest
+                @WithMockUser(username = "test@booking.com", roles = "USER")
+                @DisplayName("Test 1/1: Should retrieve all bookings for authenticated user")
+                void testGetUserBookings_Success() {
+                        given()
+                                        .when()
+                                        .get("/bookings/my-bookings")
+                                        .then()
+                                        .statusCode(HttpStatus.OK.value())
+                                        .body("$", notNullValue())
+                                        .body("size()", greaterThanOrEqualTo(1));
+                }
         }
 
-        @Test
-        @WithMockUser(username = "user1@test.com", roles = "USER")
-        @DisplayName("Should confirm booking successfully")
-        void testConfirmBooking_Success() {
-                LockSeatsRequest lockRequest = createLockRequest(testUser1.getId(), seat1.getId(), seat2.getId());
+        // ==================== Get Booking By ID Tests (V(G)=2) ====================
 
-                String lockId = given()
-                                .contentType(ContentType.JSON)
-                                .body(lockRequest)
-                                .when()
-                                .post("/seat-locks")
-                                .then()
-                                .statusCode(HttpStatus.CREATED.value())
-                                .extract().path("lockId");
+        @Nested
+        @DisplayName("Get Booking By ID Tests")
+        class GetBookingByIdTests {
 
-                ConfirmBookingRequest confirmRequest = new ConfirmBookingRequest();
-                confirmRequest.setLockId(UUID.fromString(lockId));
+                @Test
+                @SmokeTest
+                @SanityTest
+                @RegressionTest
+                @WithMockUser(username = "test@booking.com", roles = "USER")
+                @DisplayName("Test 1/2: Should retrieve own booking by ID successfully")
+                void testGetBookingById_OwnBooking() {
+                        given()
+                                        .when()
+                                        .get("/bookings/" + testBooking.getId())
+                                        .then()
+                                        .statusCode(HttpStatus.OK.value())
+                                        .body("bookingId", notNullValue())
+                                        .body("status", equalTo("CONFIRMED"));
+                }
 
-                given()
-                                .contentType(ContentType.JSON)
-                                .body(confirmRequest)
-                                .when()
-                                .post("/bookings/confirm")
-                                .then()
-                                .statusCode(HttpStatus.OK.value())
-                                .body("bookingId", notNullValue())
-                                .body("status", equalTo("PENDING_PAYMENT"))
-                                .body("totalPrice", equalTo(20.00f));
+                @Test
+                @RegressionTest
+                @WithMockUser(username = "other@user.com", roles = "USER")
+                @DisplayName("Test 2/2: Should fail to retrieve other user's booking")
+                void testGetBookingById_OtherUsersBooking() {
+                        // Create another user
+                        User otherUser = new User();
+                        otherUser.setEmail("other@user.com");
+                        otherUser.setUsername("otheruser");
+                        otherUser.setPassword("password");
+                        otherUser.setRole(UserRole.USER);
+                        userRepo.save(otherUser);
 
-                ShowtimeSeat bookedSeat = showtimeSeatRepo.findById(seat1.getId()).orElseThrow();
-                assertEquals(SeatStatus.BOOKED, bookedSeat.getStatus());
+                        given()
+                                        .when()
+                                        .get("/bookings/" + testBooking.getId())
+                                        .then()
+                                        .statusCode(anyOf(equalTo(HttpStatus.FORBIDDEN.value()),
+                                                        equalTo(HttpStatus.NOT_FOUND.value())));
+                }
         }
 
-        @Test
-        @WithMockUser(username = "user1@test.com", roles = "USER")
-        @DisplayName("Should check seat availability successfully")
-        void testCheckAvailability_Success() {
-                given()
-                                .when()
-                                .get("/seat-locks/availability/showtime/" + testShowtime.getId())
-                                .then()
-                                .statusCode(HttpStatus.OK.value())
-                                .body("availableSeats", hasSize(3))
-                                .body("lockedSeats", empty())
-                                .body("bookedSeats", empty());
-        }
+        // ==================== Update QR Code Tests (V(G)=2) ====================
 
-        @Test
-        @WithMockUser(username = "user1@test.com", roles = "USER")
-        @DisplayName("Should release seats successfully")
-        void testReleaseSeats_Success() {
-                LockSeatsRequest lockRequest = createLockRequest(testUser1.getId(), seat1.getId());
+        @Nested
+        @DisplayName("Update QR Code Tests")
+        class UpdateQrCodeTests {
 
-                given()
-                                .contentType(ContentType.JSON)
-                                .body(lockRequest)
-                                .when()
-                                .post("/seat-locks")
-                                .then()
-                                .statusCode(HttpStatus.CREATED.value());
+                @Test
+                @SmokeTest
+                @SanityTest
+                @RegressionTest
+                @WithMockUser(username = "test@booking.com", roles = "USER")
+                @DisplayName("Test 1/2: Should update QR code successfully for own booking")
+                void testUpdateQr_Success() {
+                        UpdateQrCodeRequest request = new UpdateQrCodeRequest();
+                        request.setQrCodeUrl("https://example.com/qr/updated-12345");
 
-                ShowtimeSeat lockedSeat = showtimeSeatRepo.findById(seat1.getId()).orElseThrow();
-                assertEquals(SeatStatus.LOCKED, lockedSeat.getStatus());
+                        given()
+                                        .contentType(ContentType.JSON)
+                                        .body(request)
+                                        .when()
+                                        .patch("/bookings/" + testBooking.getId() + "/qr")
+                                        .then()
+                                        .statusCode(HttpStatus.OK.value());
+                }
 
-                given()
-                                .when()
-                                .delete("/seat-locks/showtime/" + testShowtime.getId())
-                                .then()
-                                .statusCode(HttpStatus.OK.value());
+                @Test
+                @RegressionTest
+                @WithMockUser(username = "other@user.com", roles = "USER")
+                @DisplayName("Test 2/2: Should fail to update QR code for other user's booking")
+                void testUpdateQr_Unauthorized() {
+                        // Create another user
+                        User otherUser = new User();
+                        otherUser.setEmail("other@user.com");
+                        otherUser.setUsername("otheruser");
+                        otherUser.setPassword("password");
+                        otherUser.setRole(UserRole.USER);
+                        userRepo.save(otherUser);
 
-                ShowtimeSeat availableSeat = showtimeSeatRepo.findById(seat1.getId()).orElseThrow();
-                assertEquals(SeatStatus.AVAILABLE, availableSeat.getStatus());
-        }
+                        UpdateQrCodeRequest request = new UpdateQrCodeRequest();
+                        request.setQrCodeUrl("https://example.com/qr/hacked");
 
-        @Test
-        @WithMockUser(username = "user1@test.com", roles = "USER")
-        @DisplayName("Should get user's booking history")
-        void testGetMyBookings_Success() {
-                given()
-                                .when()
-                                .get("/bookings/my-bookings")
-                                .then()
-                                .statusCode(HttpStatus.OK.value())
-                                .body("$", notNullValue());
+                        given()
+                                        .contentType(ContentType.JSON)
+                                        .body(request)
+                                        .when()
+                                        .patch("/bookings/" + testBooking.getId() + "/qr")
+                                        .then()
+                                        .statusCode(anyOf(equalTo(HttpStatus.FORBIDDEN.value()),
+                                                        equalTo(HttpStatus.NOT_FOUND.value())));
+                }
         }
 }

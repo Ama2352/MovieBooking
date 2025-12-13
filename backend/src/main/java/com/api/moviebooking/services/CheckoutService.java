@@ -72,6 +72,12 @@ public class CheckoutService {
      * 5. Create Booking with PENDING_PAYMENT status
      * 6. Mark seats as BOOKED
      * 7. Link seat lock to user (if was guest)
+     * 
+     * Predicate nodes (d): 9 -> V(G) = d + 1 = 10
+     * Nodes: seatLock.isEmpty, lockOwnership, !isActive, lockExpired,
+     * session.isAuthenticated,
+     * guestInfo == null, snacks.size != requested, snackCombos != null (x2)
+     * Minimum test cases: 10
      */
     @Transactional
     public BookingResponse confirmBooking(ConfirmBookingRequest request, SessionContext session) {
@@ -214,6 +220,12 @@ public class CheckoutService {
         return bookingMapper.toBookingResponse(booking);
     }
 
+    /**
+     * Create guest user
+     * Predicate nodes (d): 3 -> V(G) = d + 1 = 4
+     * Nodes: existing != null, existing.role != GUEST, else (reuse existing)
+     * Minimum test cases: 4
+     */
     private User createGuestUser(ConfirmBookingRequest.GuestInfo guestInfo) {
 
         // Check if email already exists
@@ -236,6 +248,12 @@ public class CheckoutService {
         return userRepo.save(guestUser);
     }
 
+    /**
+     * Combined checkout: confirm booking and initiate payment atomically
+     * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
+     * Nodes: try-catch (payment initiation failure)
+     * Minimum test cases: 2
+     */
     @Transactional
     public CheckoutPaymentResponse confirmBookingAndInitiatePayment(
             CheckoutPaymentRequest request,
@@ -288,6 +306,12 @@ public class CheckoutService {
                 .build();
     }
 
+    /**
+     * Cleanup expired pending payments (called by scheduler)
+     * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
+     * Nodes: expiredBookings.isEmpty
+     * Minimum test cases: 2
+     */
     @Transactional
     public void cleanupExpiredPendingPayments() {
         List<Booking> expiredBookings = bookingRepo

@@ -69,6 +69,12 @@ public class MomoService {
 
     /**
      * Step 1: Create Momo payment request
+     * Predicate nodes (d): 7 -> V(G) = d + 1 = 8
+     * Nodes: bookingStatus != PENDING_PAYMENT, amountMismatch,
+     * existingPayment.isEmpty,
+     * response == null, resultCode != 0, response.has("message"),
+     * response.has("deeplink"), response.has("qrCodeUrl"), try-catch
+     * Minimum test cases: 8
      */
     @Transactional
     public InitiatePaymentResponse createOrder(InitiatePaymentRequest request) {
@@ -190,6 +196,12 @@ public class MomoService {
 
     /**
      * Step 2: Process IPN (server-to-server callback from Momo)
+     * Predicate nodes (d): 9 -> V(G) = d + 1 = 10
+     * Nodes: receivedSignature == null, !calculatedSignature.equals, orderId ==
+     * null || amountStr == null,
+     * optPay.isEmpty, !expected.equals(amountStr), status == SUCCESS (idempotency),
+     * success check ("0".equals), success branch, failure branch
+     * Minimum test cases: 10
      */
     @Transactional
     public IpnResponse processIpn(Map<String, String> allParams) {
@@ -260,6 +272,9 @@ public class MomoService {
 
     /**
      * Verify payment status (called from frontend after redirect)
+     * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
+     * Nodes: payment.isEmpty
+     * Minimum test cases: 2
      */
     public PaymentResponse verifyPayment(String transactionId) {
         Payment payment = paymentRepo.findByTransactionId(transactionId)
@@ -272,6 +287,11 @@ public class MomoService {
      * Refund payment via Momo
      * 
      * @return Momo refund transaction ID
+     *         Predicate nodes (d): 6 -> V(G) = d + 1 = 7
+     *         Nodes: orderId == null || orderId.isBlank, reason != null,
+     *         response == null, resultCode != 0, response.has("message"),
+     *         response.has("transId"), try-catch
+     *         Minimum test cases: 7
      */
     public String refundPayment(Payment payment, BigDecimal amount, String reason) {
         try {

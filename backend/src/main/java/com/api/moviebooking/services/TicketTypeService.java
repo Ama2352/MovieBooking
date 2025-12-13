@@ -44,6 +44,9 @@ public class TicketTypeService {
     /**
      * Get all active ticket types with their base prices
      * Used for guest endpoint: GET /ticket-types
+     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
+     * Nodes: none
+     * Minimum test cases: 1
      */
     public List<TicketTypePublicResponse> getAllActiveTicketTypes() {
         List<TicketType> ticketTypes = ticketTypeRepo.findAllByActiveTrue();
@@ -62,6 +65,9 @@ public class TicketTypeService {
      * The actual final price will vary based on the specific seat selected (VIP,
      * COUPLE, etc.)
      * and will be calculated during the seat locking phase.
+     * Predicate nodes (d): 2 -> V(G) = d + 1 = 3
+     * Nodes: showtime.isEmpty, showtimeTicketTypes.isEmpty
+     * Minimum test cases: 3
      */
     public List<TicketTypePublicResponse> getTicketTypesForShowtime(UUID showtimeId, UUID userId) {
         Showtime showtime = showtimeRepo.findById(showtimeId)
@@ -107,6 +113,9 @@ public class TicketTypeService {
      * @param showtime The showtime to calculate price for
      * @return Base price including showtime modifiers (time, day, format, room) for
      *         a NORMAL seat
+     *         Predicate nodes (d): 0 -> V(G) = d + 1 = 1
+     *         Nodes: none
+     *         Minimum test cases: 1
      */
     private BigDecimal calculateReferencePriceForShowtime(Showtime showtime) {
         // Create a reference seat with NORMAL type for price calculation
@@ -127,6 +136,9 @@ public class TicketTypeService {
      *                   includes seat/showtime modifiers)
      * @param ticketType The ticket type with modifier configuration
      * @return Final price after applying ticket type modifier
+     *         Predicate nodes (d): 3 -> V(G) = d + 1 = 4
+     *         Nodes: switch(PERCENTAGE), switch(FIXED_AMOUNT), switch(default)
+     *         Minimum test cases: 4
      */
     public BigDecimal applyTicketTypeModifier(BigDecimal basePrice, TicketType ticketType) {
         switch (ticketType.getModifierType()) {
@@ -149,6 +161,9 @@ public class TicketTypeService {
     /**
      * Get all ticket types (including inactive) for admin
      * Used for admin endpoint: GET /ticket-types/admin
+     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
+     * Nodes: none
+     * Minimum test cases: 1
      */
     public List<TicketTypeResponse> getAllTicketTypesForAdmin() {
         List<TicketType> ticketTypes = ticketTypeRepo.findAllOrderedBySortOrder();
@@ -160,6 +175,9 @@ public class TicketTypeService {
     /**
      * Create a new ticket type
      * Used for admin endpoint: POST /admin/ticket-types
+     * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
+     * Nodes: existsByCode
+     * Minimum test cases: 2
      */
     @Transactional
     public TicketTypeResponse createTicketType(CreateTicketTypeRequest request) {
@@ -185,6 +203,11 @@ public class TicketTypeService {
     /**
      * Update an existing ticket type
      * Used for admin endpoint: PUT /admin/ticket-types/{id}
+     * Predicate nodes (d): 6 -> V(G) = d + 1 = 7
+     * Nodes: ticketType.isEmpty, label != null, modifierType != null, modifierValue
+     * != null,
+     * active != null, sortOrder != null
+     * Minimum test cases: 7
      */
     @Transactional
     public TicketTypeResponse updateTicketType(UUID id, UpdateTicketTypeRequest request) {
@@ -221,6 +244,10 @@ public class TicketTypeService {
      * Delete a ticket type
      * Soft delete if used in seat locks or bookings, hard delete if not used
      * Used for admin endpoint: DELETE /admin/ticket-types/{id}
+     * Predicate nodes (d): 3 -> V(G) = d + 1 = 4
+     * Nodes: ticketType.isEmpty, isUsedInLocks || isUsedInBookings, else (hard
+     * delete)
+     * Minimum test cases: 4
      */
     @Transactional
     public void deleteTicketType(UUID id) {
@@ -257,6 +284,10 @@ public class TicketTypeService {
      * @throws ResourceNotFoundException if ticket type doesn't exist
      * @throws IllegalArgumentException  if ticket type is not available for the
      *                                   showtime
+     *                                   Predicate nodes (d): 2 -> V(G) = d + 1 = 3
+     *                                   Nodes: ticketType.isEmpty,
+     *                                   !isValidForShowtime
+     *                                   Minimum test cases: 3
      */
     public void validateTicketTypeForShowtime(UUID showtimeId, UUID ticketTypeId) {
         // First check if ticket type exists
@@ -278,6 +309,9 @@ public class TicketTypeService {
     /**
      * Check if ticket type is used in any booking seats
      * Uses BookingSeatRepo to check historical bookings
+     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
+     * Nodes: none
+     * Minimum test cases: 1
      */
     private boolean isTicketTypeUsedInBookings(UUID ticketTypeId) {
         return bookingSeatRepo.isTicketTypeUsed(ticketTypeId);

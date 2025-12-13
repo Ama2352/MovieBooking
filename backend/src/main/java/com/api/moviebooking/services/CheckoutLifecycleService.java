@@ -51,6 +51,14 @@ public class CheckoutLifecycleService {
         this.refundService = refundService;
     }
 
+    /**
+     * Handle successful payment
+     * Predicate nodes (d): 6 -> V(G) = d + 1 = 7
+     * Nodes: paymentAlreadySuccess && bookingConfirmed, bookingExpired,
+     * gatewayAmountMismatch (nested &&),
+     * bookingStatus != CONFIRMED, !loyaltyPointsAwarded, bookingChanged
+     * Minimum test cases: 7
+     */
     @Transactional
     public Payment handleSuccessfulPayment(Payment payment, BigDecimal gatewayAmount, String gatewayTxnId) {
         Booking booking = payment.getBooking();
@@ -104,6 +112,12 @@ public class CheckoutLifecycleService {
         return payment;
     }
 
+    /**
+     * Handle failed payment
+     * Predicate nodes (d): 2 -> V(G) = d + 1 = 3
+     * Nodes: paymentStatus == SUCCESS, bookingStatus == PENDING_PAYMENT
+     * Minimum test cases: 3
+     */
     @Transactional
     public Payment handleFailedPayment(Payment payment, String reason) {
         Booking booking = payment.getBooking();
@@ -128,6 +142,12 @@ public class CheckoutLifecycleService {
         return payment;
     }
 
+    /**
+     * Handle payment timeout
+     * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
+     * Nodes: bookingStatus != PENDING_PAYMENT
+     * Minimum test cases: 2
+     */
     @Transactional
     public void handlePaymentTimeout(Booking booking) {
         if (booking.getStatus() != BookingStatus.PENDING_PAYMENT) {
@@ -146,6 +166,11 @@ public class CheckoutLifecycleService {
     /**
      * Handle late payment (payment arrives after booking expired)
      * Attempts to re-acquire seats if still available, otherwise fails payment
+     * Predicate nodes (d): 6 -> V(G) = d + 1 = 7
+     * Nodes: gatewayAmountMismatch (nested &&), allAvailable,
+     * !loyaltyPointsAwarded,
+     * gatewayTxnId != null, try-catch for refund
+     * Minimum test cases: 7
      */
     @Transactional
     public Payment handleLatePayment(Payment payment, BigDecimal gatewayAmount, String gatewayTxnId) {
@@ -219,6 +244,12 @@ public class CheckoutLifecycleService {
         }
     }
 
+    /**
+     * Release seats for a booking
+     * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
+     * Nodes: seatIds.isEmpty
+     * Minimum test cases: 2
+     */
     private void releaseSeats(Booking booking) {
         List<UUID> seatIds = booking.getBookingSeats().stream()
                 .map(bookingSeat -> bookingSeat.getShowtimeSeat().getId())
@@ -231,11 +262,23 @@ public class CheckoutLifecycleService {
         showtimeSeatRepo.updateMultipleSeatsStatus(seatIds, SeatStatus.AVAILABLE);
     }
 
+    /**
+     * Generate QR payload for booking
+     * Predicate nodes (d): 0 -> V(G) = d + 1 = 1
+     * Nodes: none
+     * Minimum test cases: 1
+     */
     private String generateQrPayload(Booking booking) {
         String rawPayload = booking.getId() + ":" + booking.getUser().getId() + ":" + System.nanoTime();
         return Base64.getUrlEncoder().withoutPadding().encodeToString(rawPayload.getBytes());
     }
 
+    /**
+     * Handle refund success
+     * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
+     * Nodes: booking.isLoyaltyPointsAwarded
+     * Minimum test cases: 2
+     */
     @Transactional
     public void handleRefundSuccess(Payment payment, Refund refund, String gatewayTxnId) {
         Booking booking = payment.getBooking();
@@ -262,6 +305,12 @@ public class CheckoutLifecycleService {
         refund.setRefundedAt(LocalDateTime.now());
     }
 
+    /**
+     * Handle refund failure
+     * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
+     * Nodes: bookingStatus == REFUND_PENDING
+     * Minimum test cases: 2
+     */
     @Transactional
     public void handleRefundFailure(Payment payment, String reason) {
         Booking booking = payment.getBooking();
@@ -276,6 +325,12 @@ public class CheckoutLifecycleService {
         }
     }
 
+    /**
+     * Resolve gateway amount from payment
+     * Predicate nodes (d): 2 -> V(G) = d + 1 = 3
+     * Nodes: gatewayAmount != null, currency != null && equalsIgnoreCase
+     * Minimum test cases: 3
+     */
     private BigDecimal resolveGatewayAmount(Payment payment) {
         if (payment.getGatewayAmount() != null) {
             return payment.getGatewayAmount();
@@ -286,6 +341,12 @@ public class CheckoutLifecycleService {
         return null;
     }
 
+    /**
+     * Resolve gateway currency from payment
+     * Predicate nodes (d): 2 -> V(G) = d + 1 = 3
+     * Nodes: gatewayCurrency != null, currency != null
+     * Minimum test cases: 3
+     */
     private String resolveGatewayCurrency(Payment payment) {
         if (payment.getGatewayCurrency() != null) {
             return payment.getGatewayCurrency();

@@ -64,6 +64,14 @@ public class PayPalService {
     @Value("${payment.paypal.currency:USD}")
     private String paypalCurrency;
 
+    /**
+     * Create PayPal order for payment
+     * Predicate nodes (d): 5 -> V(G) = d + 1 = 6
+     * Nodes: bookingStatus != PENDING_PAYMENT, amountMismatch,
+     * existingPayment.isEmpty,
+     * filter("approve".equals), try-catch (IOException)
+     * Minimum test cases: 6
+     */
     @Transactional
     public InitiatePaymentResponse createOrder(InitiatePaymentRequest request) {
         try {
@@ -139,6 +147,15 @@ public class PayPalService {
         }
     }
 
+    /**
+     * Capture PayPal order after user approval
+     * Predicate nodes (d): 6 -> V(G) = d + 1 = 7
+     * Nodes: payment.isEmpty, status != PENDING, capturedAmount != null && value !=
+     * null,
+     * "COMPLETED".equalsIgnoreCase, capturedAmount != null (inner), try-catch
+     * (IOException)
+     * Minimum test cases: 7
+     */
     @Transactional
     public PaymentResponse captureOrder(String orderId) {
 
@@ -192,6 +209,12 @@ public class PayPalService {
      * Refund a captured PayPal payment
      * 
      * @return PayPal refund transaction ID
+     *         Predicate nodes (d): 5 -> V(G) = d + 1 = 6
+     *         Nodes: captureId == null || captureId.isBlank, gatewayCurrency !=
+     *         null,
+     *         reason != null, !"COMPLETED".equalsIgnoreCase, try-catch
+     *         (IOException)
+     *         Minimum test cases: 6
      */
     public String refundPayment(Payment payment, BigDecimal amount, String reason) {
         try {
