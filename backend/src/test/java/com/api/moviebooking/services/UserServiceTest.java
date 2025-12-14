@@ -28,6 +28,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.api.moviebooking.models.dtos.auth.LoginRequest;
+import com.api.moviebooking.models.dtos.auth.LoginResponse;
+import com.api.moviebooking.helpers.mapstructs.UserMapper;
 import com.api.moviebooking.tags.RegressionTest;
 import com.api.moviebooking.tags.SanityTest;
 import com.api.moviebooking.tags.SmokeTest;
@@ -60,6 +62,9 @@ class UserServiceTest {
 
     @Mock
     private Authentication authentication;
+
+    @Mock
+    private UserMapper userMapper;
 
     @InjectMocks
     private UserService userService;
@@ -209,6 +214,7 @@ class UserServiceTest {
             when(jwtService.generateAccessToken(eq(testEmail), any())).thenReturn(accessToken);
             when(jwtService.generateRefreshToken(testEmail)).thenReturn(refreshToken);
             when(userRepo.findByEmail(testEmail)).thenReturn(Optional.of(mockUser));
+            when(userMapper.toLoginResponse(any(User.class))).thenReturn(mock(LoginResponse.class));
 
             Map<String, Object> result = userService.login(request);
 
