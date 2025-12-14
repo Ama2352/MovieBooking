@@ -32,59 +32,59 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
-    private final JwtService jwtService;
-    private final UserRepo userRepo;
-    private final UserService userService;
-    private final CookieService cookieService;
+        private final JwtService jwtService;
+        private final UserRepo userRepo;
+        private final UserService userService;
+        private final CookieService cookieService;
 
-    @Value("${frontend.redirect.url:http://localhost:5173/oauth2/success}")
-    private String frontendRedirectUrl;
+        @Value("${frontend.redirect.url:http://localhost:5173/oauth2/success}")
+        private String frontendRedirectUrl;
 
-    @Override
-    public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
-            Authentication authentication) throws IOException, ServletException {
+        @Override
+        public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
+                        Authentication authentication) throws IOException, ServletException {
 
-        OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
-        String email = oAuth2User.getAttribute("email");
-        String username = oAuth2User.getAttribute("name");
+                OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
+                String email = oAuth2User.getAttribute("email");
+                String username = oAuth2User.getAttribute("name");
 
-        User user = userRepo.findByEmail(email)
-                .orElseGet(() -> createNewUser(email, username));
+                User user = userRepo.findByEmail(email)
+                                .orElseGet(() -> createNewUser(email, username));
 
-        if (user.getRole() == UserRole.GUEST) {
-            user.setRole(UserRole.USER);
-            userRepo.save(user);
+                if (user.getRole() == UserRole.GUEST) {
+                        user.setRole(UserRole.USER);
+                        userRepo.save(user);
+                }
+
+                CustomUserDetails userDetails = new CustomUserDetails(user, oAuth2User.getAttributes());
+
+                Authentication newAuth = new OAuth2AuthenticationToken(
+                                userDetails,
+                                userDetails.getAuthorities(),
+                                authentication.getName());
+
+                SecurityContextHolder.getContext().setAuthentication(newAuth);
+
+                String accessToken = jwtService.generateAccessToken(user.getEmail(), userDetails.getAuthorities());
+                String refreshToken = jwtService.generateRefreshToken(user.getEmail());
+
+                userService.addUserRefreshToken(refreshToken, user.getEmail());
+
+                response.addHeader(HttpHeaders.SET_COOKIE,
+                                cookieService.createAccessTokenCookie(accessToken).toString());
+
+                response.addHeader(HttpHeaders.SET_COOKIE,
+                                cookieService.createRefreshTokenCookie(refreshToken).toString());
+
+                response.sendRedirect(frontendRedirectUrl);
         }
 
-        CustomUserDetails userDetails = new CustomUserDetails(user, oAuth2User.getAttributes());
-
-        Authentication newAuth = new OAuth2AuthenticationToken(
-                userDetails,
-                userDetails.getAuthorities(),
-                authentication.getName());
-
-        SecurityContextHolder.getContext().setAuthentication(newAuth);
-
-        String accessToken = jwtService.generateAccessToken(user.getEmail(), userDetails.getAuthorities());
-        String refreshToken = jwtService.generateRefreshToken(user.getEmail());
-
-        userService.addUserRefreshToken(refreshToken, user.getEmail());
-
-        response.addHeader(HttpHeaders.SET_COOKIE,
-                cookieService.createAccessTokenCookie(accessToken).toString());
-
-        response.addHeader(HttpHeaders.SET_COOKIE,
-                cookieService.createRefreshTokenCookie(refreshToken).toString());
-
-        response.sendRedirect(frontendRedirectUrl);
-    }
-
-    private User createNewUser(String email, String username) {
-        User newUser = new User();
-        newUser.setEmail(email);
-        newUser.setUsername(username != null ? username : email);
-        newUser.setProvider("google");
-        newUser.setRole(UserRole.USER);
-        return userRepo.save(newUser);
-    }
+        private User createNewUser(String email, String username) {
+                User newUser = new User();
+                newUser.setEmail(email);
+                newUser.setUsername(username != null ? username : email);
+                newUser.setProvider("google");
+                newUser.setRole(UserRole.USER);
+                return userRepo.save(newUser);
+        }
 }

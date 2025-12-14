@@ -25,15 +25,10 @@ import com.api.moviebooking.models.enums.ModifierType;
 import com.api.moviebooking.models.enums.MovieStatus;
 import com.api.moviebooking.models.enums.SeatStatus;
 import com.api.moviebooking.models.enums.SeatType;
-import com.api.moviebooking.repositories.CinemaRepo;
-import com.api.moviebooking.repositories.MovieRepo;
-import com.api.moviebooking.repositories.PriceBaseRepo;
-import com.api.moviebooking.repositories.RoomRepo;
-import com.api.moviebooking.repositories.SeatRepo;
-import com.api.moviebooking.repositories.ShowtimeRepo;
-import com.api.moviebooking.repositories.ShowtimeSeatRepo;
-import com.api.moviebooking.repositories.ShowtimeTicketTypeRepo;
-import com.api.moviebooking.repositories.TicketTypeRepo;
+import com.api.moviebooking.models.entities.User;
+import com.api.moviebooking.models.enums.UserRole;
+import com.api.moviebooking.repositories.*;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -78,6 +73,9 @@ public class K6TestDataSeeder implements CommandLineRunner {
     private final TicketTypeRepo ticketTypeRepo;
     private final ShowtimeTicketTypeRepo showtimeTicketTypeRepo;
     private final PriceBaseRepo priceBaseRepo;
+    private final UserRepo userRepo;
+    private final PasswordEncoder passwordEncoder;
+    private final MembershipTierRepo membershipTierRepo;
 
     // Unique business keys for K6 test data
     private static final String K6_CINEMA_NAME = "K6 Test Cinema";
@@ -112,6 +110,9 @@ public class K6TestDataSeeder implements CommandLineRunner {
         try {
             // Seed base price first (required for ticket price calculations)
             seedPriceBase();
+
+            // Seed Admin User
+            seedAdminUser();
 
             createdTicketTypes = seedTicketTypes();
             createdCinema = seedCinema();
@@ -160,6 +161,34 @@ public class K6TestDataSeeder implements CommandLineRunner {
 
         priceBaseRepo.save(priceBase);
         log.info("   ✅ Created base price: {} VND", priceBase.getBasePrice());
+    }
+
+    private void seedAdminUser() {
+        log.info("👤 Seeding Admin User...");
+        String adminEmail = "admin@k6test.com";
+
+        if (userRepo.findByEmail(adminEmail).isPresent()) {
+            log.info("   ℹ️ Admin user already exists, skipping...");
+            return;
+        }
+
+        User admin = new User();
+        admin.setEmail(adminEmail);
+        admin.setUsername("K6 Admin");
+        admin.setPassword(passwordEncoder.encode("admin123"));
+        admin.setRole(UserRole.ADMIN);
+        admin.setPhoneNumber("0909998887");
+        admin.setLoyaltyPoints(9999);
+
+        // Assign PLATINUM tier if available, else null (will be handled by system
+        // defaults usually)
+        membershipTierRepo.findAll().stream()
+                .filter(t -> t.getName().equalsIgnoreCase("PLATINUM"))
+                .findFirst()
+                .ifPresent(admin::setMembershipTier);
+
+        userRepo.save(admin);
+        log.info("   ✅ Created Admin User: {}", adminEmail);
     }
 
     private List<TicketType> seedTicketTypes() {
