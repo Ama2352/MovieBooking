@@ -81,7 +81,7 @@ resource "azurerm_network_security_rule" "https" {
 # HTTP (80) - Allow All
 resource "azurerm_network_security_rule" "http" {
   name                        = "HTTP"
-  priority                    = 110
+  priority                    = 112
   direction                   = "Inbound"
   access                      = "Allow"
   protocol                    = "Tcp"
