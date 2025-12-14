@@ -78,6 +78,22 @@ resource "azurerm_network_security_rule" "https" {
   network_security_group_name = azurerm_network_security_group.main.name
 }
 
+# HTTP (80) - Allow All
+resource "azurerm_network_security_rule" "http" {
+  name                        = "HTTP"
+  priority                    = 110
+  direction                   = "Inbound"
+  access                      = "Allow"
+  protocol                    = "Tcp"
+  source_port_range           = "*"
+  destination_port_range      = "80"
+  source_address_prefix       = "*"
+  destination_address_prefix  = "*"
+  resource_group_name         = var.resource_group_name
+  network_security_group_name = azurerm_network_security_group.main.name
+}
+
+
 # Grafana (3000)
 resource "azurerm_network_security_rule" "grafana" {
   name                        = "Grafana"
