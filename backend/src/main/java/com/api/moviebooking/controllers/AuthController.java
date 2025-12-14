@@ -13,8 +13,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.api.moviebooking.models.dtos.auth.LoginRequest;
+import com.api.moviebooking.models.dtos.auth.LoginResponse;
 import com.api.moviebooking.models.dtos.auth.RegisterRequest;
-import com.api.moviebooking.models.dtos.user.CreateGuestRequest;
 import com.api.moviebooking.services.CookieService;
 import com.api.moviebooking.services.UserService;
 
@@ -30,55 +30,57 @@ import lombok.RequiredArgsConstructor;
 @Tag(name = "Authentication")
 public class AuthController {
 
-    private final UserService userService;
-    private final CookieService cookieService;
+        private final UserService userService;
+        private final CookieService cookieService;
 
-    @PostMapping("/register")
-    public ResponseEntity<Void> register(@Valid @RequestBody RegisterRequest request) {
-        userService.register(request);
-        return ResponseEntity.status(HttpStatus.CREATED).build();
-    }
+        @PostMapping("/register")
+        public ResponseEntity<Void> register(@Valid @RequestBody RegisterRequest request) {
+                userService.register(request);
+                return ResponseEntity.status(HttpStatus.CREATED).build();
+        }
 
-    @PostMapping("/login")
-    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
-        Map<String, String> tokens = userService.login(request);
-        return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE,
-                        cookieService.createAccessTokenCookie(tokens.get("accessToken")).toString())
-                .header(HttpHeaders.SET_COOKIE,
-                        cookieService.createRefreshTokenCookie(tokens.get("refreshToken")).toString())
-                .build();
-    }
+        @PostMapping("/login")
+        public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
+                Map<String, Object> loginResponse = userService.login(request);
+                return ResponseEntity.ok()
+                                .header(HttpHeaders.SET_COOKIE,
+                                                cookieService.createAccessTokenCookie(
+                                                                (String) loginResponse.get("accessToken")).toString())
+                                .header(HttpHeaders.SET_COOKIE,
+                                                cookieService.createRefreshTokenCookie(
+                                                                (String) loginResponse.get("refreshToken")).toString())
+                                .body((LoginResponse) loginResponse.get("loginResponse"));
+        }
 
-    @SecurityRequirement(name = "bearerToken")
-    @PostMapping("/logout")
-    public ResponseEntity<Void> logout(HttpServletRequest request) {
-        String refreshToken = cookieService.extractRefreshTokenFromCookie(request);
-        userService.logout(refreshToken);
-        return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, cookieService.clearAccessTokenCookie().toString())
-                .header(HttpHeaders.SET_COOKIE, cookieService.clearRefreshTokenCookie().toString())
-                .build();
-    }
+        @SecurityRequirement(name = "bearerToken")
+        @PostMapping("/logout")
+        public ResponseEntity<Void> logout(HttpServletRequest request) {
+                String refreshToken = cookieService.extractRefreshTokenFromCookie(request);
+                userService.logout(refreshToken);
+                return ResponseEntity.ok()
+                                .header(HttpHeaders.SET_COOKIE, cookieService.clearAccessTokenCookie().toString())
+                                .header(HttpHeaders.SET_COOKIE, cookieService.clearRefreshTokenCookie().toString())
+                                .build();
+        }
 
-    @SecurityRequirement(name = "bearerToken")
-    @PostMapping("/logout-all")
-    public ResponseEntity<?> logoutAllSessions(@RequestParam(required = true) String email) {
-        userService.logoutAllSessions(email);
-        return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, cookieService.clearAccessTokenCookie().toString())
-                .header(HttpHeaders.SET_COOKIE, cookieService.clearRefreshTokenCookie().toString())
-                .build();
-    }
+        @SecurityRequirement(name = "bearerToken")
+        @PostMapping("/logout-all")
+        public ResponseEntity<?> logoutAllSessions(@RequestParam(required = true) String email) {
+                userService.logoutAllSessions(email);
+                return ResponseEntity.ok()
+                                .header(HttpHeaders.SET_COOKIE, cookieService.clearAccessTokenCookie().toString())
+                                .header(HttpHeaders.SET_COOKIE, cookieService.clearRefreshTokenCookie().toString())
+                                .build();
+        }
 
-    @SecurityRequirement(name = "bearerToken")
-    @GetMapping("/refresh")
-    public ResponseEntity<?> refresh(HttpServletRequest request) {
-        String refreshToken = cookieService.extractRefreshTokenFromCookie(request);
-        String newAccessToken = userService.refreshAccessToken(refreshToken);
-        return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE,
-                        cookieService.createAccessTokenCookie(newAccessToken).toString())
-                .build();
-    }
+        @SecurityRequirement(name = "bearerToken")
+        @GetMapping("/refresh")
+        public ResponseEntity<?> refresh(HttpServletRequest request) {
+                String refreshToken = cookieService.extractRefreshTokenFromCookie(request);
+                String newAccessToken = userService.refreshAccessToken(refreshToken);
+                return ResponseEntity.ok()
+                                .header(HttpHeaders.SET_COOKIE,
+                                                cookieService.createAccessTokenCookie(newAccessToken).toString())
+                                .build();
+        }
 }

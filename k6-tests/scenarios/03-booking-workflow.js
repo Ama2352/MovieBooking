@@ -40,33 +40,39 @@ const bookingSuccessRate = new Rate('booking_success_rate');
 // =============================================================================
 export const options = {
     scenarios: {
-        booking_workflow: {
-            executor: 'ramping-vus',
-            startVUs: 0,
-            stages: [
-                { duration: '20s', target: 10 },   // Start slow
-                { duration: '30s', target: 20 },   // Normal load
-                { duration: '40s', target: 25 },   // Peak at 25 VUs (reduced contention)
-                { duration: '30s', target: 15 },   // Wind down
-                { duration: '20s', target: 0 },    // Cool down
-            ],
-        },
+    booking_wave_1: {
+        executor: 'per-vu-iterations',
+        vus: 100,
+        iterations: 1,
+        startTime: '0s',
     },
+    booking_wave_2: {
+        executor: 'per-vu-iterations',
+        vus: 100,
+        iterations: 1,
+        startTime: '5s',
+    },
+    booking_wave_3: {
+        executor: 'per-vu-iterations',
+        vus: 100,
+        iterations: 1,
+        startTime: '10s',
+    },
+    },
+
     thresholds: {
-        // Step latencies
         'step_lock_duration': ['p(95)<2000'],
         'step_preview_duration': ['p(95)<1000'],
         'step_confirm_duration': ['p(95)<3000'],
         'total_booking_duration': ['p(95)<8000'],
-        
-        // Business metrics
-        'booking_completed': ['count>10'],           // At least 10 completed bookings
-        'booking_success_rate': ['rate>0.05'],       // 5% for high-contention scenario (50 VUs, 1 showtime)
-        
-        // Error rate (conflicts are expected, not errors)
-        'http_req_failed': ['rate<0.3'],
+
+        'booking_completed': ['count>10'],
+        'booking_success_rate': ['rate>0.1'],
+
+        'http_req_failed': ['rate<0.4'], // conflicts expected
     },
 };
+
 
 // =============================================================================
 // SETUP
@@ -110,6 +116,10 @@ export function setup() {
 // MAIN TEST - Complete Booking Flow
 // =============================================================================
 export default function(data) {
+
+     // 1 VU = 1 booking
+    if (__ITER > 0) return;
+
     // Validate test data
     if (!data.ticketTypes?.length || !data.showtimeId) {
         console.error('Missing test data - skipping');

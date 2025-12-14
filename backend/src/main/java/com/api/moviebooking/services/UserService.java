@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import com.api.moviebooking.helpers.exceptions.EntityDeletionForbiddenException;
 import com.api.moviebooking.helpers.mapstructs.UserMapper;
 import com.api.moviebooking.models.dtos.auth.LoginRequest;
+import com.api.moviebooking.models.dtos.auth.LoginResponse;
 import com.api.moviebooking.models.dtos.auth.RegisterRequest;
 import com.api.moviebooking.models.dtos.user.UpdatePasswordRequest;
 import com.api.moviebooking.models.dtos.user.UpdateProfileRequest;
@@ -102,7 +103,7 @@ public class UserService {
      * Predicate nodes (d): 1 -> V(G) = d + 1 = 2
      * Nodes: authenticate (implicit exception throw)
      */
-    public Map<String, String> login(LoginRequest request) {
+    public Map<String, Object> login(LoginRequest request) {
         Authentication authentication = authManager
                 .authenticate(new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
 
@@ -114,9 +115,13 @@ public class UserService {
         // Persist refresh token
         addUserRefreshToken(refreshToken, userDetails.getUsername());
 
+        User user = findByEmail(request.getEmail());
+        LoginResponse loginResponse = userMapper.toLoginResponse(user);
+
         return Map.of(
                 "accessToken", accessToken,
-                "refreshToken", refreshToken);
+                "refreshToken", refreshToken,
+                "loginResponse", loginResponse);
     }
 
     public User getCurrentUser() {

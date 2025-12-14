@@ -210,11 +210,11 @@ class UserServiceTest {
             when(jwtService.generateRefreshToken(testEmail)).thenReturn(refreshToken);
             when(userRepo.findByEmail(testEmail)).thenReturn(Optional.of(mockUser));
 
-            Map<String, String> result = userService.login(request);
+            Map<String, Object> result = userService.login(request);
 
             assertNotNull(result);
-            assertEquals(accessToken, result.get("accessToken"));
-            assertEquals(refreshToken, result.get("refreshToken"));
+            assertEquals(accessToken, (String) result.get("accessToken"));
+            assertEquals(refreshToken, (String) result.get("refreshToken"));
             verify(authManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
             verify(jwtService).generateAccessToken(eq(testEmail), any());
             verify(jwtService).generateRefreshToken(testEmail);

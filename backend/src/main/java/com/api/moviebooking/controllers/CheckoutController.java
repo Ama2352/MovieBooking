@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.api.moviebooking.helpers.utils.SessionHelper;
 import com.api.moviebooking.models.dtos.SessionContext;
 import com.api.moviebooking.models.dtos.checkout.CheckoutPaymentRequest;
-import com.api.moviebooking.models.dtos.checkout.CheckoutPaymentResponse;
+import com.api.moviebooking.models.dtos.payment.InitiatePaymentResponse;
 import com.api.moviebooking.services.CheckoutService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -37,14 +37,14 @@ public class CheckoutController {
                         """, parameters = {
                         @Parameter(name = "X-Session-Id", description = "Guest session ID (required for guests, ignored if JWT present)", example = "550e8400-e29b-41d4-a716-446655440000", required = false, schema = @Schema(type = "string", format = "uuid"))
         })
-        public ResponseEntity<CheckoutPaymentResponse> confirmAndInitiate(
+        public ResponseEntity<InitiatePaymentResponse> confirmAndInitiate(
                         @Valid @RequestBody CheckoutPaymentRequest request,
                         HttpServletRequest httpRequest) {
 
                 // Extract session context (userId from JWT or sessionId from header)
                 SessionContext session = sessionHelper.extractSessionContext(httpRequest);
 
-                CheckoutPaymentResponse response = checkoutService.confirmBookingAndInitiatePayment(request, session);
+                InitiatePaymentResponse response = checkoutService.confirmBookingAndInitiatePayment(request, session);
                 return ResponseEntity.status(HttpStatus.CREATED).body(response);
         }
 }

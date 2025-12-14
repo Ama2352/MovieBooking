@@ -36,12 +36,13 @@ export const options = {
             executor: 'ramping-vus',
             startVUs: 0,
             stages: [
-                { duration: '20s', target: 30 },   // Warm up to 30 VUs
-                { duration: '30s', target: 50 },   // Push to 50 VUs
-                { duration: '30s', target: 100 },  // Peak at 100 VUs
-                { duration: '20s', target: 100 },  // Sustain peak
-                { duration: '20s', target: 0 },    // Ramp down
-            ],
+                { duration: '20s', target: 30 },   // (1) Warm up to 30 VUs
+                { duration: '30s', target: 100 },  // (2) Push to 100 VUs
+                { duration: '40s', target: 200 },  // (3) Push to 200 VUs
+                { duration: '40s', target: 300 },  // (4) Peak at 300 VUs
+                { duration: '30s', target: 300 },  // (5) Sustain peak
+                { duration: '30s', target: 0 },    // (6) Ramp down
+            ]
         },
     },
     thresholds: {

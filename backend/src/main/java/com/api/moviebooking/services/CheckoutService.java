@@ -21,7 +21,6 @@ import com.api.moviebooking.models.dtos.booking.BookingResponse;
 import com.api.moviebooking.models.dtos.booking.ConfirmBookingRequest;
 import com.api.moviebooking.models.dtos.booking.DiscountResult;
 import com.api.moviebooking.models.dtos.checkout.CheckoutPaymentRequest;
-import com.api.moviebooking.models.dtos.checkout.CheckoutPaymentResponse;
 import com.api.moviebooking.models.dtos.payment.InitiatePaymentRequest;
 import com.api.moviebooking.models.dtos.payment.InitiatePaymentResponse;
 import com.api.moviebooking.models.entities.Booking;
@@ -255,7 +254,7 @@ public class CheckoutService {
      * Minimum test cases: 2
      */
     @Transactional
-    public CheckoutPaymentResponse confirmBookingAndInitiatePayment(
+    public InitiatePaymentResponse confirmBookingAndInitiatePayment(
             CheckoutPaymentRequest request,
             SessionContext session) {
 
@@ -297,13 +296,7 @@ public class CheckoutService {
                 paymentResponse.paymentId(), bookingResponse.getBookingId());
 
         // Step 3: Build combined response
-        return CheckoutPaymentResponse.builder()
-                .bookingId(bookingResponse.getBookingId())
-                .paymentId(paymentResponse.paymentId())
-                .paymentMethod(request.getPaymentMethod())
-                .redirectUrl(paymentResponse.paymentUrl())
-                .message("Booking confirmed and payment initiated successfully")
-                .build();
+        return paymentResponse;
     }
 
     /**
