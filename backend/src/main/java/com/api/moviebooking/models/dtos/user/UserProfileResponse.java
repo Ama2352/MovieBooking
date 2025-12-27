@@ -23,6 +23,7 @@ public class UserProfileResponse {
     private String avatarUrl;
     private String avatarCloudinaryId;
     private Integer loyaltyPoints;
+    private String role;
     private MembershipTierDataResponse membershipTier;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

@@ -19,7 +19,8 @@ public final class PublicEndpointConfig {
         public static final String[] MAKE_PAYMENT = {
                         "/payments/order",
                         "/payments/order/capture",
-                        "/payments/vnpay/ipn"
+                        "/payments/vnpay/ipn",
+                        "/payments/momo/ipn"
         };
 
         public static final String[] CHECKOUT = { "/checkout" };

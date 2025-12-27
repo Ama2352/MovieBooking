@@ -12,6 +12,7 @@ import com.api.moviebooking.models.entities.User;
 public interface UserMapper {
 
     @Mapping(target = "userId", source = "id")
+    @Mapping(target = "role", source = "role")
     UserProfileResponse toUserProfileResponse(User user);
 
     @Mapping(target = "userId", source = "id")

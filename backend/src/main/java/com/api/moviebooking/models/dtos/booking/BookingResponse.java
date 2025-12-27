@@ -34,6 +34,7 @@ public class BookingResponse {
         private String qrCode;
         private String qrPayload;
         private LocalDateTime paymentExpiresAt;
+        private String posterUrl;
 
         @Data
         @NoArgsConstructor
