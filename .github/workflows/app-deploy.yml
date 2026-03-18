@@ -1,0 +1,131 @@
+name: Application Deploy (Docker)
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Image tag to build and deploy (e.g. v1.0.0, latest)"
+        required: true
+        default: "latest"
+
+permissions:
+  id-token: write # required to request OIDC tokens for Azure login
+  contents: read  # required to checkout the repository
+
+env:
+  ACR_SERVER: ${{ secrets.AZURE_ACR_SERVER }}
+  IMAGE_NAME: moviebooking-backend
+  TAG: ${{ github.event.inputs.version }}
+
+jobs:
+  # =============================================================================
+  # BUILD & PUSH PHASE
+  # =============================================================================
+  build-and-push:
+    name: Build and Push to ACR
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 1. Login to Azure via OIDC
+      - name: Azure Login via OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # 2. Login to Azure Container Registry
+      - name: ACR Login
+        run: |
+          # Use az cli to login to ACR without needing admin enabled (uses Entra ID token)
+          az acr login -n ${{ env.ACR_SERVER }}
+
+      # 3. Build the Docker Image
+      - name: Build Docker Image
+        run: |
+          docker build -t ${{ env.ACR_SERVER }}/${{ env.IMAGE_NAME }}:${{ env.TAG }} .
+
+      # 4. Push to ACR
+      - name: Push Docker Image
+        run: |
+          docker push ${{ env.ACR_SERVER }}/${{ env.IMAGE_NAME }}:${{ env.TAG }}
+
+  # =============================================================================
+  # DEPLOY PHASE
+  # =============================================================================
+  deploy:
+    name: Deploy to VM
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Copy docker-compose to VM
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.AZURE_VM_HOST }}
+          username: ${{ secrets.AZURE_VM_USERNAME }}
+          key: ${{ secrets.AZURE_VM_SSH_KEY }}
+          source: "docker-compose.yml"
+          target: "/opt/moviebooking"
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.AZURE_VM_HOST }}
+          username: ${{ secrets.AZURE_VM_USERNAME }}
+          key: ${{ secrets.AZURE_VM_SSH_KEY }}
+          command_timeout: 10m
+          script: |
+            echo "=========================================="
+            echo "Starting MovieBooking Deployment..."
+            echo "=========================================="
+            
+            sudo systemctl start docker || true
+            sudo cloud-init status --wait || true
+            
+            sudo mkdir -p /opt/moviebooking/backend
+            sudo chown -R $USER:$USER /opt/moviebooking
+            cd /opt/moviebooking
+
+            echo "Creating secure environment file..."
+            cat > backend/.env << 'EOF'
+            SPRING_PROFILES_ACTIVE=prod
+            POSTGRES_DB=moviebooking
+            POSTGRES_USER=postgres
+            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+            SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/moviebooking
+            SPRING_JPA_HIBERNATE_DDL_AUTO=create
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+            GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
+            SPRING_DATA_REDIS_HOST=redis
+            SPRING_DATA_REDIS_PORT=6379
+            SPRING_DATA_REDIS_TIMEOUT=60000
+            SEAT_LOCK_DURATION_MINUTES=10
+            SEAT_LOCK_MAX_SEATS_PER_BOOKING=10
+            PAYPAL_CLIENT_ID=${{ secrets.PAYPAL_CLIENT_ID }}
+            PAYPAL_CLIENT_SECRET=${{ secrets.PAYPAL_CLIENT_SECRET }}
+            PAYPAL_MODE=sandbox
+            MOMO_PARTNER_CODE=${{ secrets.MOMO_PARTNER_CODE }}
+            MOMO_ACCESS_KEY=${{ secrets.MOMO_ACCESS_KEY }}
+            MOMO_SECRET_KEY=${{ secrets.MOMO_SECRET_KEY }}
+            K6_SEED_ENABLED=true
+            DATA_SOURCE_NAME=postgresql://postgres:${{ secrets.POSTGRES_PASSWORD }}@db:5432/moviebooking?sslmode=disable
+            EOF
+            sed -i 's/^[[:space:]]*//' backend/.env
+
+            echo "Exporting runtime variables for docker-compose..."
+            export ACR_SERVER="${{ env.ACR_SERVER }}"
+            export TAG="${{ env.TAG }}"
+            
+            echo "Pulling latest image and restarting services..."
+            sudo -E docker compose pull moviebooking
+            sudo -E docker compose up -d
+            
+            echo "✅ Deployment complete!"
