@@ -36,3 +36,18 @@ output "acr_login_server" {
   description = "Azure Container Registry Login Server"
   value       = module.acr.acr_login_server
 }
+
+output "key_vault_name" {
+  description = "Azure Key Vault Name"
+  value       = module.keyvault.key_vault_name
+}
+
+output "vm_name" {
+  description = "Virtual Machine Name"
+  value       = module.compute.vm_name
+}
+
+output "vm_identity_client_id" {
+  description = "Virtual Machine Identity Client ID"
+  value       = module.compute.vm_identity_client_id
+}

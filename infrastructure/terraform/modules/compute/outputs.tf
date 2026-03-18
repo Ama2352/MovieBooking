@@ -1,25 +1,16 @@
-# =============================================================================
-# MovieBooking Compute Module - Outputs
-# =============================================================================
-
-output "vm_id" {
-  description = "The ID of the Azure VM"
-  value       = azurerm_linux_virtual_machine.main.id
+output "vm_public_ip" {
+  description = "Public IP address of the VM"
+  value       = azurerm_linux_virtual_machine.main.public_ip_address
 }
 
 output "vm_name" {
-  description = "The name of the Azure VM"
+  description = "Name of the VM"
   value       = azurerm_linux_virtual_machine.main.name
 }
 
-output "vm_public_ip" {
-  description = "The public IP address of the VM"
-  value       = azurerm_public_ip.main.ip_address
-}
-
-output "vm_private_ip" {
-  description = "The private IP address of the VM"
-  value       = azurerm_network_interface.main.private_ip_address
+output "admin_username" {
+  description = "VM admin username"
+  value       = var.admin_username
 }
 
 output "ssh_connection_string" {
@@ -27,7 +18,7 @@ output "ssh_connection_string" {
   value       = "ssh ${var.admin_username}@${azurerm_public_ip.main.ip_address}"
 }
 
-output "admin_username" {
-  description = "Admin username for SSH"
-  value       = var.admin_username
+output "vm_identity_client_id" {
+  description = "Client ID of the User Assigned Identity"
+  value       = azurerm_user_assigned_identity.vm.client_id
 }
