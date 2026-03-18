@@ -38,8 +38,8 @@ services:
       start_period: 5s
 
   moviebooking:
-    image: moviebooking-app
-    build: ./backend
+    # Use the image pulled from ACR (tag passed via environment variable)
+    image: ${ACR_SERVER:-moviebooking_default}/moviebooking-backend:${TAG:-latest}
     container_name: moviebooking-app
     ports:
       - "8080:8080"

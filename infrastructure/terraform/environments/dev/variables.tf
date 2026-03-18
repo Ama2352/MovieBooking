@@ -32,12 +32,6 @@ variable "public_subnet" {
   default     = "10.1.1.0/24"
 }
 
-variable "private_subnet" {
-  description = "Private subnet CIDR"
-  type        = string
-  default     = "10.1.2.0/24"
-}
-
 # -----------------------------------------------------------------------------
 # Azure Credentials (set via environment variables)
 # -----------------------------------------------------------------------------
@@ -55,12 +49,6 @@ variable "azure_client_id" {
   sensitive   = true
 }
 
-variable "azure_client_secret" {
-  description = "Azure Client Secret"
-  type        = string
-  default     = ""
-  sensitive   = true
-}
 
 variable "azure_tenant_id" {
   description = "Azure Tenant ID"

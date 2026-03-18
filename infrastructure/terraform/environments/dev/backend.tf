@@ -6,9 +6,8 @@
 
 terraform {
   backend "azurerm" {
-    resource_group_name  = "moviebooking-tfstate-rg"
-    storage_account_name = "moviebookingtfstate"
-    container_name       = "tfstate"
-    key                  = "terraform.tfstate"
+    # Backend configuration is provided natively via 'terraform init' CLI arguments in CI/CD.
+    # Ex: terraform init -backend-config="resource_group_name=..."
+    # Always keep this block empty to avoid coupling infra code to a specific state environment.
   }
 }

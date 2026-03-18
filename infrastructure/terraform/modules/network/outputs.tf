@@ -17,11 +17,6 @@ output "public_subnet_id" {
   value       = azurerm_subnet.public.id
 }
 
-output "private_subnet_id" {
-  description = "Private subnet ID"
-  value       = azurerm_subnet.private.id
-}
-
 output "resource_group_name" {
   description = "The name of the Azure Resource Group"
   value       = azurerm_resource_group.main.name
