@@ -13,10 +13,8 @@ locals {
 # -----------------------------------------------------------------------------
 # Azure Resource Group
 # -----------------------------------------------------------------------------
-resource "azurerm_resource_group" "main" {
-  name     = "${var.project_name}-rg"
-  location = var.region
-  tags     = local.tags
+data "azurerm_resource_group" "main" {
+  name = "${var.project_name}-tfstate-rg"
 }
 
 # -----------------------------------------------------------------------------
@@ -25,8 +23,8 @@ resource "azurerm_resource_group" "main" {
 resource "azurerm_virtual_network" "main" {
   name                = "${var.project_name}-vnet"
   address_space       = [var.cidr_block]
-  location            = azurerm_resource_group.main.location
-  resource_group_name = azurerm_resource_group.main.name
+  location            = data.azurerm_resource_group.main.location
+  resource_group_name = data.azurerm_resource_group.main.name
   tags                = local.tags
 }
 
@@ -35,7 +33,7 @@ resource "azurerm_virtual_network" "main" {
 # -----------------------------------------------------------------------------
 resource "azurerm_subnet" "public" {
   name                 = "${var.project_name}-public-subnet"
-  resource_group_name  = azurerm_resource_group.main.name
+  resource_group_name  = data.azurerm_resource_group.main.name
   virtual_network_name = azurerm_virtual_network.main.name
   address_prefixes     = [var.public_subnet]
 }
