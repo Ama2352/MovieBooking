@@ -37,7 +37,8 @@ resource "azurerm_linux_virtual_machine" "main" {
   }
 
   identity {
-    type = "SystemAssigned"
+    type         = "SystemAssigned, UserAssigned"
+    identity_ids = [azurerm_user_assigned_identity.vm.id]
   }
 
   custom_data = base64encode(local.cloud_init_script)
