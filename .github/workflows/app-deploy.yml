@@ -128,12 +128,6 @@ jobs:
           DATA_SOURCE_NAME=postgresql://postgres:$(get_secret "POSTGRES-PASSWORD")@db:5432/moviebooking?sslmode=disable
           ENV_EOF
           sed -i 's/^[[:space:]]*//' backend/.env
-          
-          echo "Reconstructing monitoring configuration..."
-          sudo mkdir -p k6-tests/prometheus
-          cat << 'PROM_EOF' > k6-tests/prometheus/prometheus.yml
-          $(cat k6-tests/prometheus/prometheus.yml)
-          PROM_EOF
           SCRIPT_ENV
 
           # Reconstruct docker-compose.yml directly on the VM
@@ -149,8 +143,8 @@ jobs:
           az acr login -n "${ACR_SERVER}"
 
           echo "Pulling latest image and restarting services..."
-          sudo -E docker compose pull moviebooking
-          sudo -E docker compose up -d
+          sudo -E docker compose pull
+          sudo -E docker compose up -d --remove-orphans
 
           echo "✅ Deployment complete!"
           SCRIPT_EXEC

@@ -60,69 +60,6 @@ services:
       retries: 3
       start_period: 20s
 
-  # -----------------------------
-  # Monitoring Stack
-  # -----------------------------
-
-  prometheus:
-    image: prom/prometheus
-    container_name: prometheus_moviebooking
-    command:
-      - "--config.file=/etc/prometheus/prometheus.yml"
-      - "--storage.tsdb.path=/prometheus"
-      - "--web.enable-remote-write-receiver"
-    volumes:
-      - ./k6-tests/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-    ports:
-      - "9090:9090"
-    depends_on:
-      - moviebooking
-      - node-exporter
-      - postgres-exporter
-
-  grafana:
-    image: grafana/grafana
-    container_name: grafana_moviebooking
-    ports:
-      - "3000:3000"
-    volumes:
-      - grafana_data:/var/lib/grafana
-    depends_on:
-      - prometheus
-
-  node-exporter:
-    image: prom/node-exporter
-    container_name: node-exporter
-    ports:
-      - "9100:9100"
-
-  postgres-exporter:
-    image: prometheuscommunity/postgres-exporter
-    container_name: postgres-exporter
-    env_file:
-      - ./backend/.env
-    ports:
-      - "9187:9187"
-    depends_on:
-      db:
-        condition: service_healthy
-
-  # -----------------------------
-  # k6 Load Testing
-  # -----------------------------
-  k6:
-    image: grafana/k6:latest
-    container_name: k6
-    volumes:
-      - ./k6-tests:/scripts
-    environment:
-      - K6_OUT=experimental-prometheus-rw
-      - K6_PROMETHEUS_RW_SERVER_URL=http://prometheus:9090/api/v1/write
-    depends_on:
-      - prometheus
-    profiles:
-      - k6
 
 volumes:
   db_data:
-  grafana_data:
