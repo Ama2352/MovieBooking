@@ -1,5 +1,6 @@
 locals {
   inbound_rules = {
+    ssh   = { priority = 100, port = "22", source = "*" }
     http  = { priority = 110, port = "80", source = "*" }
     https = { priority = 120, port = "443", source = "*" }
     api   = { priority = 130, port = "8080", source = "*" } # Consider restricting this rule
