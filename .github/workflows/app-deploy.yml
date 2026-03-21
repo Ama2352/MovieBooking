@@ -16,6 +16,7 @@ env:
   ACR_SERVER: ${{ secrets.AZURE_ACR_SERVER }}
   IMAGE_NAME: moviebooking-backend
   TAG: ${{ github.event.inputs.version }}
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
   # =============================================================================
@@ -138,6 +139,9 @@ jobs:
           export ACR_SERVER="${{ env.ACR_SERVER }}"
           export TAG="${{ env.TAG }}"
 
+          echo "Authenticating with ACR..."
+          az acr login -n "${ACR_SERVER}"
+
           echo "Pulling latest image and restarting services..."
           sudo -E docker compose pull moviebooking
           sudo -E docker compose up -d
@@ -154,4 +158,6 @@ jobs:
               --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
               --name "${{ secrets.AZURE_VM_NAME }}" \
               --command-id RunShellScript \
-              --scripts @deploy.sh
+              --scripts @deploy.sh \
+              --query 'value[0].message' \
+              -o tsv
