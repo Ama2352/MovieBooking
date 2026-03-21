@@ -124,7 +124,7 @@ jobs:
           MOMO_PARTNER_CODE=$(get_secret "MOMO-PARTNER-CODE")
           MOMO_ACCESS_KEY=$(get_secret "MOMO-ACCESS-KEY")
           MOMO_SECRET_KEY=$(get_secret "MOMO-SECRET-KEY")
-          K6_SEED_ENABLED=true
+          K6_SEED_ENABLED=false
           DATA_SOURCE_NAME=postgresql://postgres:$(get_secret "POSTGRES-PASSWORD")@db:5432/moviebooking?sslmode=disable
           ENV_EOF
           sed -i 's/^[[:space:]]*//' backend/.env
