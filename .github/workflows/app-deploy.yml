@@ -133,6 +133,25 @@ jobs:
           sudo mkdir -p ./nginx/conf.d
           sudo mkdir -p ./nginx/certs
           sudo mkdir -p ./logs/nginx
+
+          # Ensure OpenSSL exists for certificate generation
+          if ! command -v openssl &> /dev/null; then
+            echo "Installing missing dependency: openssl"
+            sudo apt-get update
+            sudo apt-get install -y openssl
+          fi
+
+          # Generate self-signed certificate if not present
+          if [ ! -f ./nginx/certs/moviebooking.crt ] || [ ! -f ./nginx/certs/moviebooking.key ]; then
+            echo "Generating self-signed certificate for NGINX..."
+            sudo openssl req -x509 -newkey rsa:4096 \
+              -keyout ./nginx/certs/moviebooking.key \
+              -out ./nginx/certs/moviebooking.crt \
+              -days 365 -nodes \
+              -subj "/C=VN/ST=Ho Chi Minh/L=Ho Chi Minh/O=MovieBooking/CN=moviebooking.local"
+            sudo chmod 644 ./nginx/certs/moviebooking.crt
+            sudo chmod 600 ./nginx/certs/moviebooking.key
+          fi
           
           SCRIPT_ENV
 
