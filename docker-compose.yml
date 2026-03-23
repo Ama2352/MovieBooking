@@ -41,9 +41,6 @@ services:
     # Use the image pulled from ACR (tag passed via environment variable)
     image: ${ACR_SERVER:-moviebooking_default}/moviebooking-backend:${TAG:-latest}
     container_name: moviebooking-app
-    ports:
-      - "8080:8080"
-      - "5005:5005"
     env_file:
       - ./backend/.env
     # Use condition: service_healthy to wait for dependencies to be healthy
@@ -67,6 +64,8 @@ services:
     container_name: moviebooking-nginx
     restart: always
     ports:
+      # Public entrypoints exposed on VM host.
+      # NGINX then proxies into internal backend service moviebooking:8080.
       - "80:80"
       - "443:443"
       - "8888:8888"
