@@ -19,6 +19,7 @@ locals {
       - git
       - htop
       - jq
+      - openssl
 
     runcmd:
       # Install Docker
@@ -39,15 +40,25 @@ locals {
       
       # Create directories for MovieBooking
       - mkdir -p /opt/moviebooking
+      - mkdir -p /opt/moviebooking/nginx/conf.d
+      - mkdir -p /opt/moviebooking/nginx/certs
+      - mkdir -p /opt/moviebooking/logs/nginx
       - mkdir -p /data/postgres
       - mkdir -p /data/redis
       
       # Set permissions
       - chown -R ${var.admin_username}:${var.admin_username} /opt/moviebooking
+      - chmod 755 /opt/moviebooking
       - chown -R ${var.admin_username}:${var.admin_username} /data
+      
+      # Generate self-signed certificate for development
+      - openssl req -x509 -newkey rsa:4096 -keyout /opt/moviebooking/nginx/certs/moviebooking.key -out /opt/moviebooking/nginx/certs/moviebooking.crt -days 365 -nodes -subj "/C=VN/ST=Ho Chi Minh/L=Ho Chi Minh/O=MovieBooking/CN=moviebooking.local"
+      - chmod 644 /opt/moviebooking/nginx/certs/moviebooking.crt
+      - chmod 600 /opt/moviebooking/nginx/certs/moviebooking.key
       
       # Log completion
       - echo "MovieBooking VM ready at $(date)" >> /var/log/cloud-init-output.log
+      - echo "Self-signed certificate generated at $(date)" >> /var/log/cloud-init-output.log
 
     final_message: "MovieBooking VM is ready after $UPTIME seconds"
   EOF

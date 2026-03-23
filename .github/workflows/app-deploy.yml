@@ -128,12 +128,28 @@ jobs:
           DATA_SOURCE_NAME=postgresql://postgres:$(get_secret "POSTGRES-PASSWORD")@db:5432/moviebooking?sslmode=disable
           ENV_EOF
           sed -i 's/^[[:space:]]*//' backend/.env
+
+          # Ensure NGINX directories exist with proper permissions
+          sudo mkdir -p ./nginx/conf.d
+          sudo mkdir -p ./nginx/certs
+          sudo mkdir -p ./logs/nginx
+          
           SCRIPT_ENV
 
           # Reconstruct docker-compose.yml directly on the VM
           echo "cat > docker-compose.yml << 'DOCKER_EOF'" >> deploy.sh
           cat docker-compose.yml >> deploy.sh
           echo "DOCKER_EOF" >> deploy.sh
+
+          # Deploy NGINX configuration
+          echo "cat > nginx/nginx.conf << 'NGINX_MAIN_EOF'" >> deploy.sh
+          cat nginx/nginx.conf >> deploy.sh
+          echo "NGINX_MAIN_EOF" >> deploy.sh
+
+          echo "mkdir -p nginx/conf.d" >> deploy.sh
+          echo "cat > nginx/conf.d/moviebooking.conf << 'NGINX_CONF_EOF'" >> deploy.sh
+          cat nginx/conf.d/moviebooking.conf >> deploy.sh
+          echo "NGINX_CONF_EOF" >> deploy.sh
 
           cat << 'SCRIPT_EXEC' >> deploy.sh
           export ACR_SERVER="${{ env.ACR_SERVER }}"
@@ -142,11 +158,51 @@ jobs:
           echo "Authenticating with ACR..."
           az acr login -n "${ACR_SERVER}"
 
-          echo "Pulling latest image and restarting services..."
+          echo ""
+          echo "=========================================="
+          echo "Pulling latest images and restarting services..."
+          echo "=========================================="
           sudo -E docker compose pull
+
+          # Fix permissions on config files
+          sudo chmod 644 nginx/nginx.conf
+          sudo chmod 644 nginx/conf.d/moviebooking.conf
+          
+          # Start all services
           sudo -E docker compose up -d --remove-orphans
 
+          # Wait for NGINX to be ready
+          echo ""
+          echo "Waiting for services to start..."
+          sleep 5
+          
+          # Verify NGINX is running
+          if sudo docker ps | grep -q moviebooking-nginx; then
+            echo "✅ NGINX container started successfully"
+          else
+            echo "❌ NGINX container failed to start"
+            sudo docker compose logs nginx
+            exit 1
+          fi
+
+          # Verify NGINX is responding
+          echo ""
+          echo "Checking NGINX health..."
+          if sudo docker compose exec -T nginx curl -f http://localhost:8888/health > /dev/null 2>&1; then
+            echo "✅ NGINX is healthy"
+          else
+            echo "⚠️  NGINX health check failed (may be starting)"
+          fi
+
+          echo ""
+          echo "=========================================="
           echo "✅ Deployment complete!"
+          echo "=========================================="
+          echo ""
+          echo "📝 Next Steps:"
+          echo "1. Verify HTTPS: curl -k https://<YOUR_PUBLIC_IP>"
+          echo "2. Check NGINX status: docker exec moviebooking-nginx curl http://localhost:8888/health"
+          echo "3. View NGINX logs: docker logs moviebooking-nginx"
           SCRIPT_EXEC
 
       - name: Execute Deploy Script on VM
