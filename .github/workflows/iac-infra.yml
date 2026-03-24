@@ -1,4 +1,4 @@
-name: Infrastructure Deploy (Terraform)
+name: IaC - Infrastructure Deploy (Terraform)
 
 on:
   workflow_dispatch:

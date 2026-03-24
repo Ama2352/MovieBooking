@@ -1,4 +1,4 @@
-name: Application Deploy (Docker)
+name: CD - Application Deploy
 
 on:
   workflow_dispatch:
@@ -7,6 +7,10 @@ on:
         description: "Image tag to build and deploy (e.g. v1.0.0, latest)"
         required: true
         default: "latest"
+  workflow_run:
+    workflows: ["CI - Quality Gates"]
+    types: [completed]
+    branches: [main]
 
 permissions:
   id-token: write # required to request OIDC tokens for Azure login
@@ -15,56 +19,27 @@ permissions:
 env:
   ACR_SERVER: ${{ secrets.AZURE_ACR_SERVER }}
   IMAGE_NAME: moviebooking-backend
-  TAG: ${{ github.event.inputs.version }}
+  TAG: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.event.inputs.version }}
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
-  # =============================================================================
-  # BUILD & PUSH PHASE
-  # =============================================================================
-  build-and-push:
-    name: Build and Push to ACR
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      # 1. Login to Azure via OIDC
-      - name: Azure Login via OIDC
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-      # 2. Login to Azure Container Registry
-      - name: ACR Login
-        run: |
-          # Use az cli to login to ACR without needing admin enabled (uses Entra ID token)
-          az acr login -n ${{ env.ACR_SERVER }}
-
-      # 3. Build the Docker Image
-      - name: Build Docker Image
-        run: |
-          docker build -t ${{ env.ACR_SERVER }}/${{ env.IMAGE_NAME }}:${{ env.TAG }} -f backend/Dockerfile backend
-
-      # 4. Push to ACR
-      - name: Push Docker Image
-        run: |
-          docker push ${{ env.ACR_SERVER }}/${{ env.IMAGE_NAME }}:${{ env.TAG }}
-
   # =============================================================================
   # DEPLOY PHASE
   # =============================================================================
   deploy:
     name: Deploy to VM
-    needs: build-and-push
     runs-on: ubuntu-latest
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main')
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
 
       - name: Azure Login via OIDC
         uses: azure/login@v2
@@ -126,6 +101,8 @@ jobs:
           MOMO_SECRET_KEY=$(get_secret "MOMO-SECRET-KEY")
           K6_SEED_ENABLED=false
           DATA_SOURCE_NAME=postgresql://postgres:$(get_secret "POSTGRES-PASSWORD")@db:5432/moviebooking?sslmode=disable
+          FRONTEND_REDIRECT_URL=https://movie-booking-frontend-9nbi.vercel.app/oauth2/success
+          FRONTEND_BASE_URL=https://movie-booking-frontend-9nbi.vercel.app
           ENV_EOF
           sed -i 's/^[[:space:]]*//' backend/.env
 
