@@ -50,7 +50,7 @@ jobs:
 
       - name: Generate Deploy Script
         run: |
-          cat << 'SCRIPT_ENV' > deploy.sh
+          cat << SCRIPT_ENV > deploy.sh
           #!/bin/bash
           set -euo pipefail
 
@@ -74,9 +74,9 @@ jobs:
           cd /opt/moviebooking
 
           KV_NAME="${{ secrets.AZURE_KEY_VAULT_NAME }}"
-          echo "Fetching secrets from Key Vault ($KV_NAME)..."
+          echo "Fetching secrets from Key Vault (\$KV_NAME)..."
           get_secret() {
-             az keyvault secret show --name "$1" --vault-name "$KV_NAME" --query "value" -o tsv 2>/dev/null || echo ""
+             az keyvault secret show --name "\$1" --vault-name "\$KV_NAME" --query "value" -o tsv 2>/dev/null || echo ""
           }
 
           echo "Creating secure environment file..."
@@ -84,25 +84,25 @@ jobs:
           SPRING_PROFILES_ACTIVE=prod
           POSTGRES_DB=moviebooking
           POSTGRES_USER=postgres
-          POSTGRES_PASSWORD=$(get_secret "POSTGRES-PASSWORD")
+          POSTGRES_PASSWORD=\$(get_secret "POSTGRES-PASSWORD")
           SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/moviebooking
           SPRING_JPA_HIBERNATE_DDL_AUTO=create
-          JWT_SECRET=$(get_secret "JWT-SECRET")
-          GOOGLE_CLIENT_ID=$(get_secret "GOOGLE-CLIENT-ID")
-          GOOGLE_CLIENT_SECRET=$(get_secret "GOOGLE-CLIENT-SECRET")
+          JWT_SECRET=\$(get_secret "JWT-SECRET")
+          GOOGLE_CLIENT_ID=\$(get_secret "GOOGLE-CLIENT-ID")
+          GOOGLE_CLIENT_SECRET=\$(get_secret "GOOGLE-CLIENT-SECRET")
           SPRING_DATA_REDIS_HOST=redis
           SPRING_DATA_REDIS_PORT=6379
           SPRING_DATA_REDIS_TIMEOUT=60000
           SEAT_LOCK_DURATION_MINUTES=10
           SEAT_LOCK_MAX_SEATS_PER_BOOKING=10
-          PAYPAL_CLIENT_ID=$(get_secret "PAYPAL-CLIENT-ID")
-          PAYPAL_CLIENT_SECRET=$(get_secret "PAYPAL-CLIENT-SECRET")
+          PAYPAL_CLIENT_ID=\$(get_secret "PAYPAL-CLIENT-ID")
+          PAYPAL_CLIENT_SECRET=\$(get_secret "PAYPAL-CLIENT-SECRET")
           PAYPAL_MODE=sandbox
-          MOMO_PARTNER_CODE=$(get_secret "MOMO-PARTNER-CODE")
-          MOMO_ACCESS_KEY=$(get_secret "MOMO-ACCESS-KEY")
-          MOMO_SECRET_KEY=$(get_secret "MOMO-SECRET-KEY")
+          MOMO_PARTNER_CODE=\$(get_secret "MOMO-PARTNER-CODE")
+          MOMO_ACCESS_KEY=\$(get_secret "MOMO-ACCESS-KEY")
+          MOMO_SECRET_KEY=\$(get_secret "MOMO-SECRET-KEY")
           K6_SEED_ENABLED=false
-          DATA_SOURCE_NAME=postgresql://postgres:$(get_secret "POSTGRES-PASSWORD")@db:5432/moviebooking?sslmode=disable
+          DATA_SOURCE_NAME=postgresql://postgres:\$(get_secret "POSTGRES-PASSWORD")@db:5432/moviebooking?sslmode=disable
           FRONTEND_REDIRECT_URL=https://movie-booking-frontend-eta.vercel.app/oauth2/success
           FRONTEND_BASE_URL=https://movie-booking-frontend-eta.vercel.app
           ENV_EOF
