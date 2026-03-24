@@ -292,7 +292,7 @@ jobs:
       - name: ACR Login
         run: |
           ACR_NAME="${{ env.ACR_SERVER }}"
-          ACR_NAME="${ACR_NAME%.azurecr.io}"
+          ACR_NAME="${ACR_NAME%%.azurecr.io}"
           az acr login -n "$ACR_NAME"
 
       - name: Set up JDK 21
