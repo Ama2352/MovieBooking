@@ -134,7 +134,8 @@ jobs:
           SCRIPT_ENV
 
           # Reconstruct docker-compose.yml directly on the VM
-          echo "cat > docker-compose.yml << DOCKER_EOF" >> deploy.sh
+          # Quote heredoc delimiter to avoid expanding ${...} placeholders from docker-compose at script generation time.
+          echo "cat > docker-compose.yml << 'DOCKER_EOF'" >> deploy.sh
           cat docker-compose.yml >> deploy.sh
           echo "DOCKER_EOF" >> deploy.sh
 
