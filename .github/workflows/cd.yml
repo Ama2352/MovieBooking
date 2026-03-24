@@ -101,8 +101,8 @@ jobs:
           MOMO_SECRET_KEY=$(get_secret "MOMO-SECRET-KEY")
           K6_SEED_ENABLED=false
           DATA_SOURCE_NAME=postgresql://postgres:$(get_secret "POSTGRES-PASSWORD")@db:5432/moviebooking?sslmode=disable
-          FRONTEND_REDIRECT_URL=https://movie-booking-frontend-9nbi.vercel.app/oauth2/success
-          FRONTEND_BASE_URL=https://movie-booking-frontend-9nbi.vercel.app
+          FRONTEND_REDIRECT_URL=https://movie-booking-frontend-eta.vercel.app/oauth2/success
+          FRONTEND_BASE_URL=https://movie-booking-frontend-eta.vercel.app
           ENV_EOF
           sed -i 's/^[[:space:]]*//' backend/.env
 
