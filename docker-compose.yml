@@ -39,7 +39,7 @@ services:
 
   moviebooking:
     # Use the image pulled from ACR (tag passed via environment variable)
-    image: ${ACR_SERVER:-moviebooking_default}/moviebooking-backend:${TAG:-latest}
+    image: ${ACR_SERVER}/moviebooking-backend:${TAG:-latest}
     container_name: moviebooking-app
     env_file:
       - ./backend/.env

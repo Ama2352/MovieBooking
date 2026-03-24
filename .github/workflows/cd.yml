@@ -161,14 +161,14 @@ jobs:
           echo "=========================================="
           echo "Pulling latest images and restarting services..."
           echo "=========================================="
-          sudo -E docker compose pull
+          sudo ACR_SERVER="${ACR_SERVER}" TAG="${TAG}" docker compose pull
 
           # Fix permissions on config files
           sudo chmod 644 nginx/nginx.conf
           sudo chmod 644 nginx/conf.d/moviebooking.conf
           
           # Start all services
-          sudo -E docker compose up -d --remove-orphans
+          sudo ACR_SERVER="${ACR_SERVER}" TAG="${TAG}" docker compose up -d --remove-orphans
 
           # Wait for NGINX to be ready
           echo ""
