@@ -2,9 +2,9 @@ name: CI - Quality Gates
 
 on:
   push:
-    branches: [ "**" ] # all branches
+    branches: ["**"] # all branches
   pull_request:
-    branches: [ main ]  # run CI when merging into main
+    branches: [main] # run CI when merging into main
   workflow_dispatch:
     inputs:
       run_full_regression:
@@ -35,26 +35,26 @@ jobs:
       test-classes: ${{ steps.detect.outputs.test_classes }}
       test-tags: ${{ steps.detect.outputs.test_tags }}
       has-changes: ${{ steps.detect.outputs.has_changes }}
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           # Lấy độ sâu đủ để so sánh giữa nhánh hiện tại và nhánh gốc
           fetch-depth: 2
-      
+
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
-          java-version: '21'
-          distribution: 'temurin'
+          java-version: "21"
+          distribution: "temurin"
           cache: maven
-      
+
       # Cần compile để chạy DynamicSanityTestSelector
       - name: Compile test utilities
         working-directory: ./backend
         run: mvn test-compile -q
-      
+
       - name: Detect changed modules and dependencies
         id: detect
         working-directory: ./backend
@@ -65,11 +65,11 @@ jobs:
             -Dexec.mainClass="com.api.moviebooking.utils.DynamicSanityTestSelector" \
             -Dexec.classpathScope=test \
             -q 2>&1)
-          
+
           # Trích xuất kết quả từ output
           TEST_CLASSES=$(echo "$OUTPUT" | awk -F'=' '/^TEST_CLASSES=/ {print $2}')
           TEST_TAGS=$(echo "$OUTPUT" | awk -F'=' '/^TEST_TAGS=/ {print $2}')
-          
+
           if [ -z "$TEST_CLASSES" ] && [ -z "$TEST_TAGS" ]; then
             echo "has_changes=false" >> $GITHUB_OUTPUT
           else
@@ -86,7 +86,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: detect-changes
     if: needs.detect-changes.outputs.has-changes == 'true'
-    
+
     # Cấu hình Services cho Integration Test
     services:
       postgres:
@@ -95,7 +95,7 @@ jobs:
           POSTGRES_DB: moviebooking_test
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-        ports: [ 5432:5432 ]
+        ports: [5432:5432]
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -103,27 +103,27 @@ jobs:
           --health-retries 5
       redis:
         image: redis:7-alpine
-        ports: [ 6379:6379 ]
+        ports: [6379:6379]
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Set up JDK 21
         uses: actions/setup-java@v4
-        with: { java-version: '21', distribution: 'temurin', cache: maven }
-      
+        with: { java-version: "21", distribution: "temurin", cache: maven }
+
       - name: Run smoke tests
         working-directory: ./backend
         run: mvn test -Psmoke -DfailIfNoTests=false
         env:
           SPRING_PROFILES_ACTIVE: test
-      
+
       - name: Upload smoke test results
         if: always()
         uses: actions/upload-artifact@v4
@@ -140,7 +140,7 @@ jobs:
     needs: [detect-changes, smoke-tests] # Chạy sau khi Smoke pass
     # CHỈ chạy nếu có file code thay đổi VÀ Smoke Test pass
     if: needs.detect-changes.outputs.has-changes == 'true' && needs.smoke-tests.result == 'success'
-    
+
     # ... (Giữ nguyên cấu hình Services như Smoke Tests)
     services:
       postgres:
@@ -149,7 +149,7 @@ jobs:
           POSTGRES_DB: moviebooking_test
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-        ports: [ 5432:5432 ]
+        ports: [5432:5432]
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -157,21 +157,21 @@ jobs:
           --health-retries 5
       redis:
         image: redis:7-alpine
-        ports: [ 6379:6379 ]
+        ports: [6379:6379]
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Set up JDK 21
         uses: actions/setup-java@v4
-        with: { java-version: '21', distribution: 'temurin', cache: maven }
-      
+        with: { java-version: "21", distribution: "temurin", cache: maven }
+
       - name: Run sanity tests by test classes
         if: needs.detect-changes.outputs.test-classes != ''
         working-directory: ./backend
@@ -181,7 +181,7 @@ jobs:
           mvn test -Dtest="$TEST_CLASSES" -DfailIfNoTests=false
         env:
           SPRING_PROFILES_ACTIVE: test
-      
+
       - name: Run sanity tests by tags
         if: needs.detect-changes.outputs.test-tags != ''
         working-directory: ./backend
@@ -191,7 +191,7 @@ jobs:
           mvn test -Dgroups="$TEST_TAGS" -DfailIfNoTests=false
         env:
           SPRING_PROFILES_ACTIVE: test
-      
+
       - name: Upload sanity test results
         if: always()
         uses: actions/upload-artifact@v4
@@ -211,7 +211,7 @@ jobs:
       (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'run-full-tests'))) &&
       needs.smoke-tests.result == 'success' &&
       (needs.sanity-tests.result == 'success' || needs.sanity-tests.result == 'skipped')
-    
+
     # ... (Giữ nguyên cấu hình Services như Smoke Tests)
     services:
       postgres:
@@ -220,7 +220,7 @@ jobs:
           POSTGRES_DB: moviebooking_test
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-        ports: [ 5432:5432 ]
+        ports: [5432:5432]
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -228,20 +228,20 @@ jobs:
           --health-retries 5
       redis:
         image: redis:7-alpine
-        ports: [ 6379:6379 ]
+        ports: [6379:6379]
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
-        with: { java-version: '21', distribution: 'temurin', cache: maven }
+        with: { java-version: "21", distribution: "temurin", cache: maven }
 
       - name: Run all regression tests
         working-directory: ./backend
@@ -275,9 +275,14 @@ jobs:
     if: |
       github.event_name == 'push' &&
       github.ref == 'refs/heads/main' &&
-      (needs.smoke-tests.result == 'success' || needs.smoke-tests.result == 'skipped') &&
-      (needs.sanity-tests.result == 'success' || needs.sanity-tests.result == 'skipped')
-      
+      (
+        needs.detect-changes.outputs.has-changes == 'false' ||
+        (
+          needs.smoke-tests.result == 'success' &&
+          (needs.sanity-tests.result == 'success' || needs.sanity-tests.result == 'skipped')
+        )
+      )
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -291,10 +296,10 @@ jobs:
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
-          java-version: '21'
-          distribution: 'temurin'
+          java-version: "21"
+          distribution: "temurin"
           cache: maven
-      
+
       - name: Build Docker image
         run: |
           docker build \
@@ -306,4 +311,3 @@ jobs:
         run: |
           docker push ${{ env.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
           docker push ${{ env.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest
-
