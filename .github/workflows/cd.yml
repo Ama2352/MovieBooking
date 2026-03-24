@@ -52,6 +52,8 @@ jobs:
         run: |
           cat << 'SCRIPT_ENV' > deploy.sh
           #!/bin/bash
+          set -euo pipefail
+
           echo "=========================================="
           echo "Starting MovieBooking Deployment via Azure Run Command..."
           echo "=========================================="
@@ -153,6 +155,19 @@ jobs:
 
           echo "Authenticating with ACR..."
           az acr login -n "${ACR_SERVER}"
+
+          echo "Checking image availability in ACR..."
+          if ! az acr repository show --name "${ACR_SERVER}" --image "${{ env.IMAGE_NAME }}:${TAG}" > /dev/null 2>&1; then
+            echo "⚠️  Image tag ${TAG} not found. Falling back to latest."
+            TAG="latest"
+          fi
+
+          if ! az acr repository show --name "${ACR_SERVER}" --image "${{ env.IMAGE_NAME }}:${TAG}" > /dev/null 2>&1; then
+            echo "❌ No deployable image found in ACR (tried requested tag and latest)."
+            exit 1
+          fi
+
+          echo "Using image tag: ${TAG}"
 
           echo ""
           echo "=========================================="
