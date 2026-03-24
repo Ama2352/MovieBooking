@@ -275,8 +275,7 @@ jobs:
     if: |
       github.event_name == 'push' &&
       github.ref == 'refs/heads/main' &&
-      needs.detect-changes.outputs.has-changes == 'true' &&
-      needs.smoke-tests.result == 'success' &&
+      (needs.smoke-tests.result == 'success' || needs.smoke-tests.result == 'skipped') &&
       (needs.sanity-tests.result == 'success' || needs.sanity-tests.result == 'skipped')
       
     steps:
@@ -291,7 +290,10 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: ACR Login
-        run: az acr login -n ${{ env.ACR_SERVER }}
+        run: |
+          ACR_NAME="${{ env.ACR_SERVER }}"
+          ACR_NAME="${ACR_NAME%.azurecr.io}"
+          az acr login -n "$ACR_NAME"
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4

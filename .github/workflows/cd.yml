@@ -152,17 +152,18 @@ jobs:
           cat << SCRIPT_EXEC >> deploy.sh
           export ACR_SERVER="${{ env.ACR_SERVER }}"
           export TAG="${{ env.TAG }}"
+          export ACR_NAME="${ACR_SERVER%%.azurecr.io}"
 
           echo "Authenticating with ACR..."
-          az acr login -n "${ACR_SERVER}"
+          az acr login -n "${ACR_NAME}"
 
           echo "Checking image availability in ACR..."
-          if ! az acr repository show --name "${ACR_SERVER}" --image "${{ env.IMAGE_NAME }}:${TAG}" > /dev/null 2>&1; then
+          if ! az acr repository show --name "${ACR_NAME}" --image "${{ env.IMAGE_NAME }}:${TAG}" > /dev/null 2>&1; then
             echo "⚠️  Image tag ${TAG} not found. Falling back to latest."
             TAG="latest"
           fi
 
-          if ! az acr repository show --name "${ACR_SERVER}" --image "${{ env.IMAGE_NAME }}:${TAG}" > /dev/null 2>&1; then
+          if ! az acr repository show --name "${ACR_NAME}" --image "${{ env.IMAGE_NAME }}:${TAG}" > /dev/null 2>&1; then
             echo "❌ No deployable image found in ACR (tried requested tag and latest)."
             exit 1
           fi
