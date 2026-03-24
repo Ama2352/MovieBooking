@@ -38,8 +38,8 @@ services:
       start_period: 5s
 
   moviebooking:
-    # Use the image pulled from ACR (tag passed via environment variable)
-    image: ${ACR_SERVER}/moviebooking-backend:${TAG:-latest}
+    # Use the image pulled from DockerHub (tag passed via environment variable)
+    image: ${DOCKERHUB_USERNAME}/moviebooking-backend:${TAG:-latest}
     container_name: moviebooking-app
     env_file:
       - ./backend/.env

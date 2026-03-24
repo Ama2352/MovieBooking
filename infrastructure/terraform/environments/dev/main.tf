@@ -33,20 +33,9 @@ module "compute" {
   allowed_ssh_cidr    = var.allowed_ssh_cidr
   additional_ssh_keys = var.additional_ssh_keys
 
-  acr_id       = module.acr.acr_id
   key_vault_id = module.keyvault.key_vault_id
 }
 
-# -----------------------------------------------------------------------------
-# Container Registry Module
-# -----------------------------------------------------------------------------
-module "acr" {
-  source = "../../modules/acr"
-
-  project_name        = var.project_name
-  region              = var.region
-  resource_group_name = module.network.resource_group_name
-}
 
 # -----------------------------------------------------------------------------
 # Key Vault Module

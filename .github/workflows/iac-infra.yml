@@ -177,7 +177,6 @@ jobs:
           VM=$(terraform output -raw vm_name)
           VM_ID=$(terraform output -raw vm_identity_client_id)
           RG=$(terraform output -raw resource_group_name)
-          ACR=$(terraform output -raw acr_login_server)
 
           # Push core infrastructure coordinates back to GitHub Secrets for CD pipeline
           gh secret set AZURE_VM_HOST -b"$IP"
@@ -185,14 +184,13 @@ jobs:
           gh secret set AZURE_VM_NAME -b"$VM"
           gh secret set AZURE_VM_IDENTITY_CLIENT_ID -b"$VM_ID"
           gh secret set AZURE_RESOURCE_GROUP -b"$RG"
-          gh secret set AZURE_ACR_SERVER -b"$ACR"
 
           # Remove obsolete secrets (if they existed)
           gh secret delete AZURE_VM_USERNAME || true
           gh secret delete AZURE_VM_SSH_KEY || true
+          gh secret delete AZURE_ACR_SERVER || true
 
           echo "✅ Successfully synced Infra Outputs to GitHub Actions Secrets!"
-          echo "ACR Server: $ACR"
           echo "VM IP: $IP"
           echo "Key Vault: $KV"
         env:

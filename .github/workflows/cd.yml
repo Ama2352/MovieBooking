@@ -17,7 +17,6 @@ permissions:
   contents: read # required to checkout the repository
 
 env:
-  ACR_SERVER: ${{ secrets.AZURE_ACR_SERVER }}
   IMAGE_NAME: moviebooking-backend
   TAG: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.event.inputs.version }}
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
@@ -150,25 +149,29 @@ jobs:
           echo "NGINX_CONF_EOF" >> deploy.sh
 
           cat << SCRIPT_EXEC >> deploy.sh
-          export ACR_SERVER="${ACR_SERVER}"
           export TAG="${TAG}"
-          export ACR_NAME="\${ACR_SERVER%%.azurecr.io}"
+          export DOCKERHUB_USERNAME="\$(get_secret "DOCKERHUB-USERNAME")"
+          export DOCKERHUB_TOKEN="\$(get_secret "DOCKERHUB-TOKEN")"
 
-          echo "Authenticating with ACR..."
-          az acr login -n "\${ACR_NAME}"
+          echo "Authenticating with DockerHub..."
+          if [ -n "\$DOCKERHUB_USERNAME" ] && [ -n "\$DOCKERHUB_TOKEN" ]; then
+            echo "\$DOCKERHUB_TOKEN" | sudo docker login -u "\$DOCKERHUB_USERNAME" --password-stdin
+          else
+            echo "Skipping DockerHub login (credentials not found in KeyVault)..."
+          fi
 
           echo ""
           echo "=========================================="
           echo "Pulling latest images and restarting services..."
           echo "=========================================="
-          sudo ACR_SERVER="${ACR_SERVER}" TAG="${TAG}" docker compose pull
+          sudo DOCKERHUB_USERNAME="\${DOCKERHUB_USERNAME}" TAG="${TAG}" docker compose pull
 
           # Fix permissions on config files
           sudo chmod 644 nginx/nginx.conf
           sudo chmod 644 nginx/conf.d/moviebooking.conf
           
           # Start all services
-          sudo ACR_SERVER="${ACR_SERVER}" TAG="${TAG}" docker compose up -d --remove-orphans
+          sudo DOCKERHUB_USERNAME="\${DOCKERHUB_USERNAME}" TAG="${TAG}" docker compose up -d --remove-orphans
 
           # Wait for NGINX to be ready
           echo ""

@@ -27,15 +27,6 @@ output "admin_username" {
   value       = module.compute.admin_username
 }
 
-output "acr_name" {
-  description = "Azure Container Registry Name"
-  value       = module.acr.acr_name
-}
-
-output "acr_login_server" {
-  description = "Azure Container Registry Login Server"
-  value       = module.acr.acr_login_server
-}
 
 output "key_vault_name" {
   description = "Azure Key Vault Name"

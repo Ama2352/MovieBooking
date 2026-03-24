@@ -66,10 +66,6 @@ variable "additional_ssh_keys" {
   default     = []
 }
 
-variable "acr_id" {
-  description = "The Resource ID of the Container Registry to grant AcrPull access to"
-  type        = string
-}
 
 variable "key_vault_id" {
   description = "The Resource ID of the Key Vault to grant Secrets User access to"
