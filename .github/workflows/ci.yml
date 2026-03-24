@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [ main ]  # run CI when merging into main
   workflow_dispatch:
+    inputs:
+      run_full_regression:
+        description: "Run full regression suite"
+        required: false
+        default: "false"
 
 # Permissions required for test-reporter to create check runs
 permissions:
@@ -17,6 +22,7 @@ permissions:
 env:
   ACR_SERVER: ${{ secrets.AZURE_ACR_SERVER }}
   IMAGE_NAME: moviebooking-backend
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
   # ----------------------------------------------------------------------
@@ -79,6 +85,7 @@ jobs:
     name: Run Smoke Tests (Gate)
     runs-on: ubuntu-latest
     needs: detect-changes
+    if: needs.detect-changes.outputs.has-changes == 'true'
     
     # Cấu hình Services cho Integration Test
     services:
@@ -200,7 +207,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [smoke-tests, sanity-tests] # Phải chạy sau Sanity và Smoke
     if: |
-      (github.event_name == 'push' ||
+      ((github.event_name == 'workflow_dispatch' && github.event.inputs.run_full_regression == 'true') ||
       (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'run-full-tests'))) &&
       needs.smoke-tests.result == 'success' &&
       (needs.sanity-tests.result == 'success' || needs.sanity-tests.result == 'skipped')
@@ -264,8 +271,13 @@ jobs:
   build-and-push-acr:
     name: Build and Push to ACR
     runs-on: ubuntu-latest
-    needs: [smoke-tests, regression-tests]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [detect-changes, smoke-tests, sanity-tests]
+    if: |
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      needs.detect-changes.outputs.has-changes == 'true' &&
+      needs.smoke-tests.result == 'success' &&
+      (needs.sanity-tests.result == 'success' || needs.sanity-tests.result == 'skipped')
       
     steps:
       - name: Checkout code
