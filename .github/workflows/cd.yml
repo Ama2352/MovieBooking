@@ -140,12 +140,12 @@ jobs:
           echo "DOCKER_EOF" >> deploy.sh
 
           # Deploy NGINX configuration
-          echo "cat > nginx/nginx.conf << NGINX_MAIN_EOF" >> deploy.sh
+          echo "cat > nginx/nginx.conf << 'NGINX_MAIN_EOF'" >> deploy.sh
           cat nginx/nginx.conf >> deploy.sh
           echo "NGINX_MAIN_EOF" >> deploy.sh
 
           echo "mkdir -p nginx/conf.d" >> deploy.sh
-          echo "cat > nginx/conf.d/moviebooking.conf << NGINX_CONF_EOF" >> deploy.sh
+          echo "cat > nginx/conf.d/moviebooking.conf << 'NGINX_CONF_EOF'" >> deploy.sh
           cat nginx/conf.d/moviebooking.conf >> deploy.sh
           echo "NGINX_CONF_EOF" >> deploy.sh
 
