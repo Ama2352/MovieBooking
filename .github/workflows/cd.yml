@@ -150,12 +150,12 @@ jobs:
           echo "NGINX_CONF_EOF" >> deploy.sh
 
           cat << SCRIPT_EXEC >> deploy.sh
-          export ACR_SERVER="${{ env.ACR_SERVER }}"
-          export TAG="${{ env.TAG }}"
-          export ACR_NAME="${ACR_SERVER%%.azurecr.io}"
+          export ACR_SERVER="${ACR_SERVER}"
+          export TAG="${TAG}"
+          export ACR_NAME="\${ACR_SERVER%%.azurecr.io}"
 
           echo "Authenticating with ACR..."
-          az acr login -n "${ACR_NAME}"
+          az acr login -n "\${ACR_NAME}"
 
           echo ""
           echo "=========================================="
