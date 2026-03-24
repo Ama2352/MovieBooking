@@ -1,54 +1,71 @@
-# Movie Booking System
+# Movie Booking Platform
 
-A comprehensive cinema ticket booking platform built with Spring Boot, PostgreSQL, Redis, and React. Features real-time seat locking, payment processing with MoMo integration, membership tiers, dynamic pricing, and performance monitoring with Prometheus and Grafana.
+A production-oriented movie ticket booking backend built with Spring Boot and Java 21. The platform models the complete booking lifecycle: movie and cinema management, showtimes, seat selection, temporary seat reservations, dynamic pricing, promotions, membership benefits, QR tickets, refunds, and payment initiation through MoMo and PayPal.
 
-## Tech Stack
+The project also includes automated testing, k6 performance scenarios, containerized deployment, Terraform infrastructure for Azure, and GitHub Actions pipelines for CI/CD.
 
-**Backend:** Spring Boot 3.5.6, Java 21, PostgreSQL 17, Redis 7  
-**Frontend:** React, Vite, TailwindCSS  
-**Infrastructure:** Docker, Terraform, Azure  
-**Monitoring:** Prometheus, Grafana, k6 Load Testing  
-**Testing:** JUnit, Testcontainers
+## Architecture
 
-## Key Features
+![Movie Booking deployment architecture](architecture.png)
 
-- **Seat Management:** Real-time seat locking with Redis, concurrent booking prevention
-- **Payment Integration:** MoMo & PayPal payment gateways
-- **Dynamic Pricing:** Configurable price modifiers (time-based, seat type, special events)
-- **Membership System:** Tiered loyalty program with exclusive benefits
-- **Promotions:** Flexible discount codes and campaigns
-- **QR Tickets:** QR code generation for seamless ticket validation
-- **Admin Dashboard:** Complete cinema, movie, and showtime management
-- **Load Testing:** k6 scenarios for performance validation
+The deployed system runs on an Azure VM behind Nginx. GitHub Actions authenticates to Azure with OIDC, Terraform provisions the network, VM, managed identity, and Key Vault, and the deployment workflow uses Azure Run Command to pull the backend image and restart Docker Compose. Runtime secrets are retrieved from Azure Key Vault through the VM managed identity.
 
-## Quick Start with Docker Compose
+## Why this project is technically interesting
+
+- **Concurrency control:** Redis-backed, time-limited seat locks prevent two users from booking the same seat during checkout. The API supports both authenticated users and guest sessions through `X-Session-Id`.
+- **Atomic checkout:** booking confirmation and payment initiation are coordinated in a transaction. If payment initiation fails, the pending booking is rolled back.
+- **Payment integrations:** MoMo and PayPal flows include redirect/callback handling, payment status tracking, refunds, and currency conversion for PayPal.
+- **Business rules:** ticket types, seat types, time-based modifiers, special-event pricing, promotions, and membership tiers are composed into the final price.
+- **Security:** JWT authentication, refresh tokens, role-based access, OAuth2 client support, and secure cookie/session handling.
+- **Observability:** Spring Boot Actuator and Micrometer expose application and JVM metrics for Prometheus and Grafana, with PostgreSQL and host metrics available to the monitoring stack.
+- **Delivery automation:** GitHub Actions runs change-aware smoke and sanity tests, supports full regression runs, builds and publishes the Docker image, and deploys to Azure.
+
+## Technology stack
+
+| Area | Technologies |
+| --- | --- |
+| Backend | Java 21, Spring Boot 3.5.6, Spring MVC, Spring Data JPA, Spring Security |
+| Data | PostgreSQL 17, Redis 7, Testcontainers |
+| API | REST, JWT, OAuth2 client, OpenAPI/Swagger |
+| Payments | MoMo, PayPal Checkout SDK |
+| Delivery | Docker, Docker Compose, Nginx, Docker Hub |
+| Cloud and IaC | Microsoft Azure, Terraform, Azure Key Vault, managed identity, OIDC |
+| Quality and observability | JUnit 5, RestAssured, smoke/sanity/regression tags, k6, Prometheus, Grafana |
+
+## Core booking flow
+
+1. A user or guest session selects seats for a showtime.
+2. The API acquires a Redis-backed seat lock with an expiry time and stores the calculated ticket prices.
+3. Checkout validates ownership and expiry of the lock, applies snacks, promotions, and membership benefits, then creates a pending booking.
+4. The selected payment gateway is initialized. Failed initiation rolls the transaction back.
+5. The gateway callback updates payment and booking state, and a QR ticket is generated for successful bookings.
+
+Detailed request and response examples are available in the [API documentation](backend/docs/README.md), including the [booking flow](backend/docs/API-Bookings.md) and [atomic checkout](backend/docs/API-Checkout.md).
+
+## Run locally with Docker Compose
 
 ### Prerequisites
 
-- Docker & Docker Compose
-- Create `backend/.env` file with required variables (see below)
+- Docker Desktop with Docker Compose
+- A running Redis 7 instance reachable by the backend
+- A Docker Hub image name in `DOCKERHUB_USERNAME`, unless you replace the backend image with a locally built image
+- Test or sandbox credentials for MoMo and PayPal when exercising payments
 
-### Environment Setup
-
-Create `backend/.env`:
+Create `backend/.env` from the following template. Keep real credentials out of Git:
 
 ```env
-# Database
 POSTGRES_DB=moviebooking
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=your_password
 DATA_SOURCE_URL=jdbc:postgresql://db:5432/moviebooking
 
-# Redis
 REDIS_HOST=redis
 REDIS_PORT=6379
 
-# JWT
-JWT_SECRET=your-secret-key-min-256-bits
+JWT_SECRET=replace-with-a-secret-of-at-least-256-bits
 JWT_EXPIRATION=3600000
 JWT_REFRESH_EXPIRATION=86400000
 
-# MoMo Payment
 MOMO_PARTNER_CODE=your_partner_code
 MOMO_ACCESS_KEY=your_access_key
 MOMO_SECRET_KEY=your_secret_key
@@ -56,127 +73,118 @@ MOMO_ENDPOINT=https://test-payment.momo.vn/v2/gateway/api/create
 MOMO_REDIRECT_URL=http://localhost:5173/payment/callback
 MOMO_IPN_URL=http://localhost:8080/api/payments/momo/ipn
 
-# PayPal Payment
 PAYPAL_CLIENT_ID=your_paypal_client_id
 PAYPAL_CLIENT_SECRET=your_paypal_client_secret
 PAYPAL_MODE=sandbox
 PAYPAL_RETURN_URL=http://localhost:5173/payment/callback
 PAYPAL_CANCEL_URL=http://localhost:5173/payment/cancelled
 
-# Postgres Exporter
 DATA_SOURCE_NAME=postgresql://postgres:your_password@db:5432/moviebooking?sslmode=disable
-
-# Cloudinary (optional)
-CLOUDINARY_CLOUD_NAME=your_cloud_name
-CLOUDINARY_API_KEY=your_api_key
-CLOUDINARY_API_SECRET=your_api_secret
 ```
 
-### Run the Application
+Start the services defined by the repository Compose file:
 
 ```bash
-# Start all services
-docker-compose up -d
-
-# View logs
-docker-compose logs -f moviebooking
-
-# Stop services
-docker-compose down
-
-# Clean up volumes
-docker-compose down -v
+docker compose up -d
+docker compose logs -f moviebooking
 ```
 
-### Access Services
-
-- **Backend API:** http://localhost:8080/api
-- **Swagger UI:** http://localhost:8080/swagger-ui/index.html
-- **Health Check:** http://localhost:8080/health
-- **Prometheus:** http://localhost:9090
-- **Grafana:** http://localhost:3000
-- **PostgreSQL:** localhost:5433
-- **Redis:** localhost:6379
-
-### Run Load Tests
+The root Compose file does not declare a Redis container. For local Maven development, start one separately:
 
 ```bash
-# Execute k6 scenarios
-docker-compose --profile k6 run k6 run /scripts/scenarios/01-seat-lock-concurrency.js
-
-# Available scenarios:
-# - 01-seat-lock-concurrency.js - Concurrent seat booking stress test
-# - 02-browsing-load.js - User browsing patterns
-# - 03-booking-workflow.js - Complete booking flow
-# - 04-spike-test.js - Traffic spike simulation
-# - 05-soak-test.js - Long-running endurance test
+docker run --name moviebooking-redis -p 6379:6379 -d redis:7-alpine
 ```
 
-## Development
+For a containerized backend, place Redis on the same Docker network and set `REDIS_HOST` to its container name. The checked-in Compose file currently starts PostgreSQL, the backend image, and Nginx.
 
-### Build Backend Locally
+Stop the stack with `docker compose down`. Use `docker compose down -v` only when you intentionally want to remove the PostgreSQL volume and local data.
+
+### Local endpoints
+
+| Service | URL |
+| --- | --- |
+| Backend API | `http://localhost:8080/api` |
+| Swagger UI | `http://localhost:8080/swagger-ui/index.html` |
+| Actuator health | `http://localhost:8080/actuator/health` |
+| Nginx HTTP | `http://localhost` |
+| PostgreSQL | `localhost:5433` |
+
+The Compose file exposes Nginx on ports 80, 443, and 8888. Prometheus and Grafana are part of the observability design and CI/load-test configuration; they are not declared as services in the root Compose file.
+
+## Build and run the backend locally
 
 ```bash
 cd backend
 
-# Run tests
+# Run the default test suite
 ./mvnw test
 
-# Build JAR
+# Run the tagged suites explicitly
+./mvnw test -Psmoke
+./mvnw test -Psanity
+./mvnw test -Pregression
+
+# Package the application
 ./mvnw clean package
 
-# Run locally (requires external PostgreSQL and Redis)
+# Run the application; PostgreSQL and Redis must be reachable
 ./mvnw spring-boot:run
 ```
 
-### Run Frontend
+On Windows, use `mvnw.cmd` in place of `./mvnw`.
+
+## Testing and performance validation
+
+The test suite combines unit tests, Spring integration tests, Testcontainers-backed PostgreSQL/Redis tests, MockMvc/RestAssured API tests, and JUnit-tagged smoke, sanity, and regression suites.
+
+k6 scenarios live in [`k6-tests/scenarios`](k6-tests/scenarios). With k6 installed locally, run a scenario with:
 
 ```bash
-cd frontend/movie-booking-frontend
-
-# Install dependencies
-npm install
-
-# Start dev server
-npm run dev
+k6 run k6-tests/scenarios/01-seat-lock-concurrency.js
 ```
 
-### Database Initialization
+Available scenarios cover browsing load, the end-to-end booking workflow, concurrent seat reservation, traffic spikes, and soak testing. Existing result notes are stored beside the scenarios in [`k6-tests/scenarios/results`](k6-tests/scenarios/results).
 
-The application auto-creates tables and seeds sample data on first run when `backend/.env` contains development settings.
+## CI/CD and infrastructure
 
-## API Documentation
+- [`ci.yml`](.github/workflows/ci.yml) detects affected modules, runs smoke tests, selects relevant sanity tests, optionally runs full regression, and publishes the backend image to Docker Hub on pushes to `main`.
+- [`cd.yml`](.github/workflows/cd.yml) authenticates to Azure with OIDC and deploys the selected image to an Azure VM through Azure Run Command.
+- [`iac-infra.yml`](.github/workflows/iac-infra.yml) runs Terraform plan/apply/destroy workflows and synchronizes infrastructure outputs with GitHub Actions secrets.
+- [`infrastructure/terraform`](infrastructure/terraform) provisions the Azure resource group, virtual network/subnet, public IP, network security group, VM, managed identity, and Key Vault.
+- Nginx terminates public HTTPS traffic and reverse-proxies requests to the backend container.
 
-Comprehensive API docs available at `/backend/docs/`:
+Production deployment requires GitHub Actions secrets and Azure Key Vault values for database, JWT, payment, Docker Hub, domain, and certificate configuration. Do not commit `.env` files, tokens, private keys, or Terraform state.
 
-- [Authentication](backend/docs/API-Authentication.md) - Register, login, JWT tokens
-- [Bookings](backend/docs/API-Bookings.md) - Seat locking, booking lifecycle
-- [Checkout](backend/docs/API-Checkout.md) - Atomic booking + payment
-- [Movies](backend/docs/API-Movies.md) - Browse, search, filter movies
-- [Showtimes](backend/docs/API-Showtimes.md) - Showtime scheduling
-- [Payments](backend/docs/API-Payments.md) - MoMo integration, refunds
+## API documentation
 
-## Monitoring
+The backend documentation includes:
 
-Prometheus metrics include:
-- Application health and performance
-- JVM metrics (heap, threads, GC)
-- Database connection pool stats
-- Custom business metrics (bookings, payments)
-- System metrics via node-exporter
+- [Authentication](backend/docs/API-Authentication.md)
+- [Bookings and seat locks](backend/docs/API-Bookings.md)
+- [Atomic checkout](backend/docs/API-Checkout.md)
+- [Movies](backend/docs/API-Movies.md)
+- [Showtimes](backend/docs/API-Showtimes.md)
+- [Payments and refunds](backend/docs/API-Payments.md)
+- [Pricing and promotions](backend/docs/API-Pricing.md)
+- [Cinemas, seats, users, and membership tiers](backend/docs/README.md)
 
-## Project Structure
+## Repository structure
 
+```text
+.
+├── backend/                 # Spring Boot API, tests, and API documentation
+├── infrastructure/         # Terraform modules and dev environment
+├── k6-tests/                # Performance scenarios and result notes
+├── nginx/                   # Reverse proxy and HTTPS configuration
+├── .github/workflows/       # CI, CD, and Terraform workflows
+├── architecture.png        # Deployment architecture diagram
+└── docker-compose.yml       # Database, backend, and Nginx orchestration
 ```
-├── backend/              # Spring Boot REST API
-│   ├── src/main/java/    # Application source
-│   ├── src/test/java/    # JUnit & integration tests
-│   └── docs/             # API documentation
-├── infrastructure/       # Terraform IaC
-├── k6-tests/            # Load testing scenarios
-└── docker-compose.yml   # Service orchestration
-```
+
+## Project positioning
+
+This repository demonstrates backend engineering and delivery ownership across API design, transactional workflows, distributed locking, payment integration, automated testing, observability, infrastructure as code, and Azure deployment. For a CV, describe your specific contribution and include measurable evidence such as test coverage, load-test throughput/latency, deployment frequency, or booking contention results where available.
 
 ## License
 
-SE113 Project - University Assignment
+SE113 project — University assignment.
