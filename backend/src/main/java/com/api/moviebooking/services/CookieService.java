@@ -15,8 +15,8 @@ public class CookieService {
     private static final Duration ACCESS_TOKEN_EXPIRY = Duration.ofHours(1);
     private static final Duration REFRESH_TOKEN_EXPIRY = Duration.ofDays(7);
 
-    private static final String SAME_SITE_POLICY = "Strict";
-    private static final boolean SECURE = false; // true in prod (HTTPS)
+    private static final String SAME_SITE_POLICY = "None";
+    private static final boolean SECURE = true; // Required for SameSite=None
 
     public ResponseCookie createAccessTokenCookie(String token) {
         return ResponseCookie.from(ACCESS_TOKEN_COOKIE, token)

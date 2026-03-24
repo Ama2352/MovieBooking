@@ -18,32 +18,25 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.web.cors.CorsConfigurationSource;
 
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
 
-    private final CorsConfigurationSource corsConfigurationSource;
-
-    SecurityConfig(CorsConfigurationSource corsConfigurationSource) {
-        this.corsConfigurationSource = corsConfigurationSource;
-    }
 
     @Bean
     @Order(1)
     public SecurityFilterChain oauth2SecurityFilterChain(
             HttpSecurity httpSecurity,
-            OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler,
-            CorsConfigurationSource corsConfigurationSource) throws Exception {
+            OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler) throws Exception {
 
         return httpSecurity
                 .securityMatcher("/oauth2/**", "/login/**")
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
                 .oauth2Login(oauth2 -> oauth2.successHandler(oAuth2LoginSuccessHandler))
-                .cors(cors -> cors.configurationSource(corsConfigurationSource))
+                .cors(AbstractHttpConfigurer::disable)
                 .build();
     }
 
@@ -76,7 +69,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, PublicEndpointConfig.TICKET_TYPES).permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(filter, UsernamePasswordAuthenticationFilter.class)
-                .cors(cors -> cors.configurationSource(corsConfigurationSource))
+                .cors(AbstractHttpConfigurer::disable)
                 .build();
     }
 
