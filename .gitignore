@@ -48,5 +48,6 @@ testing/
 terraform.tfvars
 tfplan
 
-/frontend
 /.notes
+.playwright-mcp/
+/frontend/package-lock.json

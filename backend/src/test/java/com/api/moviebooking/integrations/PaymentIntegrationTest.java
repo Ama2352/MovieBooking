@@ -7,6 +7,14 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -39,6 +47,7 @@ import org.springframework.http.ResponseEntity;
 
 import com.api.moviebooking.models.dtos.payment.InitiatePaymentRequest;
 import com.api.moviebooking.models.dtos.payment.ConfirmPaymentRequest;
+import com.api.moviebooking.models.dtos.payment.IpnResponse;
 import com.api.moviebooking.models.entities.Booking;
 import com.api.moviebooking.models.entities.Cinema;
 import com.api.moviebooking.models.entities.Movie;
@@ -58,6 +67,8 @@ import com.api.moviebooking.repositories.PaymentRepo;
 import com.api.moviebooking.repositories.RoomRepo;
 import com.api.moviebooking.repositories.ShowtimeRepo;
 import com.api.moviebooking.repositories.UserRepo;
+import com.api.moviebooking.helpers.utils.SecurityUtils;
+import com.api.moviebooking.services.MomoService;
 import com.api.moviebooking.tags.RegressionTest;
 import com.api.moviebooking.tags.SanityTest;
 import com.api.moviebooking.tags.SmokeTest;
@@ -119,6 +130,9 @@ class PaymentIntegrationTest {
 
         @Autowired
         private ObjectMapper objectMapper;
+
+        @Autowired
+        private MomoService momoService;
 
         private User testUser;
         private Booking testBooking;
@@ -182,6 +196,118 @@ class PaymentIntegrationTest {
         @Nested
         @DisplayName("momo Payment Flow")
         class momoPaymentFlowTests {
+
+                @Test
+                @RegressionTest
+                @DisplayName("Concurrent duplicate Momo IPNs should process payment side effects exactly once")
+                void concurrentDuplicateMomoIpnsProcessPaymentExactlyOnce() throws Exception {
+                        BigDecimal amount = new BigDecimal("100000.00");
+                        testBooking.setTotalPrice(amount);
+                        testBooking.setFinalPrice(amount);
+                        bookingRepo.saveAndFlush(testBooking);
+
+                        Payment payment = new Payment();
+                        payment.setBooking(testBooking);
+                        payment.setMethod(PaymentMethod.MOMO);
+                        payment.setStatus(PaymentStatus.PENDING);
+                        payment.setAmount(amount);
+                        payment.setCurrency("VND");
+                        payment.setGatewayAmount(amount);
+                        payment.setGatewayCurrency("VND");
+                        payment.setExchangeRate(BigDecimal.ONE);
+                        payment = paymentRepo.saveAndFlush(payment);
+
+                        String orderId = payment.getId().toString();
+                        payment.setTransactionId(orderId);
+                        paymentRepo.saveAndFlush(payment);
+
+                        Map<String, String> ipnParams = successfulMomoIpn(orderId, "100000", "987654321");
+                        int contenders = 2;
+                        CountDownLatch ready = new CountDownLatch(contenders);
+                        CountDownLatch start = new CountDownLatch(1);
+                        ExecutorService executor = Executors.newFixedThreadPool(contenders);
+
+                        try {
+                                List<Future<IpnResponse>> attempts = java.util.stream.IntStream
+                                                .range(0, contenders)
+                                                .mapToObj(index -> executor.submit(() -> {
+                                                        ready.countDown();
+                                                        if (!start.await(5, TimeUnit.SECONDS)) {
+                                                                throw new AssertionError("IPN start barrier timed out");
+                                                        }
+                                                        return momoService.processIpn(new HashMap<>(ipnParams));
+                                                }))
+                                                .toList();
+
+                                assertTrue(ready.await(5, TimeUnit.SECONDS),
+                                                "Both IPN requests should reach the start barrier");
+                                start.countDown();
+
+                                List<IpnResponse> responses = attempts.stream()
+                                                .map(attempt -> {
+                                                        try {
+                                                                return attempt.get(10, TimeUnit.SECONDS);
+                                                        } catch (Exception exception) {
+                                                                throw new AssertionError("Concurrent IPN processing failed", exception);
+                                                        }
+                                                })
+                                                .toList();
+
+                                assertEquals(1, responses.stream()
+                                                .filter(response -> "00".equals(response.RspCode()))
+                                                .count(), "Exactly one callback should claim the pending payment");
+
+                                Payment persistedPayment = paymentRepo.findById(payment.getId()).orElseThrow();
+                                Booking persistedBooking = bookingRepo.findById(testBooking.getId()).orElseThrow();
+                                User persistedUser = userRepo.findById(testUser.getId()).orElseThrow();
+
+                                assertEquals(PaymentStatus.SUCCESS, persistedPayment.getStatus());
+                                assertNotNull(persistedPayment.getCompletedAt());
+                                assertEquals("987654321", persistedPayment.getTransactionId());
+                                assertEquals(BookingStatus.CONFIRMED, persistedBooking.getStatus());
+                                assertTrue(persistedBooking.isLoyaltyPointsAwarded());
+                                assertEquals(100, persistedUser.getLoyaltyPoints(),
+                                                "Duplicate callbacks must not award loyalty points twice");
+                        } finally {
+                                executor.shutdownNow();
+                        }
+                }
+
+                private Map<String, String> successfulMomoIpn(
+                                String orderId, String amount, String transId) {
+                        Map<String, String> params = new HashMap<>();
+                        params.put("accessKey", "test-access-key");
+                        params.put("amount", amount);
+                        params.put("extraData", "");
+                        params.put("message", "Successful.");
+                        params.put("orderId", orderId);
+                        params.put("orderInfo", "Booking " + testBooking.getId());
+                        params.put("orderType", "momo_wallet");
+                        params.put("partnerCode", "test-partner-code");
+                        params.put("payType", "webApp");
+                        params.put("requestId", orderId);
+                        params.put("responseTime", "1722300000000");
+                        params.put("resultCode", "0");
+                        params.put("transId", transId);
+
+                        String rawSignature = "accessKey=" + params.get("accessKey")
+                                        + "&amount=" + params.get("amount")
+                                        + "&extraData=" + params.get("extraData")
+                                        + "&message=" + params.get("message")
+                                        + "&orderId=" + params.get("orderId")
+                                        + "&orderInfo=" + params.get("orderInfo")
+                                        + "&orderType=" + params.get("orderType")
+                                        + "&partnerCode=" + params.get("partnerCode")
+                                        + "&payType=" + params.get("payType")
+                                        + "&requestId=" + params.get("requestId")
+                                        + "&responseTime=" + params.get("responseTime")
+                                        + "&resultCode=" + params.get("resultCode")
+                                        + "&transId=" + params.get("transId");
+
+                        params.put("signature",
+                                        SecurityUtils.HmacSHA256sign("test-secret-key", rawSignature));
+                        return params;
+                }
 
                 @Test
                 @SmokeTest
