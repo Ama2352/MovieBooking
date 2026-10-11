@@ -2,13 +2,13 @@
 import { FcGoogle } from "react-icons/fc";
 import { BsFacebook } from "react-icons/bs";
 import { BsInstagram } from "react-icons/bs";
+import { OAUTH_BASE_URL } from "@/api/fetchConfig";
 
 import { toast } from "react-toastify";
 
 export default function SocialLogin() {
   const handleGoogleLogin = () => {
-    const base = import.meta.env.VITE_API_URL || "http://localhost:8080";
-    window.location.href = `${base}/api/auth/google/login`;
+    window.location.href = `${OAUTH_BASE_URL}/oauth2/authorization/google`;
   };
 
   return (

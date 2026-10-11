@@ -37,7 +37,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         private final UserService userService;
         private final CookieService cookieService;
 
-        @Value("${frontend.redirect.url:http://localhost:5173/oauth2/success}")
+        @Value("${frontend.redirect.url:https://movie-booking-two-chi.vercel.app/oauth2/success}")
         private String frontendRedirectUrl;
 
         @Override
